@@ -4,7 +4,8 @@ __pycache__/
 .venv/
 venv/
 
-# Flutter / Dart (aquaguard_mobile/ ileride olusturulacak)
+# Flutter / Dart (aquaguard_mobile/ kendi .gitignore'u da bunlari kapsar,
+# burada ek guvence olarak tutuluyor)
 aquaguard_mobile/.dart_tool/
 aquaguard_mobile/build/
 aquaguard_mobile/.flutter-plugins
@@ -12,6 +13,7 @@ aquaguard_mobile/.flutter-plugins-dependencies
 aquaguard_mobile/.packages
 aquaguard_mobile/android/local.properties
 aquaguard_mobile/ios/Flutter/Flutter.podspec
+aquaguard_mobile/windows/flutter/ephemeral/
 
 # Isletim sistemi
 Thumbs.db

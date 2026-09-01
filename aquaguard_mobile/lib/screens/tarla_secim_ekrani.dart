@@ -1,0 +1,347 @@
+/// AquaGuard - Tarla Secim Ekrani
+/// ==================================
+///
+/// Amac:
+///   Uygulama acilinca gosterilen ilk ekran. Kullanicinin kayitli
+///   tarlalarini listeler, yeni tarla eklemeyi/silmeyi saglar ve bir
+///   tarlaya dokununca o tarlanin zon dashboard'una gecer.
+///
+/// Tarih:  2026-09-01
+/// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
+library;
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../models/sensor_okuma.dart';
+import '../models/tarla.dart';
+import '../providers/uygulama_durumu.dart';
+import '../widgets/demo_modu_banner.dart';
+import '../widgets/durum_renkleri.dart';
+import 'ayarlar_ekrani.dart';
+import 'zon_dashboard_ekrani.dart';
+
+class TarlaSecimEkrani extends StatelessWidget {
+  const TarlaSecimEkrani({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final durum = context.watch<UygulamaDurumu>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Icon(Icons.water_drop, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('AquaGuard'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Ayarlar',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AyarlarEkrani()),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: !durum.hazir
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                if (durum.demoModuAktif)
+                  DemoModuBanner(
+                    onAyarlaraGit: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AyarlarEkrani()),
+                    ),
+                  ),
+                Expanded(
+                  child: durum.tarlalar.isEmpty
+                      ? _BosTarlaGorunumu(onEkle: () => _tarlaEkleDuzenleFormunuGoster(context))
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                          children: [
+                            Text(
+                              'Tarlalarım',
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${durum.tarlalar.length} tarla, '
+                              '${durum.tumZonNumaralari.length} izlenen zon',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                            const SizedBox(height: 20),
+                            ...durum.tarlalar.map(
+                              (tarla) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _TarlaKarti(
+                                  tarla: tarla,
+                                  onDuzenle: () => _tarlaEkleDuzenleFormunuGoster(
+                                    context,
+                                    duzenlenecekTarla: tarla,
+                                  ),
+                                  onSil: () => _tarlaSilmeyiOnayla(context, tarla),
+                                  onAc: () => Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => ZonDashboardEkrani(tarla: tarla)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _tarlaEkleDuzenleFormunuGoster(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Tarla Ekle'),
+      ),
+    );
+  }
+
+  void _tarlaSilmeyiOnayla(BuildContext context, Tarla tarla) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Tarlayı Sil'),
+        content: Text('"${tarla.ad}" tarlasını silmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton.tonal(
+            onPressed: () {
+              context.read<UygulamaDurumu>().tarlaSil(tarla.id);
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _tarlaEkleDuzenleFormunuGoster(BuildContext context, {Tarla? duzenlenecekTarla}) {
+    final adController = TextEditingController(text: duzenlenecekTarla?.ad ?? '');
+    final zonController = TextEditingController(
+      text: duzenlenecekTarla?.zonNumaralari.join(', ') ?? '',
+    );
+    final formAnahtari = GlobalKey<FormState>();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(duzenlenecekTarla == null ? 'Yeni Tarla Ekle' : 'Tarlayı Düzenle'),
+        content: Form(
+          key: formAnahtari,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: adController,
+                decoration: const InputDecoration(labelText: 'Tarla Adı'),
+                validator: (deger) =>
+                    (deger == null || deger.trim().isEmpty) ? 'Tarla adı gerekli' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: zonController,
+                decoration: const InputDecoration(
+                  labelText: 'Zon Numaraları',
+                  hintText: 'Örnek: 1, 2, 3',
+                ),
+                validator: (deger) {
+                  if (deger == null || deger.trim().isEmpty) return 'En az bir zon numarası girin';
+                  final gecerliMi = deger.split(',').every(
+                        (parca) => int.tryParse(parca.trim()) != null,
+                      );
+                  return gecerliMi ? null : 'Zon numaraları virgülle ayrılmış tam sayı olmalı';
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!(formAnahtari.currentState?.validate() ?? false)) return;
+
+              final zonNumaralari = zonController.text
+                  .split(',')
+                  .map((parca) => int.parse(parca.trim()))
+                  .toSet()
+                  .toList()
+                ..sort();
+
+              final durum = context.read<UygulamaDurumu>();
+
+              if (duzenlenecekTarla == null) {
+                durum.tarlaEkle(Tarla(
+                  id: 'tarla-${DateTime.now().millisecondsSinceEpoch}',
+                  ad: adController.text.trim(),
+                  zonNumaralari: zonNumaralari,
+                ));
+              } else {
+                durum.tarlaGuncelle(duzenlenecekTarla.kopyalaVeGuncelle(
+                  ad: adController.text.trim(),
+                  zonNumaralari: zonNumaralari,
+                ));
+              }
+
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BosTarlaGorunumu extends StatelessWidget {
+  final VoidCallback onEkle;
+  const _BosTarlaGorunumu({required this.onEkle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.grass, size: 72, color: Theme.of(context).colorScheme.outline),
+            const SizedBox(height: 16),
+            Text('Henüz tarla eklenmedi', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            const Text(
+              'İzlemek istediğiniz ilk tarlanızı ve zon numaralarını ekleyerek başlayın.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onEkle,
+              icon: const Icon(Icons.add),
+              label: const Text('Tarla Ekle'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TarlaKarti extends StatelessWidget {
+  final Tarla tarla;
+  final VoidCallback onDuzenle;
+  final VoidCallback onSil;
+  final VoidCallback onAc;
+
+  const _TarlaKarti({
+    required this.tarla,
+    required this.onDuzenle,
+    required this.onSil,
+    required this.onAc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final durum = context.watch<UygulamaDurumu>();
+    final renk = _enOnceliklirenk(durum, tarla.zonNumaralari);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onAc,
+        child: Row(
+          children: [
+            Container(width: 6, height: 88, color: renk),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tarla.ad,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${tarla.zonNumaralari.length} zon — '
+                            '${tarla.zonNumaralari.map((z) => "Zon $z").join(", ")}',
+                            style: const TextStyle(color: Colors.black54, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      onSelected: (secim) {
+                        if (secim == 'sil') {
+                          onSil();
+                        } else if (secim == 'duzenle') {
+                          onDuzenle();
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'duzenle', child: Text('Düzenle')),
+                        PopupMenuItem(value: 'sil', child: Text('Sil')),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Tarladaki zonlar arasinda EN ONCELIKLI (en dikkat gerektiren) durumun
+  /// rengini doner -- tespit edilen > belirsiz > tedavi > normal > cevrimdisi.
+  Color _enOnceliklirenk(UygulamaDurumu durum, List<int> zonlar) {
+    var enYuksekOncelik = -1;
+    var secilenRenk = DurumRenkleri.cevrimdisi;
+
+    for (final zon in zonlar) {
+      final okuma = durum.sonOkuma(zon);
+      final cevrimici = durum.zonCevrimiciMi(zon);
+      final oncelik = _oncelikSkoru(okuma, cevrimici);
+      if (oncelik > enYuksekOncelik) {
+        enYuksekOncelik = oncelik;
+        secilenRenk = DurumRenkleri.renkGetir(okuma: okuma, cevrimici: cevrimici);
+      }
+    }
+    return secilenRenk;
+  }
+
+  int _oncelikSkoru(SensorOkuma? okuma, bool cevrimici) {
+    if (okuma == null || !cevrimici) return 0;
+    if (okuma.durum == TeshisDurumu.tespitEdildi) return 4;
+    if (okuma.durum == TeshisDurumu.belirsiz) return 3;
+    if (okuma.tedaviAktif != TedaviTuru.yok) return 2;
+    return 1; // normal
+  }
+}
