@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Flutter / Dart (aquaguard_mobile/ ileride olusturulacak)
+aquaguard_mobile/.dart_tool/
+aquaguard_mobile/build/
+aquaguard_mobile/.flutter-plugins
+aquaguard_mobile/.flutter-plugins-dependencies
+aquaguard_mobile/.packages
+aquaguard_mobile/android/local.properties
+aquaguard_mobile/ios/Flutter/Flutter.podspec
+
+# Isletim sistemi
+Thumbs.db
+.DS_Store
+
+# Claude Code yerel ayarlari
+.claude/
+
+# Editor
+.vscode/
+.idea/
