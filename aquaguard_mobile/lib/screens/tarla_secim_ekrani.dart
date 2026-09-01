@@ -30,23 +30,7 @@ class TarlaSecimEkrani extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Icon(Icons.water_drop, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            const Text('AquaGuard'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Ayarlar',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AyarlarEkrani()),
-            ),
-          ),
-          const SizedBox(width: 4),
-        ],
+        title: const Text('Tarlalarım'),
       ),
       body: !durum.hazir
           ? const Center(child: CircularProgressIndicator())
@@ -65,20 +49,13 @@ class TarlaSecimEkrani extends StatelessWidget {
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                           children: [
                             Text(
-                              'Tarlalarım',
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
                               '${durum.tarlalar.length} tarla, '
                               '${durum.tumZonNumaralari.length} izlenen zon',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
                             ...durum.tarlalar.map(
                               (tarla) => Padding(
                                 padding: const EdgeInsets.only(bottom: 12),

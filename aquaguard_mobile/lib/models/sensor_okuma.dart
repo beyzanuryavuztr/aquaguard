@@ -114,6 +114,13 @@ class SensorOkuma {
   final TeshisDurumu durum;
   final TikanmaTuru tikanmaTuru;
   final double guven;
+
+  // Karar motorunun UC tikanma turunu de ne kadar olasi gordugu (aciklanabilirlik).
+  // Tikanma yoksa (durum=normal) ucu de 0.0'dir.
+  final double guvenKimyasal;
+  final double guvenBiyolojik;
+  final double guvenFiziksel;
+
   final TedaviTuru tedaviAktif;
   final bool durulamaAktif;
 
@@ -129,9 +136,19 @@ class SensorOkuma {
     required this.durum,
     required this.tikanmaTuru,
     required this.guven,
+    this.guvenKimyasal = 0.0,
+    this.guvenBiyolojik = 0.0,
+    this.guvenFiziksel = 0.0,
     required this.tedaviAktif,
     required this.durulamaAktif,
   });
+
+  /// Ucunun turu icin guven yuzdesini isimle sorgulamak icin yardimci (grafik cizimlerinde kullanislidir).
+  Map<TikanmaTuru, double> get tumTurGuvenleri => {
+        TikanmaTuru.kimyasal: guvenKimyasal,
+        TikanmaTuru.biyolojik: guvenBiyolojik,
+        TikanmaTuru.fiziksel: guvenFiziksel,
+      };
 
   /// MQTT'den gelen JSON haritasindan (Map) nesne olusturur.
   /// Sayisal alanlar hem int hem double olarak gelebilir, bu yuzden
@@ -151,6 +168,9 @@ class SensorOkuma {
       durum: durumAyristir(json['durum'] as String?),
       tikanmaTuru: turAyristir(json['tikanma_turu'] as String?),
       guven: sayi(json['guven']),
+      guvenKimyasal: sayi(json['guven_kimyasal']),
+      guvenBiyolojik: sayi(json['guven_biyolojik']),
+      guvenFiziksel: sayi(json['guven_fiziksel']),
       tedaviAktif: tedaviAyristir(json['tedavi_aktif'] as String?),
       durulamaAktif: json['durulama_aktif'] as bool? ?? false,
     );
@@ -169,6 +189,9 @@ class SensorOkuma {
         'durum': durum.name,
         'tikanma_turu': tikanmaTuru.name,
         'guven': guven,
+        'guven_kimyasal': guvenKimyasal,
+        'guven_biyolojik': guvenBiyolojik,
+        'guven_fiziksel': guvenFiziksel,
         'tedavi_aktif': tedaviAktif.name,
         'durulama_aktif': durulamaAktif,
       };
@@ -196,6 +219,9 @@ class SensorOkuma {
         orElse: () => TikanmaTuru.yok,
       ),
       guven: sayi(json['guven']),
+      guvenKimyasal: sayi(json['guven_kimyasal']),
+      guvenBiyolojik: sayi(json['guven_biyolojik']),
+      guvenFiziksel: sayi(json['guven_fiziksel']),
       tedaviAktif: TedaviTuru.values.firstWhere(
         (e) => e.name == json['tedavi_aktif'],
         orElse: () => TedaviTuru.yok,

@@ -168,6 +168,9 @@ class SimulasyonServisi {
         durum: teshis.durum,
         tikanmaTuru: teshis.tur,
         guven: teshis.guven,
+        guvenKimyasal: teshis.guvenKimyasal,
+        guvenBiyolojik: teshis.guvenBiyolojik,
+        guvenFiziksel: teshis.guvenFiziksel,
         tedaviAktif: adim.tedaviAktif,
         durulamaAktif: adim.durulamaAktif,
       ));

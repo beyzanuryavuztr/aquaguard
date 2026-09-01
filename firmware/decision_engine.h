@@ -56,7 +56,12 @@ enum TeshisDurumu {
 struct TeshisSonucu {
   TeshisDurumu durum;
   TikanmaTuru tur;
-  float guven;              // 0-100 (%)
+  float guven;              // 0-100 (%) -- kazanan turun guveni
+  // Ucunun de ayri ayri guven yuzdesi (aciklanabilirlik icin, MQTT ile
+  // mobil uygulamaya tasinir -- bkz. mqtt_handler.h). Tikanma yoksa 0'dir.
+  float guvenKimyasal;
+  float guvenBiyolojik;
+  float guvenFiziksel;
   bool debiDususVar;
   bool basincArtisVar;
   bool turbiditeYuksekVar;
@@ -149,11 +154,17 @@ TeshisSonucu kuralTabanliTeshis(const SensorOkumalari& okuma) {
     sonuc.durum = DURUM_NORMAL;
     sonuc.tur = TUR_YOK;
     sonuc.guven = 100.0f;
+    sonuc.guvenKimyasal = 0.0f;
+    sonuc.guvenBiyolojik = 0.0f;
+    sonuc.guvenFiziksel = 0.0f;
     return sonuc;
   }
 
   float guvenler[3];
   turGuvenSkorlariniHesapla(okuma, guvenler);
+  sonuc.guvenKimyasal = guvenler[0];
+  sonuc.guvenBiyolojik = guvenler[1];
+  sonuc.guvenFiziksel = guvenler[2];
 
   int enIyiIndeks = 0;
   for (int i = 1; i < 3; i++) {

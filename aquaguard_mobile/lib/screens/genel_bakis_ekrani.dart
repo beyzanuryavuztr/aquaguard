@@ -1,0 +1,224 @@
+/// AquaGuard - Genel Bakis Ekrani
+/// ==================================
+///
+/// Amac:
+///   Uygulamanin acilis sekmesi. Tum tarlalar/zonlar genelinde ozet bir
+///   "kus bakisi" sunar: kac zon izleniyor, kac tanesi dikkat gerektiriyor,
+///   su an kac tedavi aktif ve en son neler oldu. Kullanicinin tek tek
+///   tarlalara girmeden sistemin genel saglik durumunu gormesini saglar.
+///
+/// Tarih:  2026-09-01
+/// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
+library;
+
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../models/aktivite_kaydi.dart';
+import '../models/sensor_okuma.dart';
+import '../providers/uygulama_durumu.dart';
+import '../widgets/demo_modu_banner.dart';
+import '../widgets/durum_renkleri.dart';
+import 'aktivite_gecmisi_ekrani.dart';
+import 'ayarlar_ekrani.dart';
+
+class GenelBakisEkrani extends StatelessWidget {
+  const GenelBakisEkrani({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final durum = context.watch<UygulamaDurumu>();
+
+    var normal = 0, dikkat = 0, tedavide = 0, cevrimdisi = 0;
+    for (final zon in durum.tumZonNumaralari) {
+      final okuma = durum.sonOkuma(zon);
+      final cevrimici = durum.zonCevrimiciMi(zon);
+      if (okuma == null || !cevrimici) {
+        cevrimdisi++;
+      } else if (okuma.tedaviAktif != TedaviTuru.yok) {
+        tedavide++;
+      } else if (okuma.durum == TeshisDurumu.tespitEdildi || okuma.durum == TeshisDurumu.belirsiz) {
+        dikkat++;
+      } else {
+        normal++;
+      }
+    }
+
+    final sonAktiviteler = durum.aktiviteGecmisi.take(6).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Icon(Icons.water_drop, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('AquaGuard'),
+          ],
+        ),
+      ),
+      body: !durum.hazir
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 32),
+              children: [
+                if (durum.demoModuAktif)
+                  DemoModuBanner(
+                    onAyarlaraGit: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AyarlarEkrani()),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Text(
+                    'Sistem Özeti',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      _IstatistikKarti(
+                        deger: durum.tarlalar.length,
+                        etiket: 'Tarla',
+                        ikon: Icons.grass,
+                      ),
+                      const SizedBox(width: 10),
+                      _IstatistikKarti(
+                        deger: durum.tumZonNumaralari.length,
+                        etiket: 'Zon',
+                        ikon: Icons.sensors,
+                      ),
+                      const SizedBox(width: 10),
+                      _IstatistikKarti(
+                        deger: tedavide,
+                        etiket: 'Aktif Tedavi',
+                        ikon: Icons.build_circle,
+                        vurgulaRenk: tedavide > 0 ? DurumRenkleri.tedaviAktif : null,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      _DurumOzetRozeti(sayi: normal, etiket: 'Normal', renk: DurumRenkleri.normal),
+                      const SizedBox(width: 8),
+                      _DurumOzetRozeti(sayi: dikkat, etiket: 'Dikkat', renk: DurumRenkleri.tespitEdildi),
+                      if (cevrimdisi > 0) ...[
+                        const SizedBox(width: 8),
+                        _DurumOzetRozeti(
+                            sayi: cevrimdisi, etiket: 'Çevrimdışı', renk: DurumRenkleri.cevrimdisi),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Son Aktiviteler',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AktiviteGecmisiEkrani()),
+                        ),
+                        child: const Text('Tümünü Gör'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (sonAktiviteler.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Text('Henüz aktivite kaydı yok.', style: TextStyle(color: Colors.black54)),
+                  )
+                else
+                  ...sonAktiviteler.map((kayit) => _AktiviteSatiri(kayit: kayit)),
+              ],
+            ),
+    );
+  }
+}
+
+class _IstatistikKarti extends StatelessWidget {
+  final int deger;
+  final String etiket;
+  final IconData ikon;
+  final Color? vurgulaRenk;
+
+  const _IstatistikKarti({
+    required this.deger,
+    required this.etiket,
+    required this.ikon,
+    this.vurgulaRenk,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final renk = vurgulaRenk ?? Theme.of(context).colorScheme.primary;
+    return Expanded(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            children: [
+              Icon(ikon, color: renk),
+              const SizedBox(height: 8),
+              Text('$deger', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: renk)),
+              Text(etiket, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DurumOzetRozeti extends StatelessWidget {
+  final int sayi;
+  final String etiket;
+  final Color renk;
+
+  const _DurumOzetRozeti({required this.sayi, required this.etiket, required this.renk});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(color: renk.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          children: [
+            Text('$sayi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: renk)),
+            Text(etiket, style: TextStyle(fontSize: 11, color: renk)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AktiviteSatiri extends StatelessWidget {
+  final AktiviteKaydi kayit;
+  const _AktiviteSatiri({required this.kayit});
+
+  @override
+  Widget build(BuildContext context) {
+    final renk = kayit.renkGetir(context);
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: renk.withValues(alpha: 0.15),
+        child: Icon(kayit.ikon, color: renk, size: 20),
+      ),
+      title: Text(kayit.mesaj, style: const TextStyle(fontSize: 13)),
+      subtitle: Text(DateFormat('dd.MM HH:mm:ss').format(kayit.zaman)),
+    );
+  }
+}

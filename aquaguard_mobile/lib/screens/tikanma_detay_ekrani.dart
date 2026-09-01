@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 
 import '../models/sensor_okuma.dart';
 import '../providers/uygulama_durumu.dart';
+import '../widgets/aciklanabilirlik_paneli.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/mini_trend_grafigi.dart';
 import 'aktif_tedavi_ekrani.dart';
@@ -45,9 +46,15 @@ class TikanmaDetayEkrani extends StatelessWidget {
                 if (!cevrimici) _CevrimdisiBanner(okuma: okuma),
                 _DurumOzetKarti(okuma: okuma, cevrimici: cevrimici, renk: renk),
                 const SizedBox(height: 16),
-                if (okuma.tedaviAktif != TedaviTuru.yok || okuma.durulamaAktif)
+                if (okuma.tedaviAktif != TedaviTuru.yok || okuma.durulamaAktif) ...[
                   _TedaviBanner(zonNumarasi: zonNumarasi, okuma: okuma),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
+                if (okuma.durum == TeshisDurumu.tespitEdildi ||
+                    okuma.durum == TeshisDurumu.belirsiz) ...[
+                  AciklanabilirlikPaneli(okuma: okuma),
+                  const SizedBox(height: 16),
+                ],
                 Text('Sensör Eğilimleri', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 _SensorTrendIzgarasi(sonOkumalar: sonOkumalar),

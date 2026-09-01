@@ -22,7 +22,19 @@ class KararSonucu {
   final TikanmaTuru tur;
   final double guven;
 
-  const KararSonucu({required this.durum, required this.tur, required this.guven});
+  // Aciklanabilirlik: ucunun de ayri guven yuzdesi (durum=normal ise ucu de 0)
+  final double guvenKimyasal;
+  final double guvenBiyolojik;
+  final double guvenFiziksel;
+
+  const KararSonucu({
+    required this.durum,
+    required this.tur,
+    required this.guven,
+    this.guvenKimyasal = 0.0,
+    this.guvenBiyolojik = 0.0,
+    this.guvenFiziksel = 0.0,
+  });
 }
 
 class KararMotoru {
@@ -67,12 +79,15 @@ class KararMotoru {
       toplamUstel += v;
     }
 
+    final guvenler = <String, double>{
+      for (final e in ustel.entries) e.key: 100.0 * e.value / toplamUstel,
+    };
+
     var enIyiTur = _tipSiniflari.first;
     var enYuksekGuven = 0.0;
-    for (final e in ustel.entries) {
-      final guven = 100.0 * e.value / toplamUstel;
-      if (guven > enYuksekGuven) {
-        enYuksekGuven = guven;
+    for (final e in guvenler.entries) {
+      if (e.value > enYuksekGuven) {
+        enYuksekGuven = e.value;
         enIyiTur = e.key;
       }
     }
@@ -80,6 +95,13 @@ class KararMotoru {
     final tur = turAyristir(enIyiTur);
     final durum = enYuksekGuven >= guvenEsigi ? TeshisDurumu.tespitEdildi : TeshisDurumu.belirsiz;
 
-    return KararSonucu(durum: durum, tur: tur, guven: enYuksekGuven);
+    return KararSonucu(
+      durum: durum,
+      tur: tur,
+      guven: enYuksekGuven,
+      guvenKimyasal: guvenler['kimyasal']!,
+      guvenBiyolojik: guvenler['biyolojik']!,
+      guvenFiziksel: guvenler['fiziksel']!,
+    );
   }
 }

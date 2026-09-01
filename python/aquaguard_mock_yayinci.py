@@ -152,7 +152,15 @@ def senaryo_adimlarini_uret(rng: np.random.Generator):
 
 def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
                     durulama_aktif: bool) -> str:
-    """firmware/mqtt_handler.h basindaki JSON semasiyla BIREBIR AYNI alanlar."""
+    """firmware/mqtt_handler.h basindaki JSON semasiyla BIREBIR AYNI alanlar.
+
+    guven_kimyasal/guven_biyolojik/guven_fiziksel alanlari, karar motorunun
+    UC turu de nasil degerlendirdigini (aciklanabilirlik) tasir -- sadece
+    "kazanan" turu degil, ucunun de guven yuzdesini gosterir. Bu, mobil
+    uygulamadaki "Neden bu karar?" panelinin veri kaynagidir.
+    """
+    tum_guvenler = teshis.get("tum_guvenler", {})
+
     mesaj = {
         "zaman": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "zone": zone,
@@ -165,6 +173,9 @@ def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
         "durum": teshis["durum"],
         "tikanma_turu": teshis["tur"] if teshis["tur"] else "yok",
         "guven": round(teshis["guven"], 1),
+        "guven_kimyasal": round(tum_guvenler.get("kimyasal", 0.0), 1),
+        "guven_biyolojik": round(tum_guvenler.get("biyolojik", 0.0), 1),
+        "guven_fiziksel": round(tum_guvenler.get("fiziksel", 0.0), 1),
         "tedavi_aktif": tedavi_aktif,
         "durulama_aktif": durulama_aktif,
     }

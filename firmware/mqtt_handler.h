@@ -21,9 +21,16 @@
  *     "durum":         "normal" | "belirsiz" | "tespit_edildi",
  *     "tikanma_turu":  "yok" | "kimyasal" | "biyolojik" | "fiziksel",
  *     "guven":         94.2,
+ *     "guven_kimyasal": 12.4,
+ *     "guven_biyolojik": 94.2,
+ *     "guven_fiziksel": 3.1,
  *     "tedavi_aktif":  "yok" | "asit_dozlama" | "klor_enjeksiyon" | "yuksek_basincli_yikama",
  *     "durulama_aktif": false
  *   }
+ *
+ *   guven_* alanlari, kural katmaninin UC tikanma turunu de ne kadar olasi
+ *   gordugunu tasir (aciklanabilirlik) -- mobil uygulamadaki "Neden bu
+ *   karar?" panelinin veri kaynagidir. Tikanma yoksa (durum=normal) ucu de 0'dir.
  *
  * Konu (topic) semasi:
  *   aquaguard/zone{N}/veri   -> yukaridaki JSON, RETAINED (son mesaj brokerda
@@ -149,7 +156,7 @@ void veriYayinla(const SensorOkumalari& okuma, const TeshisSonucu& teshis,
     return;
   }
 
-  StaticJsonDocument<384> belge;
+  StaticJsonDocument<512> belge;
   belge["zaman"] = zamanDamgasi;
   belge["zone"] = BOLGE_ID;
   belge["ph"] = serialized(String(okuma.ph, 2));
@@ -161,10 +168,13 @@ void veriYayinla(const SensorOkumalari& okuma, const TeshisSonucu& teshis,
   belge["durum"] = durumAdiGetir(teshis.durum);
   belge["tikanma_turu"] = turAdiGetir(teshis.tur);
   belge["guven"] = serialized(String(teshis.guven, 1));
+  belge["guven_kimyasal"] = serialized(String(teshis.guvenKimyasal, 1));
+  belge["guven_biyolojik"] = serialized(String(teshis.guvenBiyolojik, 1));
+  belge["guven_fiziksel"] = serialized(String(teshis.guvenFiziksel, 1));
   belge["tedavi_aktif"] = tedaviAdiGetir(aktifTedavi);
   belge["durulama_aktif"] = durulamaAktif;
 
-  char cikti[384];
+  char cikti[512];
   size_t uzunluk = serializeJson(belge, cikti, sizeof(cikti));
 
   bool basarili = _mqttClient.publish(_veriTopic, (const uint8_t*)cikti, uzunluk, true);

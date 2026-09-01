@@ -19,6 +19,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../models/aktivite_kaydi.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../services/depolama_servisi.dart';
@@ -44,6 +45,12 @@ class UygulamaDurumu extends ChangeNotifier {
 
   final List<String> _bildirimKuyrugu = [];
   final Map<int, DateTime> _tedaviBaslangicZamanlari = {};
+  final List<AktiviteKaydi> _aktiviteGecmisi = [];
+  final Map<TedaviTuru, int> _tedaviSayaclari = {
+    TedaviTuru.asitDozlama: 0,
+    TedaviTuru.klorEnjeksiyon: 0,
+    TedaviTuru.yuksekBasincliYikama: 0,
+  };
 
   // ============================================================================
   // DISARIYA ACIK (READ-ONLY) DURUM
@@ -65,6 +72,21 @@ class UygulamaDurumu extends ChangeNotifier {
   SensorOkuma? sonOkuma(int zone) => _sonOkumalar[zone];
   bool zonCevrimiciMi(int zone) => _zonCevrimici[zone] ?? false;
   List<SensorOkuma> gecmis(int zone) => List.unmodifiable(_gecmisler[zone] ?? const <SensorOkuma>[]);
+
+  /// Tum zonlardaki onemli olaylarin kalici gecmisi, EN YENI ONCE.
+  List<AktiviteKaydi> get aktiviteGecmisi => List.unmodifiable(_aktiviteGecmisi);
+
+  /// Uygulama acildigindan beri tetiklenen tedavi sayilari (turlere gore).
+  Map<TedaviTuru, int> get tedaviSayaclari => Map.unmodifiable(_tedaviSayaclari);
+
+  /// Tum zonlardaki tum gecmis okumalar tek bir listede (istatistik hesaplari icin).
+  List<SensorOkuma> get tumOkumalarBirlesik {
+    final liste = <SensorOkuma>[];
+    for (final zon in tumZonNumaralari) {
+      liste.addAll(_gecmisler[zon] ?? const <SensorOkuma>[]);
+    }
+    return liste;
+  }
 
   List<String> bildirimleriAlVeTemizle() {
     final kopya = List<String>.from(_bildirimKuyrugu);
@@ -179,13 +201,12 @@ class UygulamaDurumu extends ChangeNotifier {
     );
     final onceki = _sonOkumalar[okuma.zone];
 
-    if (_bildirimlerAcik) {
-      _degisimiKontrolEtVeBildir(onceki, okuma);
-    }
+    _degisimleriKaydet(onceki, okuma);
 
     if (okuma.tedaviAktif != TedaviTuru.yok &&
         (onceki == null || onceki.tedaviAktif != okuma.tedaviAktif)) {
       _tedaviBaslangicZamanlari[okuma.zone] = okuma.zaman;
+      _tedaviSayaclari[okuma.tedaviAktif] = (_tedaviSayaclari[okuma.tedaviAktif] ?? 0) + 1;
     } else if (okuma.tedaviAktif == TedaviTuru.yok) {
       _tedaviBaslangicZamanlari.remove(okuma.zone);
     }
@@ -202,25 +223,33 @@ class UygulamaDurumu extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _degisimiKontrolEtVeBildir(SensorOkuma? onceki, SensorOkuma yeni) {
+  void _degisimleriKaydet(SensorOkuma? onceki, SensorOkuma yeni) {
     if (onceki == null) return; // ilk veri -- gecmis karsilastirma yok
+
+    void kaydet(String mesaj, AktiviteTuru tur) {
+      _aktiviteGecmisi.insert(0, AktiviteKaydi(zaman: yeni.zaman, zone: yeni.zone, mesaj: mesaj, tur: tur));
+      if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
+      if (_bildirimlerAcik) _bildirimKuyrugu.add(mesaj);
+    }
 
     if (onceki.durum != yeni.durum) {
       switch (yeni.durum) {
         case TeshisDurumu.tespitEdildi:
-          _bildirimKuyrugu.add(
+          kaydet(
             'Zon ${yeni.zone}: ${turEtiketi(yeni.tikanmaTuru)} tıkanma tespit edildi '
             '(güven %${yeni.guven.toStringAsFixed(0)})',
+            AktiviteTuru.tespit,
           );
           break;
         case TeshisDurumu.belirsiz:
-          _bildirimKuyrugu.add(
+          kaydet(
             'Zon ${yeni.zone}: Tıkanma şüphesi var, operatör kontrolü gerekiyor',
+            AktiviteTuru.belirsiz,
           );
           break;
         case TeshisDurumu.normal:
           if (onceki.durum != TeshisDurumu.bilinmiyor) {
-            _bildirimKuyrugu.add('Zon ${yeni.zone}: Durum normale döndü');
+            kaydet('Zon ${yeni.zone}: Durum normale döndü', AktiviteTuru.normaleDonus);
           }
           break;
         case TeshisDurumu.bilinmiyor:
@@ -230,11 +259,12 @@ class UygulamaDurumu extends ChangeNotifier {
 
     if (onceki.tedaviAktif != yeni.tedaviAktif) {
       if (yeni.tedaviAktif != TedaviTuru.yok) {
-        _bildirimKuyrugu.add(
+        kaydet(
           'Zon ${yeni.zone}: ${tedaviEtiketi(yeni.tedaviAktif)} başlatıldı',
+          AktiviteTuru.tedaviBaslangic,
         );
       } else if (onceki.tedaviAktif != TedaviTuru.yok) {
-        _bildirimKuyrugu.add('Zon ${yeni.zone}: Tedavi tamamlandı, durulama başladı');
+        kaydet('Zon ${yeni.zone}: Tedavi tamamlandı, durulama başladı', AktiviteTuru.tedaviBitis);
       }
     }
   }

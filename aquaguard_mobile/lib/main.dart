@@ -3,8 +3,8 @@
 ///
 /// Amac:
 ///   Provider ile UygulamaDurumu'nu (ana state) uygulama agacinin en
-///   tepesine yerlestirir, MaterialApp'i Turkce yerellestirmeyle kurar ve
-///   ilk ekran olarak Tarla Secim Ekrani'ni acar.
+///   tepesine yerlestirir, MaterialApp'i tema ile kurar ve alt navigasyonlu
+///   Ana Kabuk'u (Genel Bakış / Tarlalar / İstatistikler / Ayarlar) acar.
 ///
 /// Tarih:  2026-09-01
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
@@ -15,7 +15,7 @@ import 'package:provider/provider.dart';
 
 import 'config/tema.dart';
 import 'providers/uygulama_durumu.dart';
-import 'screens/tarla_secim_ekrani.dart';
+import 'screens/ana_kabuk.dart';
 
 void main() {
   runApp(const AquaGuardUygulamasi());
@@ -34,7 +34,7 @@ class AquaGuardUygulamasi extends StatelessWidget {
         theme: AquaGuardTema.acikTema(),
         darkTheme: AquaGuardTema.koyuTema(),
         themeMode: ThemeMode.system,
-        home: const TarlaSecimEkrani(),
+        home: const AnaKabuk(),
       ),
     );
   }
