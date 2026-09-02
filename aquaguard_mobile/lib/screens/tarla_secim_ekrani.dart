@@ -13,7 +13,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/demo_modu_banner.dart';
@@ -409,31 +408,31 @@ class _TarlaKarti extends StatelessWidget {
   }
 
   /// Tarladaki zonlar arasinda EN ONCELIKLI (en dikkat gerektiren) durumun
-  /// rengini doner -- tespit edilen > belirsiz > tedavi > normal > cevrimdisi.
+  /// rengini doner. Siniflandirma DurumRenkleri.onceligiBelirle()'den gelir
+  /// (tek kaynak -- bu fonksiyonun eskiden kendi elle yazilmis, ozet
+  /// hesaplamasindan FARKLI sirali bir kopyasi vardi, bkz. o fonksiyonun
+  /// dokumantasyonu).
   Color _enOnceliklirenk(UygulamaDurumu durum, List<int> zonlar) {
-    var enYuksekOncelik = -1;
+    var enYuksekOncelik = ZonOnceligi.cevrimdisi;
     var secilenRenk = DurumRenkleri.cevrimdisi;
+    var ilkZon = true;
 
     for (final zon in zonlar) {
       final okuma = durum.sonOkuma(zon);
       final cevrimici = durum.zonCevrimiciMi(zon);
-      final oncelik = _oncelikSkoru(okuma, cevrimici);
-      if (oncelik > enYuksekOncelik) {
+      final oncelik = DurumRenkleri.onceligiBelirle(
+        okuma: okuma,
+        cevrimici: cevrimici,
+      );
+      if (ilkZon || oncelik.index > enYuksekOncelik.index) {
         enYuksekOncelik = oncelik;
         secilenRenk = DurumRenkleri.renkGetir(
           okuma: okuma,
           cevrimici: cevrimici,
         );
+        ilkZon = false;
       }
     }
     return secilenRenk;
-  }
-
-  int _oncelikSkoru(SensorOkuma? okuma, bool cevrimici) {
-    if (okuma == null || !cevrimici) return 0;
-    if (okuma.durum == TeshisDurumu.tespitEdildi) return 4;
-    if (okuma.durum == TeshisDurumu.belirsiz) return 3;
-    if (okuma.tedaviAktif != TedaviTuru.yok) return 2;
-    return 1; // normal
   }
 }

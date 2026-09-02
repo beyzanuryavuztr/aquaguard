@@ -26,6 +26,7 @@ import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
 import '../services/mqtt_servisi.dart';
 import '../services/simulasyon_servisi.dart';
+import '../widgets/durum_renkleri.dart';
 
 class UygulamaDurumu extends ChangeNotifier {
   final DepolamaServisi _depolama = DepolamaServisi();
@@ -125,8 +126,9 @@ class UygulamaDurumu extends ChangeNotifier {
 
   /// Verilen zon listesinin durum ozetini hesaplar (Genel Bakış ve Zon
   /// Dashboard ekranlarinin ikisi de bunu kullanir -- ayni mantigin iki
-  /// yerde elle kopyalanmasini onler). Her zon TEK bir kovaya duser,
-  /// oncelik sirasi: cevrimdisi > tedavide > tespit edildi > belirsiz > normal.
+  /// yerde elle kopyalanmasini onler). Her zon TEK bir kovaya duser;
+  /// siniflandirma DurumRenkleri.onceligiBelirle()'den gelir (tek kaynak --
+  /// bkz. o fonksiyonun dokumantasyonu, tarla karti da AYNI fonksiyonu kullanir).
   ZonDurumOzeti durumOzetiHesapla(List<int> zonlar) {
     var normal = 0,
         belirsiz = 0,
@@ -136,16 +138,17 @@ class UygulamaDurumu extends ChangeNotifier {
     for (final zon in zonlar) {
       final okuma = _sonOkumalar[zon];
       final cevrimici = _zonCevrimici[zon] ?? false;
-      if (okuma == null || !cevrimici) {
-        cevrimdisi++;
-      } else if (okuma.tedaviAktif != TedaviTuru.yok) {
-        tedavide++;
-      } else if (okuma.durum == TeshisDurumu.tespitEdildi) {
-        tespitEdildi++;
-      } else if (okuma.durum == TeshisDurumu.belirsiz) {
-        belirsiz++;
-      } else {
-        normal++;
+      switch (DurumRenkleri.onceligiBelirle(okuma: okuma, cevrimici: cevrimici)) {
+        case ZonOnceligi.cevrimdisi:
+          cevrimdisi++;
+        case ZonOnceligi.tedavide:
+          tedavide++;
+        case ZonOnceligi.tespitEdildi:
+          tespitEdildi++;
+        case ZonOnceligi.belirsiz:
+          belirsiz++;
+        case ZonOnceligi.normal:
+          normal++;
       }
     }
     return ZonDurumOzeti(

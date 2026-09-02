@@ -12,15 +12,30 @@
 ///   Yesil  -> Normal, tikanma yok
 ///   Sari   -> Belirsiz (guven dusuk), operator kontrolu gerekiyor
 ///   Kirmizi-> Tikanma tespit edildi (tedavi tetiklendi veya tetiklenecek)
-///   Mavi   -> Tedavi su an aktif olarak uygulaniyor
+///   Mavi   -> Tedavi aktif UYGULANIYOR YA DA zorunlu durulama suruyor --
+///             ikisi de "sistem su an mesgul, henuz tam olarak normale
+///             donmedi" anlamina gelir ve AYNI renkle gosterilir (durulama
+///             suren bir zonu duz yesil gostermek, ayni ekranda "Zorunlu
+///             durulama suruyor" banneri ile celisir).
 ///
-/// Tarih:  2026-09-01
+/// Tarih:  2026-09-01 (durulama tutarliligi + tek kaynak oncelik: 2026-09-03)
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
 import 'package:flutter/material.dart';
 
 import '../models/sensor_okuma.dart';
+
+/// Bir zonun "ne kadar dikkat gerektirdigi" onceligi, EN DUSUKTEN EN
+/// YUKSEGE sirali. TEK KAYNAK: hem tarla kartinin (bir tarladaki en
+/// oncelikli zonun rengini secmek icin) hem de
+/// UygulamaDurumu.durumOzetiHesapla'nin (ozet sayaclari icin) kullanmasi
+/// gereken ortak siniflandirma budur. Daha once bu iki yerde BIRBIRINDEN
+/// FARKLI sirali elle yazilmis kopyalar vardi (tarla karti "tespit"i
+/// tedaviden daha oncelikli sayiyordu, ozet ise tam tersini) -- bu, ayni
+/// projede daha once yasanmis "sema/mantik tek kaynak degil" hatasinin bir
+/// baska ornegiydi.
+enum ZonOnceligi { cevrimdisi, normal, belirsiz, tespitEdildi, tedavide }
 
 class DurumRenkleri {
   DurumRenkleri._();
@@ -31,23 +46,40 @@ class DurumRenkleri {
   static const Color tespitEdildi = Color(0xFFC62828);
   static const Color tedaviAktif = Color(0xFF1565C0);
 
+  static ZonOnceligi onceligiBelirle({
+    required SensorOkuma? okuma,
+    required bool cevrimici,
+  }) {
+    if (okuma == null || !cevrimici) return ZonOnceligi.cevrimdisi;
+    if (okuma.tedaviAktif != TedaviTuru.yok || okuma.durulamaAktif) {
+      return ZonOnceligi.tedavide;
+    }
+    switch (okuma.durum) {
+      case TeshisDurumu.tespitEdildi:
+        return ZonOnceligi.tespitEdildi;
+      case TeshisDurumu.belirsiz:
+        return ZonOnceligi.belirsiz;
+      case TeshisDurumu.normal:
+      case TeshisDurumu.bilinmiyor:
+        return ZonOnceligi.normal;
+    }
+  }
+
   static Color renkGetir({
     required SensorOkuma? okuma,
     required bool cevrimici,
   }) {
-    if (okuma == null) return cevrimdisi;
-    if (!cevrimici) return cevrimdisi;
-    if (okuma.tedaviAktif != TedaviTuru.yok) return tedaviAktif;
-
-    switch (okuma.durum) {
-      case TeshisDurumu.normal:
-        return normal;
-      case TeshisDurumu.belirsiz:
-        return belirsiz;
-      case TeshisDurumu.tespitEdildi:
-        return tespitEdildi;
-      case TeshisDurumu.bilinmiyor:
+    switch (onceligiBelirle(okuma: okuma, cevrimici: cevrimici)) {
+      case ZonOnceligi.cevrimdisi:
         return cevrimdisi;
+      case ZonOnceligi.normal:
+        return normal;
+      case ZonOnceligi.belirsiz:
+        return belirsiz;
+      case ZonOnceligi.tespitEdildi:
+        return tespitEdildi;
+      case ZonOnceligi.tedavide:
+        return tedaviAktif;
     }
   }
 
@@ -57,6 +89,7 @@ class DurumRenkleri {
   }) {
     if (okuma == null || !cevrimici) return Icons.cloud_off;
     if (okuma.tedaviAktif != TedaviTuru.yok) return Icons.build_circle;
+    if (okuma.durulamaAktif) return Icons.water_drop;
 
     switch (okuma.durum) {
       case TeshisDurumu.normal:
@@ -79,6 +112,7 @@ class DurumRenkleri {
     if (okuma.tedaviAktif != TedaviTuru.yok) {
       return '${tedaviEtiketi(okuma.tedaviAktif)} uygulanıyor';
     }
+    if (okuma.durulamaAktif) return 'Zorunlu durulama sürüyor';
     return durumEtiketi(okuma.durum);
   }
 }
