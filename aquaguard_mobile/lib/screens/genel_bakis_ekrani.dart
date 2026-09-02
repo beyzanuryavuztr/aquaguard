@@ -3,11 +3,12 @@
 ///
 /// Amac:
 ///   Uygulamanin acilis sekmesi. Tum tarlalar/zonlar genelinde ozet bir
-///   "kus bakisi" sunar: kac zon izleniyor, kac tanesi dikkat gerektiriyor,
-///   su an kac tedavi aktif ve en son neler oldu. Kullanicinin tek tek
-///   tarlalara girmeden sistemin genel saglik durumunu gormesini saglar.
+///   "kus bakisi" sunar: genel sistem sagligi, kac zon izleniyor, kac
+///   tanesi dikkat gerektiriyor, su an kac tedavi aktif, TUM zonlarin
+///   tek bakista durumu ve en son neler oldu. Kullanicinin tek tek
+///   tarlalara girmeden sistemin tamamini gormesini saglar.
 ///
-/// Tarih:  2026-09-01
+/// Tarih:  2026-09-01 (guncelleme: 2026-09-02 -- saglik gostergesi + tum zonlar)
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
@@ -20,8 +21,11 @@ import '../providers/uygulama_durumu.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/durum_renkleri.dart';
+import '../widgets/sistem_sagligi_gostergesi.dart';
+import '../widgets/zon_durum_karti.dart';
 import 'aktivite_gecmisi_ekrani.dart';
 import 'ayarlar_ekrani.dart';
+import 'tikanma_detay_ekrani.dart';
 
 class GenelBakisEkrani extends StatelessWidget {
   const GenelBakisEkrani({super.key});
@@ -30,7 +34,8 @@ class GenelBakisEkrani extends StatelessWidget {
   Widget build(BuildContext context) {
     final durum = context.watch<UygulamaDurumu>();
 
-    final ozet = durum.durumOzetiHesapla(durum.tumZonNumaralari);
+    final tumZonlar = durum.tumZonNumaralari;
+    final ozet = durum.durumOzetiHesapla(tumZonlar);
     final sonAktiviteler = durum.aktiviteGecmisi.take(6).toList();
 
     return Scaffold(
@@ -62,6 +67,10 @@ class GenelBakisEkrani extends StatelessWidget {
                     ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: SistemSagligiGostergesi(ozet: ozet),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                     child: Text(
                       'Sistem Özeti',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -80,7 +89,7 @@ class GenelBakisEkrani extends StatelessWidget {
                         ),
                         const SizedBox(width: 10),
                         _IstatistikKarti(
-                          deger: durum.tumZonNumaralari.length,
+                          deger: tumZonlar.length,
                           etiket: 'Zon',
                           ikon: Icons.sensors,
                         ),
@@ -128,6 +137,42 @@ class GenelBakisEkrani extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Tüm Zonlar',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (tumZonlar.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Text(
+                        'Henüz izlenen zon yok.',
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    )
+                  else
+                    ...tumZonlar.map(
+                      (zon) => ZonDurumKarti(
+                        zonNumarasi: zon,
+                        okuma: durum.sonOkuma(zon),
+                        cevrimici: durum.zonCevrimiciMi(zon),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                TikanmaDetayEkrani(zonNumarasi: zon),
+                          ),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),

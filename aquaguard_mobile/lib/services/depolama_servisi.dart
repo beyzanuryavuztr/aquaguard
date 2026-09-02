@@ -47,11 +47,11 @@ class DepolamaServisi {
     final tercihler = await _tercihler;
     final ham = tercihler.getString(_tarlalarAnahtari);
     if (ham == null) {
-      return [Tarla.varsayilan()];
+      return Tarla.varsayilanListe();
     }
     final liste = jsonDecode(ham) as List<dynamic>;
     if (liste.isEmpty) {
-      return [Tarla.varsayilan()];
+      return Tarla.varsayilanListe();
     }
     return liste
         .map((e) => Tarla.fromJson(e as Map<String, dynamic>))
