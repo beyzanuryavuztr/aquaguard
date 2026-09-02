@@ -12,7 +12,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/mqtt_servisi.dart';
@@ -103,37 +102,22 @@ class _OzetSatiri extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var normal = 0;
-    var dikkat = 0;
-    var tedavide = 0;
-    var cevrimdisi = 0;
-
-    for (final zon in tarla.zonNumaralari) {
-      final okuma = durum.sonOkuma(zon);
-      final cevrimici = durum.zonCevrimiciMi(zon);
-      if (okuma == null || !cevrimici) {
-        cevrimdisi++;
-      } else if (okuma.tedaviAktif != TedaviTuru.yok) {
-        tedavide++;
-      } else if (okuma.durum == TeshisDurumu.tespitEdildi || okuma.durum == TeshisDurumu.belirsiz) {
-        dikkat++;
-      } else {
-        normal++;
-      }
-    }
+    final ozet = durum.durumOzetiHesapla(tarla.zonNumaralari);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
         children: [
-          _OzetRozeti(sayi: normal, etiket: 'Normal', renk: DurumRenkleri.normal),
+          _OzetRozeti(sayi: ozet.normal, etiket: 'Normal', renk: DurumRenkleri.normal),
           const SizedBox(width: 8),
-          _OzetRozeti(sayi: dikkat, etiket: 'Dikkat', renk: DurumRenkleri.tespitEdildi),
+          _OzetRozeti(sayi: ozet.belirsiz, etiket: 'Belirsiz', renk: DurumRenkleri.belirsiz),
           const SizedBox(width: 8),
-          _OzetRozeti(sayi: tedavide, etiket: 'Tedavide', renk: DurumRenkleri.tedaviAktif),
-          if (cevrimdisi > 0) ...[
+          _OzetRozeti(sayi: ozet.tespitEdildi, etiket: 'Tespit', renk: DurumRenkleri.tespitEdildi),
+          const SizedBox(width: 8),
+          _OzetRozeti(sayi: ozet.tedavide, etiket: 'Tedavide', renk: DurumRenkleri.tedaviAktif),
+          if (ozet.cevrimdisi > 0) ...[
             const SizedBox(width: 8),
-            _OzetRozeti(sayi: cevrimdisi, etiket: 'Çevrimdışı', renk: DurumRenkleri.cevrimdisi),
+            _OzetRozeti(sayi: ozet.cevrimdisi, etiket: 'Çevrimdışı', renk: DurumRenkleri.cevrimdisi),
           ],
         ],
       ),

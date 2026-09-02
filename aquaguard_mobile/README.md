@@ -1,17 +1,44 @@
-# aquaguard_mobile
+# AquaGuard Mobil
 
-A new Flutter project.
+AquaGuard'ın Flutter mobil/web uygulaması — TEKNOFEST 2026 Tarım Teknolojileri
+Yarışması, Arge-T HydroLab takımı.
 
-## Getting Started
+Toprak altı damla sulama (SDI) sistemlerinde damlatıcı tıkanmasını türüne göre
+(kimyasal / biyolojik / fiziksel) otonom teşhis eden ve tedavi eden AquaGuard
+sisteminin mobil izleme arayüzüdür. Deneyap Kart'tan (veya henüz donanım
+hazır değilse uygulama içi **Demo Modu**'ndan) MQTT üzerinden gelen sensör ve
+teşhis verisini görselleştirir.
 
-This project is a starting point for a Flutter application.
+Projenin tam teknik özeti için depo kökündeki `PROJE_BRIEF.md` dosyasına bakın.
 
-A few resources to get you started if this is your first Flutter project:
+## Klasör yapısı
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```
+lib/
+├── config/       Sensör imzaları, tema, sabitler (Python/firmware ile tutarlı tutulmalı)
+├── models/       Veri modelleri (SensorOkuma, Tarla, AktiviteKaydi)
+├── services/     MQTT istemcisi, karar motoru, simülasyon (demo) servisi, yerel depolama
+├── providers/    UygulamaDurumu -- tek durum kaynağı (Provider/ChangeNotifier)
+├── screens/      Ekranlar (Genel Bakış, Tarlalar, İstatistikler, Ayarlar, ...)
+└── widgets/      Tekrar kullanılan bileşenler
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Çalıştırma
+
+```bash
+flutter pub get
+flutter run -d chrome   # web (önerilen ilk test ortamı)
+flutter run              # bağlı bir Android cihaz/emülatörde
+```
+
+Uygulama ilk açılışta **Demo Modu**'nda başlar (gerçek donanım henüz
+bağlanmamışsa) ve tamamen simüle edilmiş, gerçekçi bir tıkanma senaryosu
+gösterir — hiçbir ağ bağlantısı gerekmez. Gerçek Deneyap Kart'a bağlanmak
+için Ayarlar sekmesinden Demo Modu'nu kapatıp MQTT broker bilgilerini girin.
+
+## Testler
+
+```bash
+flutter analyze
+flutter test
+```

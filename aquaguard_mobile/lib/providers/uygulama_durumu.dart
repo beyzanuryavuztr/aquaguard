@@ -46,11 +46,6 @@ class UygulamaDurumu extends ChangeNotifier {
   final List<String> _bildirimKuyrugu = [];
   final Map<int, DateTime> _tedaviBaslangicZamanlari = {};
   final List<AktiviteKaydi> _aktiviteGecmisi = [];
-  final Map<TedaviTuru, int> _tedaviSayaclari = {
-    TedaviTuru.asitDozlama: 0,
-    TedaviTuru.klorEnjeksiyon: 0,
-    TedaviTuru.yuksekBasincliYikama: 0,
-  };
 
   // ============================================================================
   // DISARIYA ACIK (READ-ONLY) DURUM
@@ -76,8 +71,29 @@ class UygulamaDurumu extends ChangeNotifier {
   /// Tum zonlardaki onemli olaylarin kalici gecmisi, EN YENI ONCE.
   List<AktiviteKaydi> get aktiviteGecmisi => List.unmodifiable(_aktiviteGecmisi);
 
-  /// Uygulama acildigindan beri tetiklenen tedavi sayilari (turlere gore).
-  Map<TedaviTuru, int> get tedaviSayaclari => Map.unmodifiable(_tedaviSayaclari);
+  /// Tedavi sayilari (turlere gore), KALICI gecmisten HESAPLANIR (ayri bir
+  /// sayac tutulmuyor) -- boylece uygulama yeniden acildiginda sifirlanmaz,
+  /// depolanmis sensor gecmisiyle her zaman tutarlidir. Her zonun gecmisinde
+  /// "tedavi_aktif" alaninin YOK'tan bir tedaviye GECTIGI anlar sayilir.
+  Map<TedaviTuru, int> get tedaviSayaclari {
+    final sayaclar = <TedaviTuru, int>{
+      TedaviTuru.asitDozlama: 0,
+      TedaviTuru.klorEnjeksiyon: 0,
+      TedaviTuru.yuksekBasincliYikama: 0,
+    };
+    for (final zon in tumZonNumaralari) {
+      // _gecmisler EN YENI ONCE saklanir; kronolojik (eskiden yeniye) gerekir.
+      final kronolojik = (_gecmisler[zon] ?? const <SensorOkuma>[]).reversed;
+      var oncekiTedavi = TedaviTuru.yok;
+      for (final okuma in kronolojik) {
+        if (okuma.tedaviAktif != TedaviTuru.yok && oncekiTedavi == TedaviTuru.yok) {
+          sayaclar[okuma.tedaviAktif] = (sayaclar[okuma.tedaviAktif] ?? 0) + 1;
+        }
+        oncekiTedavi = okuma.tedaviAktif;
+      }
+    }
+    return sayaclar;
+  }
 
   /// Tum zonlardaki tum gecmis okumalar tek bir listede (istatistik hesaplari icin).
   List<SensorOkuma> get tumOkumalarBirlesik {
@@ -103,6 +119,36 @@ class UygulamaDurumu extends ChangeNotifier {
     return kume.toList()..sort();
   }
 
+  /// Verilen zon listesinin durum ozetini hesaplar (Genel Bakış ve Zon
+  /// Dashboard ekranlarinin ikisi de bunu kullanir -- ayni mantigin iki
+  /// yerde elle kopyalanmasini onler). Her zon TEK bir kovaya duser,
+  /// oncelik sirasi: cevrimdisi > tedavide > tespit edildi > belirsiz > normal.
+  ZonDurumOzeti durumOzetiHesapla(List<int> zonlar) {
+    var normal = 0, belirsiz = 0, tespitEdildi = 0, tedavide = 0, cevrimdisi = 0;
+    for (final zon in zonlar) {
+      final okuma = _sonOkumalar[zon];
+      final cevrimici = _zonCevrimici[zon] ?? false;
+      if (okuma == null || !cevrimici) {
+        cevrimdisi++;
+      } else if (okuma.tedaviAktif != TedaviTuru.yok) {
+        tedavide++;
+      } else if (okuma.durum == TeshisDurumu.tespitEdildi) {
+        tespitEdildi++;
+      } else if (okuma.durum == TeshisDurumu.belirsiz) {
+        belirsiz++;
+      } else {
+        normal++;
+      }
+    }
+    return ZonDurumOzeti(
+      normal: normal,
+      belirsiz: belirsiz,
+      tespitEdildi: tespitEdildi,
+      tedavide: tedavide,
+      cevrimdisi: cevrimdisi,
+    );
+  }
+
   // ============================================================================
   // BASLATMA
   // ============================================================================
@@ -121,9 +167,17 @@ class UygulamaDurumu extends ChangeNotifier {
       final onbellek = await _depolama.sonOkumayiGetir(zon);
       if (onbellek != null) {
         _sonOkumalar[zon] = onbellek;
+        // Uygulama tedavi surerken kapatilip acilmis olabilir -- bu durumda
+        // ilerleme cubugunun "sifirdan basliyormus" gibi gorunmemesi icin
+        // son bilinen okumanin zaman damgasini YAKLASIK baslangic olarak kullan.
+        if (onbellek.tedaviAktif != TedaviTuru.yok) {
+          _tedaviBaslangicZamanlari[zon] = onbellek.zaman;
+        }
       }
       _gecmisler[zon] = await _depolama.gecmisiGetir(zon);
     }
+
+    _aktiviteGecmisi.addAll(await _depolama.aktiviteGecmisiGetir());
 
     _hazir = true;
     notifyListeners();
@@ -206,7 +260,6 @@ class UygulamaDurumu extends ChangeNotifier {
     if (okuma.tedaviAktif != TedaviTuru.yok &&
         (onceki == null || onceki.tedaviAktif != okuma.tedaviAktif)) {
       _tedaviBaslangicZamanlari[okuma.zone] = okuma.zaman;
-      _tedaviSayaclari[okuma.tedaviAktif] = (_tedaviSayaclari[okuma.tedaviAktif] ?? 0) + 1;
     } else if (okuma.tedaviAktif == TedaviTuru.yok) {
       _tedaviBaslangicZamanlari.remove(okuma.zone);
     }
@@ -229,6 +282,7 @@ class UygulamaDurumu extends ChangeNotifier {
     void kaydet(String mesaj, AktiviteTuru tur) {
       _aktiviteGecmisi.insert(0, AktiviteKaydi(zaman: yeni.zaman, zone: yeni.zone, mesaj: mesaj, tur: tur));
       if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
+      unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
       if (_bildirimlerAcik) _bildirimKuyrugu.add(mesaj);
     }
 
@@ -349,5 +403,24 @@ class UygulamaDurumu extends ChangeNotifier {
 void unawaited(Future<void> future) {
   future.catchError((Object hata) {
     debugPrint('AquaGuard depolama hatasi: $hata');
+  });
+}
+
+/// Bir zon grubunun (tarla veya tum sistem) durum dagilimi. Genel Bakış ve
+/// Zon Dashboard ekranlarinin ikisi de UygulamaDurumu.durumOzetiHesapla()
+/// araciligiyla bunu kullanir.
+class ZonDurumOzeti {
+  final int normal;
+  final int belirsiz;
+  final int tespitEdildi;
+  final int tedavide;
+  final int cevrimdisi;
+
+  const ZonDurumOzeti({
+    required this.normal,
+    required this.belirsiz,
+    required this.tespitEdildi,
+    required this.tedavide,
+    required this.cevrimdisi,
   });
 }

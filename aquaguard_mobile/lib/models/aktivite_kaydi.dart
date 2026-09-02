@@ -57,4 +57,21 @@ class AktiviteKaydi {
         return const Color(0xFF1565C0);
     }
   }
+
+  Map<String, dynamic> toJson() => {
+        'zaman': zaman.toIso8601String(),
+        'zone': zone,
+        'mesaj': mesaj,
+        'tur': tur.name,
+      };
+
+  factory AktiviteKaydi.fromJson(Map<String, dynamic> json) => AktiviteKaydi(
+        zaman: DateTime.tryParse(json['zaman'] as String? ?? '') ?? DateTime.now(),
+        zone: (json['zone'] as num?)?.toInt() ?? 0,
+        mesaj: json['mesaj'] as String? ?? '',
+        tur: AktiviteTuru.values.firstWhere(
+          (e) => e.name == json['tur'],
+          orElse: () => AktiviteTuru.normaleDonus,
+        ),
+      );
 }

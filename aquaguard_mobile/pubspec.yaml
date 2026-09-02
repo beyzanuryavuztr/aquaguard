@@ -1,5 +1,5 @@
 name: aquaguard_mobile
-description: "A new Flutter project."
+description: "AquaGuard - Toprak altı damla sulama sistemlerinde tıkanma türünü otonom teşhis eden ve tedavi eden akıllı izleme uygulaması (TEKNOFEST 2026)."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

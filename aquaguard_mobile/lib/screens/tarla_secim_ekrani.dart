@@ -139,10 +139,24 @@ class TarlaSecimEkrani extends StatelessWidget {
                 ),
                 validator: (deger) {
                   if (deger == null || deger.trim().isEmpty) return 'En az bir zon numarası girin';
-                  final gecerliMi = deger.split(',').every(
-                        (parca) => int.tryParse(parca.trim()) != null,
-                      );
-                  return gecerliMi ? null : 'Zon numaraları virgülle ayrılmış tam sayı olmalı';
+                  final parcalar = deger.split(',').map((p) => p.trim());
+                  final hepsiGecerliSayi = parcalar.every((p) => int.tryParse(p) != null);
+                  if (!hepsiGecerliSayi) return 'Zon numaraları virgülle ayrılmış tam sayı olmalı';
+
+                  final girilenZonlar = parcalar.map(int.parse).toSet();
+
+                  // Baska bir tarlada ZATEN KULLANILAN zon numarasi var mi?
+                  // (duzenlenen tarlanin kendisi haric -- kendi zonlarini
+                  // degistirmeden tekrar kaydetmek hataya dusmemeli)
+                  final durum = context.read<UygulamaDurumu>();
+                  for (final digerTarla in durum.tarlalar) {
+                    if (duzenlenecekTarla != null && digerTarla.id == duzenlenecekTarla.id) continue;
+                    final cakisanlar = girilenZonlar.intersection(digerTarla.zonNumaralari.toSet());
+                    if (cakisanlar.isNotEmpty) {
+                      return 'Zon ${cakisanlar.join(", ")} zaten "${digerTarla.ad}" tarlasında kullanılıyor';
+                    }
+                  }
+                  return null;
                 },
               ),
             ],

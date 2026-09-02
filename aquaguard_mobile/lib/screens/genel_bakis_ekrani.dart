@@ -16,7 +16,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/aktivite_kaydi.dart';
-import '../models/sensor_okuma.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/durum_renkleri.dart';
@@ -30,21 +29,7 @@ class GenelBakisEkrani extends StatelessWidget {
   Widget build(BuildContext context) {
     final durum = context.watch<UygulamaDurumu>();
 
-    var normal = 0, dikkat = 0, tedavide = 0, cevrimdisi = 0;
-    for (final zon in durum.tumZonNumaralari) {
-      final okuma = durum.sonOkuma(zon);
-      final cevrimici = durum.zonCevrimiciMi(zon);
-      if (okuma == null || !cevrimici) {
-        cevrimdisi++;
-      } else if (okuma.tedaviAktif != TedaviTuru.yok) {
-        tedavide++;
-      } else if (okuma.durum == TeshisDurumu.tespitEdildi || okuma.durum == TeshisDurumu.belirsiz) {
-        dikkat++;
-      } else {
-        normal++;
-      }
-    }
-
+    final ozet = durum.durumOzetiHesapla(durum.tumZonNumaralari);
     final sonAktiviteler = durum.aktiviteGecmisi.take(6).toList();
 
     return Scaffold(
@@ -92,10 +77,10 @@ class GenelBakisEkrani extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       _IstatistikKarti(
-                        deger: tedavide,
+                        deger: ozet.tedavide,
                         etiket: 'Aktif Tedavi',
                         ikon: Icons.build_circle,
-                        vurgulaRenk: tedavide > 0 ? DurumRenkleri.tedaviAktif : null,
+                        vurgulaRenk: ozet.tedavide > 0 ? DurumRenkleri.tedaviAktif : null,
                       ),
                     ],
                   ),
@@ -104,13 +89,15 @@ class GenelBakisEkrani extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      _DurumOzetRozeti(sayi: normal, etiket: 'Normal', renk: DurumRenkleri.normal),
+                      _DurumOzetRozeti(sayi: ozet.normal, etiket: 'Normal', renk: DurumRenkleri.normal),
                       const SizedBox(width: 8),
-                      _DurumOzetRozeti(sayi: dikkat, etiket: 'Dikkat', renk: DurumRenkleri.tespitEdildi),
-                      if (cevrimdisi > 0) ...[
+                      _DurumOzetRozeti(sayi: ozet.belirsiz, etiket: 'Belirsiz', renk: DurumRenkleri.belirsiz),
+                      const SizedBox(width: 8),
+                      _DurumOzetRozeti(sayi: ozet.tespitEdildi, etiket: 'Tespit', renk: DurumRenkleri.tespitEdildi),
+                      if (ozet.cevrimdisi > 0) ...[
                         const SizedBox(width: 8),
                         _DurumOzetRozeti(
-                            sayi: cevrimdisi, etiket: 'Çevrimdışı', renk: DurumRenkleri.cevrimdisi),
+                            sayi: ozet.cevrimdisi, etiket: 'Çevrimdışı', renk: DurumRenkleri.cevrimdisi),
                       ],
                     ],
                   ),

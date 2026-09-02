@@ -23,6 +23,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/ayarlar_sabitleri.dart';
+import '../models/aktivite_kaydi.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 
@@ -32,6 +33,7 @@ class DepolamaServisi {
   static const _mqttPortAnahtari = 'aquaguard_mqtt_port';
   static const _bildirimlerAnahtari = 'aquaguard_bildirimler_acik';
   static const _demoModuAnahtari = 'aquaguard_demo_modu_acik';
+  static const _aktiviteGecmisiAnahtari = 'aquaguard_aktivite_gecmisi';
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>
@@ -158,5 +160,25 @@ class DepolamaServisi {
   Future<void> demoModunuAyarla(bool acik) async {
     final tercihler = await _tercihler;
     await tercihler.setBool(_demoModuAnahtari, acik);
+  }
+
+  // ==========================================================================
+  // AKTIVITE GECMISI (kalici -- uygulama yeniden acildiginda kaybolmasin diye)
+  // ==========================================================================
+
+  Future<List<AktiviteKaydi>> aktiviteGecmisiGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_aktiviteGecmisiAnahtari);
+    if (ham == null) return [];
+    final liste = jsonDecode(ham) as List<dynamic>;
+    return liste.map((e) => AktiviteKaydi.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> aktiviteGecmisiniKaydet(List<AktiviteKaydi> gecmis) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(
+      _aktiviteGecmisiAnahtari,
+      jsonEncode(gecmis.map((k) => k.toJson()).toList()),
+    );
   }
 }
