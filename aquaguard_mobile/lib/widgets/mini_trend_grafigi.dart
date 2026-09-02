@@ -43,10 +43,9 @@ class MiniTrendGrafigi extends StatelessWidget {
               children: [
                 Text(
                   baslik,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(color: Colors.black54),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: Colors.black54),
                 ),
                 Text(
                   '${guncelDeger.toStringAsFixed(guncelDeger.abs() < 10 ? 2 : 0)} $birim',
@@ -72,7 +71,9 @@ class MiniTrendGrafigi extends StatelessWidget {
                         borderData: FlBorderData(show: false),
                         lineTouchData: const LineTouchData(enabled: false),
                         minY: degerler.reduce((a, b) => a < b ? a : b) * 0.95,
-                        maxY: degerler.reduce((a, b) => a > b ? a : b) * 1.05 + 0.01,
+                        maxY:
+                            degerler.reduce((a, b) => a > b ? a : b) * 1.05 +
+                            0.01,
                         lineBarsData: [
                           LineChartBarData(
                             spots: [

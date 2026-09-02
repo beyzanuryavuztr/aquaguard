@@ -23,6 +23,7 @@ import '../models/aktivite_kaydi.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../services/depolama_servisi.dart';
+import '../services/gecmis_veri_uretici.dart';
 import '../services/mqtt_servisi.dart';
 import '../services/simulasyon_servisi.dart';
 
@@ -171,6 +172,30 @@ class UygulamaDurumu extends ChangeNotifier {
     // Cevrimdisi mod: baglanmadan ONCE son bilinen degerleri yukle,
     // boylece ekran hicbir zaman bomben acilmiyor.
     for (final zon in tumZonNumaralari) {
+      var gecmis = await _depolama.gecmisiGetir(zon);
+
+      // Bu zon icin HIC gecmis yoksa (gercekten ilk kurulum): sanki sistem
+      // gunlerdir sahada calisiyormus gibi GECMISE DONUK sentetik bir
+      // gecmis uret ve kaydet -- boylece Istatistikler/Aktivite Gecmisi/
+      // trend grafikleri ilk acilista bile bombos degil, dolu gorunur.
+      if (gecmis.isEmpty) {
+        final kronolojikGecmis = GecmisVeriUreticisi.zonGecmisiUret(zon);
+        gecmis = kronolojikGecmis.reversed
+            .toList(); // depolama EN YENI ONCE bekler
+        unawaited(_depolama.gecmisiTopluKaydet(zon, gecmis));
+
+        final uretilenAktiviteler = GecmisVeriUreticisi.aktiviteleriTuret(
+          kronolojikGecmis,
+        );
+        _aktiviteGecmisi.addAll(uretilenAktiviteler.reversed);
+
+        if (kronolojikGecmis.isNotEmpty) {
+          final sonUretilen = kronolojikGecmis.last;
+          unawaited(_depolama.sonOkumayiKaydet(sonUretilen));
+        }
+      }
+      _gecmisler[zon] = gecmis;
+
       final onbellek = await _depolama.sonOkumayiGetir(zon);
       if (onbellek != null) {
         _sonOkumalar[zon] = onbellek;
@@ -181,10 +206,20 @@ class UygulamaDurumu extends ChangeNotifier {
           _tedaviBaslangicZamanlari[zon] = onbellek.zaman;
         }
       }
-      _gecmisler[zon] = await _depolama.gecmisiGetir(zon);
     }
 
-    _aktiviteGecmisi.addAll(await _depolama.aktiviteGecmisiGetir());
+    final oncedenKayitliAktiviteler = await _depolama.aktiviteGecmisiGetir();
+    final yeniUretilenVarMi = _aktiviteGecmisi.isNotEmpty;
+    _aktiviteGecmisi.addAll(oncedenKayitliAktiviteler);
+    _aktiviteGecmisi.sort((a, b) => b.zaman.compareTo(a.zaman));
+    if (_aktiviteGecmisi.length > 200) {
+      _aktiviteGecmisi.removeRange(200, _aktiviteGecmisi.length);
+    }
+    // Yeni zonlar icin uretilen aktiviteler varsa, birlestirilmis+sirali
+    // son hali kalici depoya yaz (aksi halde bir sonraki acilista kaybolur).
+    if (yeniUretilenVarMi) {
+      unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+    }
 
     _hazir = true;
     notifyListeners();
@@ -289,61 +324,14 @@ class UygulamaDurumu extends ChangeNotifier {
   void _degisimleriKaydet(SensorOkuma? onceki, SensorOkuma yeni) {
     if (onceki == null) return; // ilk veri -- gecmis karsilastirma yok
 
-    void kaydet(String mesaj, AktiviteTuru tur) {
-      _aktiviteGecmisi.insert(
-        0,
-        AktiviteKaydi(
-          zaman: yeni.zaman,
-          zone: yeni.zone,
-          mesaj: mesaj,
-          tur: tur,
-        ),
-      );
+    // Mesaj/kural mantigi burada DEGIL -- gecisAktiviteleriniUret() saf
+    // fonksiyonunda (bkz. models/aktivite_kaydi.dart). GecmisVeriUreticisi
+    // de (gecmise donuk toplu veri uretirken) AYNI fonksiyonu kullanir.
+    for (final kayit in gecisAktiviteleriniUret(onceki, yeni)) {
+      _aktiviteGecmisi.insert(0, kayit);
       if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
       unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-      if (_bildirimlerAcik) _bildirimKuyrugu.add(mesaj);
-    }
-
-    if (onceki.durum != yeni.durum) {
-      switch (yeni.durum) {
-        case TeshisDurumu.tespitEdildi:
-          kaydet(
-            'Zon ${yeni.zone}: ${turEtiketi(yeni.tikanmaTuru)} tıkanma tespit edildi '
-            '(güven %${yeni.guven.toStringAsFixed(0)})',
-            AktiviteTuru.tespit,
-          );
-          break;
-        case TeshisDurumu.belirsiz:
-          kaydet(
-            'Zon ${yeni.zone}: Tıkanma şüphesi var, operatör kontrolü gerekiyor',
-            AktiviteTuru.belirsiz,
-          );
-          break;
-        case TeshisDurumu.normal:
-          if (onceki.durum != TeshisDurumu.bilinmiyor) {
-            kaydet(
-              'Zon ${yeni.zone}: Durum normale döndü',
-              AktiviteTuru.normaleDonus,
-            );
-          }
-          break;
-        case TeshisDurumu.bilinmiyor:
-          break;
-      }
-    }
-
-    if (onceki.tedaviAktif != yeni.tedaviAktif) {
-      if (yeni.tedaviAktif != TedaviTuru.yok) {
-        kaydet(
-          'Zon ${yeni.zone}: ${tedaviEtiketi(yeni.tedaviAktif)} başlatıldı',
-          AktiviteTuru.tedaviBaslangic,
-        );
-      } else if (onceki.tedaviAktif != TedaviTuru.yok) {
-        kaydet(
-          'Zon ${yeni.zone}: Tedavi tamamlandı, durulama başladı',
-          AktiviteTuru.tedaviBitis,
-        );
-      }
+      if (_bildirimlerAcik) _bildirimKuyrugu.add(kayit.mesaj);
     }
   }
 

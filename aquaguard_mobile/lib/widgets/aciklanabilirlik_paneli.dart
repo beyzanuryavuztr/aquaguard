@@ -39,9 +39,15 @@ class AciklanabilirlikPaneli extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.psychology_outlined, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.psychology_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
-                Text('Neden Bu Karar?', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Neden Bu Karar?',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ],
             ),
             const SizedBox(height: 4),

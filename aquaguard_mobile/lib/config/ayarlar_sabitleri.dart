@@ -36,7 +36,8 @@ class AyarlarSabitleri {
   /// portu (1883) kullanilirsa WebSocket baglantisi asla kurulamaz --
   /// bu yuzden varsayilan deger burada platforma gore SECILIR, sabit
   /// birakilmaz.
-  static int get varsayilanPort => kIsWeb ? varsayilanWebSocketPort : varsayilanTcpPort;
+  static int get varsayilanPort =>
+      kIsWeb ? varsayilanWebSocketPort : varsayilanTcpPort;
 
   // --- Konu (topic) sablonlari -- firmware/mqtt_handler.h ile BIREBIR AYNI ---
   static String veriKonusu(int zone) => 'aquaguard/zone$zone/veri';

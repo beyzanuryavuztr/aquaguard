@@ -145,10 +145,10 @@ class SensorOkuma {
 
   /// Ucunun turu icin guven yuzdesini isimle sorgulamak icin yardimci (grafik cizimlerinde kullanislidir).
   Map<TikanmaTuru, double> get tumTurGuvenleri => {
-        TikanmaTuru.kimyasal: guvenKimyasal,
-        TikanmaTuru.biyolojik: guvenBiyolojik,
-        TikanmaTuru.fiziksel: guvenFiziksel,
-      };
+    TikanmaTuru.kimyasal: guvenKimyasal,
+    TikanmaTuru.biyolojik: guvenBiyolojik,
+    TikanmaTuru.fiziksel: guvenFiziksel,
+  };
 
   /// MQTT'den gelen JSON haritasindan (Map) nesne olusturur.
   /// Sayisal alanlar hem int hem double olarak gelebilir, bu yuzden
@@ -178,23 +178,23 @@ class SensorOkuma {
 
   /// Yerel depolamaya (SharedPreferences) kaydetmek icin JSON'a cevirir.
   Map<String, dynamic> toJson() => {
-        'zaman': zaman.toIso8601String(),
-        'zone': zone,
-        'ph': ph,
-        'ec': ec,
-        'orp': orp,
-        'turbidite': turbidite,
-        'debi': debi,
-        'delta_basinc': deltaBasinc,
-        'durum': durum.name,
-        'tikanma_turu': tikanmaTuru.name,
-        'guven': guven,
-        'guven_kimyasal': guvenKimyasal,
-        'guven_biyolojik': guvenBiyolojik,
-        'guven_fiziksel': guvenFiziksel,
-        'tedavi_aktif': tedaviAktif.name,
-        'durulama_aktif': durulamaAktif,
-      };
+    'zaman': zaman.toIso8601String(),
+    'zone': zone,
+    'ph': ph,
+    'ec': ec,
+    'orp': orp,
+    'turbidite': turbidite,
+    'debi': debi,
+    'delta_basinc': deltaBasinc,
+    'durum': durum.name,
+    'tikanma_turu': tikanmaTuru.name,
+    'guven': guven,
+    'guven_kimyasal': guvenKimyasal,
+    'guven_biyolojik': guvenBiyolojik,
+    'guven_fiziksel': guvenFiziksel,
+    'tedavi_aktif': tedaviAktif.name,
+    'durulama_aktif': durulamaAktif,
+  };
 
   /// toJson() ile kaydedilmis (dolayisiyla Turkce string kodlari degil,
   /// enum.name kodlarini tasiyan) bir haritadan geri yukler.
@@ -202,7 +202,8 @@ class SensorOkuma {
     double sayi(dynamic deger) => (deger as num?)?.toDouble() ?? 0.0;
 
     return SensorOkuma(
-      zaman: DateTime.tryParse(json['zaman'] as String? ?? '') ?? DateTime.now(),
+      zaman:
+          DateTime.tryParse(json['zaman'] as String? ?? '') ?? DateTime.now(),
       zone: (json['zone'] as num?)?.toInt() ?? 0,
       ph: sayi(json['ph']),
       ec: sayi(json['ec']),

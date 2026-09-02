@@ -61,7 +61,14 @@ const Map<String, Map<String, SensorImzasi>> sensorImzalari = {
   },
 };
 
-const List<String> sensorSirasi = ['ph', 'ec', 'orp', 'turbidite', 'debi', 'delta_basinc'];
+const List<String> sensorSirasi = [
+  'ph',
+  'ec',
+  'orp',
+  'turbidite',
+  'debi',
+  'delta_basinc',
+];
 
 // --- Katman 1 kural esikleri -- config.h / aquaguard_karar_motoru.py ile ayni ---
 const double referansDebi = 4.0;

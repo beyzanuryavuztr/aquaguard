@@ -94,7 +94,9 @@ class MqttServisi {
     }
 
     if (istemci.connectionStatus?.state != MqttConnectionState.connected) {
-      debugPrint('[AquaGuard/MQTT] Bağlantı kurulamadı: ${istemci.connectionStatus}');
+      debugPrint(
+        '[AquaGuard/MQTT] Bağlantı kurulamadı: ${istemci.connectionStatus}',
+      );
       baglantiDurumuDegistiginde(MqttBaglantiDurumu.hata);
       return false;
     }

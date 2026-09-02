@@ -37,7 +37,10 @@ class ZonDurumKarti extends StatelessWidget {
   Widget build(BuildContext context) {
     final renk = DurumRenkleri.renkGetir(okuma: okuma, cevrimici: cevrimici);
     final ikon = DurumRenkleri.ikonGetir(okuma: okuma, cevrimici: cevrimici);
-    final ozet = DurumRenkleri.ozetMetniGetir(okuma: okuma, cevrimici: cevrimici);
+    final ozet = DurumRenkleri.ozetMetniGetir(
+      okuma: okuma,
+      cevrimici: cevrimici,
+    );
     const gecisSuresi = Duration(milliseconds: 400);
 
     return Padding(
@@ -78,9 +81,8 @@ class ZonDurumKarti extends StatelessWidget {
                               children: [
                                 Text(
                                   'Zon $zonNumarasi',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 if (okuma != null &&
                                     okuma!.durum == TeshisDurumu.tespitEdildi &&
@@ -93,7 +95,10 @@ class ZonDurumKarti extends StatelessWidget {
                             const SizedBox(height: 4),
                             AnimatedDefaultTextStyle(
                               duration: gecisSuresi,
-                              style: TextStyle(color: renk, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: renk,
+                                fontWeight: FontWeight.w600,
+                              ),
                               child: Text(ozet),
                             ),
                             if (okuma != null) ...[
@@ -135,7 +140,11 @@ class _GuvenRozeti extends StatelessWidget {
       ),
       child: Text(
         '%${guven.toStringAsFixed(0)}',
-        style: TextStyle(color: renk, fontSize: 11, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: renk,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

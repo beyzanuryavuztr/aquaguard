@@ -133,6 +133,19 @@ class DepolamaServisi {
         .toList();
   }
 
+  /// Bir zonun TUM gecmisini tek seferde yazar (liste EN YENI ONCE
+  /// sirali olmali). `gecmiseEkle`'nin aksine mevcut gecmisi OKUMAZ --
+  /// GecmisVeriUreticisi gibi toplu (bulk) yazimlar icin, N kez okuma+
+  /// yazma yapmaktan cok daha verimlidir.
+  Future<void> gecmisiTopluKaydet(int zone, List<SensorOkuma> gecmis) async {
+    final tercihler = await _tercihler;
+    final sinirli = gecmis.take(_gecmisMaksimumUzunluk).toList();
+    await tercihler.setString(
+      _gecmisAnahtari(zone),
+      jsonEncode(sinirli.map((o) => o.toJson()).toList()),
+    );
+  }
+
   /// Yeni bir okumayi gecmisin BASINA ekler (en yeni once) ve listeyi
   /// _gecmisMaksimumUzunluk ile sinirlar (cihaz depolamasi sisirilmesin diye).
   Future<void> gecmiseEkle(SensorOkuma okuma) async {

@@ -14,7 +14,96 @@ library;
 
 import 'package:flutter/material.dart';
 
-enum AktiviteTuru { tespit, belirsiz, normaleDonus, tedaviBaslangic, tedaviBitis }
+import 'sensor_okuma.dart';
+
+enum AktiviteTuru {
+  tespit,
+  belirsiz,
+  normaleDonus,
+  tedaviBaslangic,
+  tedaviBitis,
+}
+
+/// Iki ARDISIK okuma arasindaki durum/tedavi GECISLERINDEN aktivite kaydi
+/// uretir (saf fonksiyon, yan etkisi yok). Hem UygulamaDurumu (canli akis
+/// sirasinda) hem de GecmisVeriUreticisi (gecmise donuk toplu veri
+/// uretirken) AYNI bu fonksiyonu kullanir -- ayni mesaj/kural mantigi iki
+/// yerde elle kopyalanmasin diye (bkz. feedback: "Schema single source of
+/// truth" -- bu projede daha once tam olarak bu tur bir kopyalanma bir
+/// hataya sebep olmustu).
+List<AktiviteKaydi> gecisAktiviteleriniUret(
+  SensorOkuma onceki,
+  SensorOkuma yeni,
+) {
+  final sonuc = <AktiviteKaydi>[];
+
+  if (onceki.durum != yeni.durum) {
+    switch (yeni.durum) {
+      case TeshisDurumu.tespitEdildi:
+        sonuc.add(
+          AktiviteKaydi(
+            zaman: yeni.zaman,
+            zone: yeni.zone,
+            mesaj:
+                'Zon ${yeni.zone}: ${turEtiketi(yeni.tikanmaTuru)} tıkanma tespit edildi '
+                '(güven %${yeni.guven.toStringAsFixed(0)})',
+            tur: AktiviteTuru.tespit,
+          ),
+        );
+        break;
+      case TeshisDurumu.belirsiz:
+        sonuc.add(
+          AktiviteKaydi(
+            zaman: yeni.zaman,
+            zone: yeni.zone,
+            mesaj:
+                'Zon ${yeni.zone}: Tıkanma şüphesi var, operatör kontrolü gerekiyor',
+            tur: AktiviteTuru.belirsiz,
+          ),
+        );
+        break;
+      case TeshisDurumu.normal:
+        if (onceki.durum != TeshisDurumu.bilinmiyor) {
+          sonuc.add(
+            AktiviteKaydi(
+              zaman: yeni.zaman,
+              zone: yeni.zone,
+              mesaj: 'Zon ${yeni.zone}: Durum normale döndü',
+              tur: AktiviteTuru.normaleDonus,
+            ),
+          );
+        }
+        break;
+      case TeshisDurumu.bilinmiyor:
+        break;
+    }
+  }
+
+  if (onceki.tedaviAktif != yeni.tedaviAktif) {
+    if (yeni.tedaviAktif != TedaviTuru.yok) {
+      sonuc.add(
+        AktiviteKaydi(
+          zaman: yeni.zaman,
+          zone: yeni.zone,
+          mesaj:
+              'Zon ${yeni.zone}: ${tedaviEtiketi(yeni.tedaviAktif)} başlatıldı',
+          tur: AktiviteTuru.tedaviBaslangic,
+        ),
+      );
+    } else if (onceki.tedaviAktif != TedaviTuru.yok) {
+      sonuc.add(
+        AktiviteKaydi(
+          zaman: yeni.zaman,
+          zone: yeni.zone,
+          mesaj: 'Zon ${yeni.zone}: Tedavi tamamlandı, durulama başladı',
+          tur: AktiviteTuru.tedaviBitis,
+        ),
+      );
+    }
+  }
+
+  return sonuc;
+}
 
 class AktiviteKaydi {
   final DateTime zaman;
@@ -59,19 +148,19 @@ class AktiviteKaydi {
   }
 
   Map<String, dynamic> toJson() => {
-        'zaman': zaman.toIso8601String(),
-        'zone': zone,
-        'mesaj': mesaj,
-        'tur': tur.name,
-      };
+    'zaman': zaman.toIso8601String(),
+    'zone': zone,
+    'mesaj': mesaj,
+    'tur': tur.name,
+  };
 
   factory AktiviteKaydi.fromJson(Map<String, dynamic> json) => AktiviteKaydi(
-        zaman: DateTime.tryParse(json['zaman'] as String? ?? '') ?? DateTime.now(),
-        zone: (json['zone'] as num?)?.toInt() ?? 0,
-        mesaj: json['mesaj'] as String? ?? '',
-        tur: AktiviteTuru.values.firstWhere(
-          (e) => e.name == json['tur'],
-          orElse: () => AktiviteTuru.normaleDonus,
-        ),
-      );
+    zaman: DateTime.tryParse(json['zaman'] as String? ?? '') ?? DateTime.now(),
+    zone: (json['zone'] as num?)?.toInt() ?? 0,
+    mesaj: json['mesaj'] as String? ?? '',
+    tur: AktiviteTuru.values.firstWhere(
+      (e) => e.name == json['tur'],
+      orElse: () => AktiviteTuru.normaleDonus,
+    ),
+  );
 }

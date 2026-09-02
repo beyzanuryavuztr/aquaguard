@@ -40,7 +40,11 @@ class KararSonucu {
 class KararMotoru {
   KararMotoru._();
 
-  static const List<String> _tipSiniflari = ['kimyasal', 'biyolojik', 'fiziksel'];
+  static const List<String> _tipSiniflari = [
+    'kimyasal',
+    'biyolojik',
+    'fiziksel',
+  ];
 
   static double _logGaussYogunlugu(double x, double ortalama, double std) {
     final z = (x - ortalama) / std;
@@ -56,7 +60,11 @@ class KararMotoru {
     final tikanmaVar = debiDusus || basincArtis || turbiditeYuksek;
 
     if (!tikanmaVar) {
-      return const KararSonucu(durum: TeshisDurumu.normal, tur: TikanmaTuru.yok, guven: 100.0);
+      return const KararSonucu(
+        durum: TeshisDurumu.normal,
+        tur: TikanmaTuru.yok,
+        guven: 100.0,
+      );
     }
 
     final logSkorlar = <String, double>{};
@@ -93,7 +101,9 @@ class KararMotoru {
     }
 
     final tur = turAyristir(enIyiTur);
-    final durum = enYuksekGuven >= guvenEsigi ? TeshisDurumu.tespitEdildi : TeshisDurumu.belirsiz;
+    final durum = enYuksekGuven >= guvenEsigi
+        ? TeshisDurumu.tespitEdildi
+        : TeshisDurumu.belirsiz;
 
     return KararSonucu(
       durum: durum,

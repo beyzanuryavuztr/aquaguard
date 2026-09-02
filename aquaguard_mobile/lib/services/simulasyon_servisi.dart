@@ -25,12 +25,15 @@ import '../config/sensor_imzalari.dart';
 import '../models/sensor_okuma.dart';
 import 'karar_motoru.dart';
 
-class _SimAdim {
+/// Tek bir senaryo adiminin ham verisi. `gecmis_veri_uretici.dart` da ayni
+/// senaryo mantigini (bu sefer GECMISE DONUK zaman damgalariyla) kullanmak
+/// icin bu sinifi ve `senaryoAdimlariUret()`'i disari acar.
+class SimAdim {
   final Map<String, double> ornek;
   final TedaviTuru tedaviAktif;
   final bool durulamaAktif;
 
-  const _SimAdim(this.ornek, this.tedaviAktif, this.durulamaAktif);
+  const SimAdim(this.ornek, this.tedaviAktif, this.durulamaAktif);
 }
 
 TedaviTuru _tedaviEslemesi(String tur) {
@@ -76,45 +79,71 @@ Map<String, double> _tamOrnekUret(
 ) {
   return {
     for (final sensor in sensorSirasi)
-      sensor: _sensorDegeriHesapla(sensor, kaynakSinif, hedefSinif, ilerleme, rng),
+      sensor: _sensorDegeriHesapla(
+        sensor,
+        kaynakSinif,
+        hedefSinif,
+        ilerleme,
+        rng,
+      ),
   };
 }
 
 /// Sonsuz bir senaryo akisi: normal -> kotulesme -> tedavi -> durulama ->
 /// iyilesme, ardindan yeni rastgele bir tikanma turuyle tekrar basa doner.
-Iterable<_SimAdim> _senaryoUret(math.Random rng) sync* {
+Iterable<SimAdim> senaryoAdimlariUret(math.Random rng) sync* {
   const turler = ['kimyasal', 'biyolojik', 'fiziksel'];
 
   while (true) {
     final hedefTur = turler[rng.nextInt(turler.length)];
 
     for (var i = 0; i < 4; i++) {
-      yield _SimAdim(_tamOrnekUret('normal', 'normal', 0.0, rng), TedaviTuru.yok, false);
+      yield SimAdim(
+        _tamOrnekUret('normal', 'normal', 0.0, rng),
+        TedaviTuru.yok,
+        false,
+      );
     }
 
     const kotulesmeAdim = 6;
     for (var i = 1; i <= kotulesmeAdim; i++) {
       final ilerleme = i / kotulesmeAdim;
-      yield _SimAdim(_tamOrnekUret('normal', hedefTur, ilerleme, rng), TedaviTuru.yok, false);
+      yield SimAdim(
+        _tamOrnekUret('normal', hedefTur, ilerleme, rng),
+        TedaviTuru.yok,
+        false,
+      );
     }
 
     final tedaviTuru = _tedaviEslemesi(hedefTur);
     const tedaviAdim = 3;
     for (var i = 0; i < tedaviAdim; i++) {
       final ilerleme = (1.0 - 0.15 * i).clamp(0.0, 1.0);
-      yield _SimAdim(_tamOrnekUret('normal', hedefTur, ilerleme, rng), tedaviTuru, false);
+      yield SimAdim(
+        _tamOrnekUret('normal', hedefTur, ilerleme, rng),
+        tedaviTuru,
+        false,
+      );
     }
 
     const durulamaAdim = 2;
     for (var i = 0; i < durulamaAdim; i++) {
       final ilerleme = (0.5 - 0.25 * i).clamp(0.0, 1.0);
-      yield _SimAdim(_tamOrnekUret('normal', hedefTur, ilerleme, rng), TedaviTuru.yok, true);
+      yield SimAdim(
+        _tamOrnekUret('normal', hedefTur, ilerleme, rng),
+        TedaviTuru.yok,
+        true,
+      );
     }
 
     const iyilesmeAdim = 4;
     for (var i = 1; i <= iyilesmeAdim; i++) {
       final ilerleme = (0.25 - 0.25 * (i / iyilesmeAdim)).clamp(0.0, 1.0);
-      yield _SimAdim(_tamOrnekUret('normal', hedefTur, ilerleme, rng), TedaviTuru.yok, false);
+      yield SimAdim(
+        _tamOrnekUret('normal', hedefTur, ilerleme, rng),
+        TedaviTuru.yok,
+        false,
+      );
     }
   }
 }
@@ -123,7 +152,7 @@ class SimulasyonServisi {
   final List<int> zonlar;
   final void Function(SensorOkuma okuma) veriUretildiginde;
 
-  final Map<int, Iterator<_SimAdim>> _iteratorlar = {};
+  final Map<int, Iterator<SimAdim>> _iteratorlar = {};
   Timer? _zamanlayici;
 
   SimulasyonServisi({required this.zonlar, required this.veriUretildiginde});
@@ -134,7 +163,9 @@ class SimulasyonServisi {
     final tohumRng = math.Random();
     _iteratorlar.clear();
     for (final zon in zonlar) {
-      _iteratorlar[zon] = _senaryoUret(math.Random(tohumRng.nextInt(0x7FFFFFFF))).iterator;
+      _iteratorlar[zon] = senaryoAdimlariUret(
+        math.Random(tohumRng.nextInt(0x7FFFFFFF)),
+      ).iterator;
     }
 
     _zamanlayici?.cancel();
@@ -152,28 +183,34 @@ class SimulasyonServisi {
     for (final zon in zonlar) {
       final iterator = _iteratorlar[zon];
       if (iterator == null || !iterator.moveNext()) continue;
-
-      final adim = iterator.current;
-      final teshis = KararMotoru.teshisEt(adim.ornek);
-
-      veriUretildiginde(SensorOkuma(
-        zaman: DateTime.now(),
-        zone: zon,
-        ph: adim.ornek['ph']!,
-        ec: adim.ornek['ec']!,
-        orp: adim.ornek['orp']!,
-        turbidite: adim.ornek['turbidite']!,
-        debi: adim.ornek['debi']!,
-        deltaBasinc: adim.ornek['delta_basinc']!,
-        durum: teshis.durum,
-        tikanmaTuru: teshis.tur,
-        guven: teshis.guven,
-        guvenKimyasal: teshis.guvenKimyasal,
-        guvenBiyolojik: teshis.guvenBiyolojik,
-        guvenFiziksel: teshis.guvenFiziksel,
-        tedaviAktif: adim.tedaviAktif,
-        durulamaAktif: adim.durulamaAktif,
-      ));
+      veriUretildiginde(
+        simAdimindanOkumaUret(iterator.current, zon, DateTime.now()),
+      );
     }
   }
+}
+
+/// Bir [SimAdim]'i (karar motorunu calistirarak) tam bir [SensorOkuma]'ya
+/// cevirir. Hem canli SimulasyonServisi hem de GecmisVeriUreticisi (gecmise
+/// donuk toplu veri uretimi) AYNI bu fonksiyonu kullanir -- tek kaynak.
+SensorOkuma simAdimindanOkumaUret(SimAdim adim, int zone, DateTime zaman) {
+  final teshis = KararMotoru.teshisEt(adim.ornek);
+  return SensorOkuma(
+    zaman: zaman,
+    zone: zone,
+    ph: adim.ornek['ph']!,
+    ec: adim.ornek['ec']!,
+    orp: adim.ornek['orp']!,
+    turbidite: adim.ornek['turbidite']!,
+    debi: adim.ornek['debi']!,
+    deltaBasinc: adim.ornek['delta_basinc']!,
+    durum: teshis.durum,
+    tikanmaTuru: teshis.tur,
+    guven: teshis.guven,
+    guvenKimyasal: teshis.guvenKimyasal,
+    guvenBiyolojik: teshis.guvenBiyolojik,
+    guvenFiziksel: teshis.guvenFiziksel,
+    tedaviAktif: adim.tedaviAktif,
+    durulamaAktif: adim.durulamaAktif,
+  );
 }

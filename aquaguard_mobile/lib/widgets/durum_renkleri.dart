@@ -31,7 +31,10 @@ class DurumRenkleri {
   static const Color tespitEdildi = Color(0xFFC62828);
   static const Color tedaviAktif = Color(0xFF1565C0);
 
-  static Color renkGetir({required SensorOkuma? okuma, required bool cevrimici}) {
+  static Color renkGetir({
+    required SensorOkuma? okuma,
+    required bool cevrimici,
+  }) {
     if (okuma == null) return cevrimdisi;
     if (!cevrimici) return cevrimdisi;
     if (okuma.tedaviAktif != TedaviTuru.yok) return tedaviAktif;
@@ -48,7 +51,10 @@ class DurumRenkleri {
     }
   }
 
-  static IconData ikonGetir({required SensorOkuma? okuma, required bool cevrimici}) {
+  static IconData ikonGetir({
+    required SensorOkuma? okuma,
+    required bool cevrimici,
+  }) {
     if (okuma == null || !cevrimici) return Icons.cloud_off;
     if (okuma.tedaviAktif != TedaviTuru.yok) return Icons.build_circle;
 
@@ -64,7 +70,10 @@ class DurumRenkleri {
     }
   }
 
-  static String ozetMetniGetir({required SensorOkuma? okuma, required bool cevrimici}) {
+  static String ozetMetniGetir({
+    required SensorOkuma? okuma,
+    required bool cevrimici,
+  }) {
     if (okuma == null) return 'Henüz veri alınmadı';
     if (!cevrimici) return 'Çevrimdışı — son bilinen durum';
     if (okuma.tedaviAktif != TedaviTuru.yok) {

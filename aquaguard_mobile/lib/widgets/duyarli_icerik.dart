@@ -23,7 +23,11 @@ class DuyarliIcerik extends StatelessWidget {
   final Widget child;
   final double maksimumGenislik;
 
-  const DuyarliIcerik({super.key, required this.child, this.maksimumGenislik = 900});
+  const DuyarliIcerik({
+    super.key,
+    required this.child,
+    this.maksimumGenislik = 900,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -41,4 +45,5 @@ class DuyarliIcerik extends StatelessWidget {
 /// navigasyon rayi, ortalanmis icerik) devreye girer.
 const double genisEkranEsigi = 900;
 
-bool genisEkranMi(BuildContext context) => MediaQuery.sizeOf(context).width >= genisEkranEsigi;
+bool genisEkranMi(BuildContext context) =>
+    MediaQuery.sizeOf(context).width >= genisEkranEsigi;

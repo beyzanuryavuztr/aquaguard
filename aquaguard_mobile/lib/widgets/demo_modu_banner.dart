@@ -30,7 +30,11 @@ class DemoModuBanner extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
-              Icon(Icons.smart_toy_outlined, size: 18, color: renkSemasi.onTertiaryContainer),
+              Icon(
+                Icons.smart_toy_outlined,
+                size: 18,
+                color: renkSemasi.onTertiaryContainer,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -42,7 +46,11 @@ class DemoModuBanner extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(Icons.chevron_right, size: 18, color: renkSemasi.onTertiaryContainer),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: renkSemasi.onTertiaryContainer,
+              ),
             ],
           ),
         ),
