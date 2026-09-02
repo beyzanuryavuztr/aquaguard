@@ -17,6 +17,14 @@ Amac:
     bir "gercek" karar mantigi kaynagi olur (bu script + firmware'in
     decision_engine.h dosyasi ayni matematigi iki farkli dilde uygular).
 
+    OPERATOR KOMUTLARI: bu script ayrica "aquaguard/zone{N}/komut" konusuna
+    ABONE OLUR -- Flutter uygulamasindaki manuel mudahale (bkz.
+    providers/uygulama_durumu.dart manuelTedaviBaslat/Durdur/NormaleDondur)
+    gercek bir MQTT brokerina karsi da uctan uca test edilebilsin diye.
+    Komut geldiginde, o an yayinlanmakta olan senaryo ureteci degistirilir
+    (firmware/mqtt_handler.h + treatment.h ile AYNI davranis: erken durdurma
+    once zorunlu durulamadan gecer, mutex atlanmaz).
+
 Senaryo mantigi (bir "hikaye" dongusu):
     1) NORMAL   - sensorler normal deger etrafinda dalgalanir
     2) KOTULESME - rastgele secilen bir tikanma turune dogru kademeli kayma
@@ -42,6 +50,7 @@ Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import time
 from datetime import datetime
@@ -64,6 +73,11 @@ TEDAVI_ESLEME = {
     "biyolojik": "klor_enjeksiyon",
     "fiziksel": "yuksek_basincli_yikama",
 }
+
+# TEDAVI_ESLEME'nin TERSI -- operatorun MQTT komutuyla gonderdigi tedavi
+# adindan (ekipmanla eslesir) hangi tikanma turu senaryosunun uretilecegini
+# bulmak icin (bkz. _komut_isle()).
+TUR_ESLEME_TERS = {tedavi: tur for tur, tedavi in TEDAVI_ESLEME.items()}
 
 # Senaryo fazlarinin adim sayilari (her adim bir MQTT yayinina karsilik gelir)
 FAZ_ADIM_SAYILARI = {
@@ -103,6 +117,42 @@ def _tam_ornek_uret(kaynak_sinif: str, hedef_sinif: str, ilerleme: float,
     }
 
 
+def durulama_ve_iyilesme_adimlarini_uret(hedef_tur: str, rng: np.random.Generator):
+    """
+    DURULAMA + IYILESME kuyrugu -- otonom akisin (tedavi bittikten sonra) ve
+    operatorun "tedavi_durdur" komutuyla ERKEN durdurmasinin (bkz. _komut_isle)
+    ORTAK kullandigi tek kaynak. Guvenlik geregi erken durdurma da bu adimlardan
+    gecer -- dogrudan "normal"e atlanmaz (firmware/treatment.h ile ayni kural).
+    """
+    adim_sayisi = FAZ_ADIM_SAYILARI["durulama"]
+    for i in range(adim_sayisi):
+        ilerleme = 0.5 - 0.25 * i
+        ornek = _tam_ornek_uret("normal", hedef_tur, max(ilerleme, 0.0), rng)
+        yield ornek, "durulama", "yok", True
+
+    adim_sayisi = FAZ_ADIM_SAYILARI["iyilesme"]
+    for i in range(1, adim_sayisi + 1):
+        ilerleme = max(0.25 - 0.25 * (i / adim_sayisi), 0.0)
+        ornek = _tam_ornek_uret("normal", hedef_tur, ilerleme, rng)
+        yield ornek, "iyilesme", "yok", False
+
+
+def tedavi_ve_iyilesme_adimlarini_uret(hedef_tur: str, rng: np.random.Generator):
+    """
+    TEDAVI + DURULAMA + IYILESME kuyrugu -- otonom akisin (kotulesme sonrasi)
+    ve operatorun "tedavi_baslat" komutuyla MANUEL baslatmasinin (bkz.
+    _komut_isle) ORTAK kullandigi tek kaynak.
+    """
+    tedavi_adi = TEDAVI_ESLEME[hedef_tur]
+    adim_sayisi = FAZ_ADIM_SAYILARI["tedavi"]
+    for i in range(adim_sayisi):
+        ilerleme = 1.0 - 0.15 * i  # tedavi surerken hafif iyilesme egilimi
+        ornek = _tam_ornek_uret("normal", hedef_tur, max(ilerleme, 0.0), rng)
+        yield ornek, "tedavi", tedavi_adi, False
+
+    yield from durulama_ve_iyilesme_adimlarini_uret(hedef_tur, rng)
+
+
 def senaryo_adimlarini_uret(rng: np.random.Generator):
     """
     Sonsuz bir uretec (generator): her cagrida bir sonraki simulasyon adimini
@@ -123,27 +173,42 @@ def senaryo_adimlarini_uret(rng: np.random.Generator):
             ornek = _tam_ornek_uret("normal", hedef_tur, ilerleme, rng)
             yield ornek, "kotulesme", "yok", False
 
-        # --- 3) TEDAVI (esik asildi, dozlama/yikama aktif, iyilesme baslar) ---
-        tedavi_adi = TEDAVI_ESLEME[hedef_tur]
-        adim_sayisi = FAZ_ADIM_SAYILARI["tedavi"]
-        for i in range(adim_sayisi):
-            ilerleme = 1.0 - 0.15 * i  # tedavi surerken hafif iyilesme egilimi
-            ornek = _tam_ornek_uret("normal", hedef_tur, max(ilerleme, 0.0), rng)
-            yield ornek, "tedavi", tedavi_adi, False
+        # --- 3,4,5) TEDAVI -> DURULAMA -> IYILESME ---
+        yield from tedavi_ve_iyilesme_adimlarini_uret(hedef_tur, rng)
 
-        # --- 4) DURULAMA (tedavi bitti, zorunlu bekleme) ---
-        adim_sayisi = FAZ_ADIM_SAYILARI["durulama"]
-        for i in range(adim_sayisi):
-            ilerleme = 0.5 - 0.25 * i
-            ornek = _tam_ornek_uret("normal", hedef_tur, max(ilerleme, 0.0), rng)
-            yield ornek, "durulama", "yok", True
 
-        # --- 5) IYILESME (tamamen normale donus) ---
-        adim_sayisi = FAZ_ADIM_SAYILARI["iyilesme"]
-        for i in range(1, adim_sayisi + 1):
-            ilerleme = max(0.25 - 0.25 * (i / adim_sayisi), 0.0)
-            ornek = _tam_ornek_uret("normal", hedef_tur, ilerleme, rng)
-            yield ornek, "iyilesme", "yok", False
+def _komut_isle(mesaj_json: dict, calisma_durumu: dict) -> None:
+    """
+    Operatorden gelen bir MQTT komutunu isler, calisma_durumu["uretec"]'i
+    (o an aktif olan senaryo ureteci) gerekirse DEGISTIRIR. bkz. dosya basi
+    aciklamasi ve Flutter tarafinda providers/uygulama_durumu.dart.
+    """
+    komut = mesaj_json.get("komut")
+    rng = calisma_durumu["rng"]
+
+    if komut == "tedavi_baslat":
+        tedavi_turu = mesaj_json.get("tedavi_turu")
+        hedef_tur = TUR_ESLEME_TERS.get(tedavi_turu)
+        if hedef_tur is None:
+            print(f"[Komut] Gecersiz/eksik tedavi_turu: {tedavi_turu!r}, yoksayildi.")
+            return
+        print(f"[Komut] Operatör: '{tedavi_turu}' tedavisi manuel başlatılıyor.")
+        calisma_durumu["uretec"] = itertools.chain(
+            tedavi_ve_iyilesme_adimlarini_uret(hedef_tur, rng),
+            senaryo_adimlarini_uret(rng),
+        )
+    elif komut == "tedavi_durdur":
+        guncel_tur = calisma_durumu.get("guncel_tur") or "fiziksel"
+        print(f"[Komut] Operatör: aktif tedavi erken durduruluyor (tür={guncel_tur}).")
+        calisma_durumu["uretec"] = itertools.chain(
+            durulama_ve_iyilesme_adimlarini_uret(guncel_tur, rng),
+            senaryo_adimlarini_uret(rng),
+        )
+    elif komut == "normale_dondur":
+        print("[Komut] Operatör: durum yanlış alarm olarak işaretlendi, normale dönülüyor.")
+        calisma_durumu["uretec"] = senaryo_adimlarini_uret(rng)
+    else:
+        print(f"[Komut] Bilinmeyen komut: {komut!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -185,35 +250,53 @@ def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
 def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: int | None) -> None:
     veri_konusu = f"aquaguard/zone{zone}/veri"
     durum_konusu = f"aquaguard/zone{zone}/durum"
+    komut_konusu = f"aquaguard/zone{zone}/komut"
 
     istemci = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"aquaguard-mock-zone{zone}")
     istemci.will_set(durum_konusu, payload="offline", qos=1, retain=True)
+
+    rng = np.random.default_rng()  # her calistirmada farkli senaryo (demo cesitliligi icin)
+    # Operator komutlarinin (ayri bir ag thread'inde calisan on_message
+    # geri cagirimi ile) o an aktif olan ureteci DEGISTIREBILMESI icin
+    # paylasilan, mutable bir durum sozlugu -- bkz. _komut_isle().
+    calisma_durumu = {"uretec": senaryo_adimlarini_uret(rng), "rng": rng, "guncel_tur": None}
 
     def _baglaninca(client, userdata, connect_flags, reason_code, properties):
         if reason_code == 0:
             print(f"[MQTT] Brokera baglanildi: {broker}:{port}")
             client.publish(durum_konusu, "online", qos=1, retain=True)
+            client.subscribe(komut_konusu, qos=1)
         else:
             print(f"[MQTT] Baglanti hatasi: {reason_code}")
 
+    def _mesaj_geldiginde(client, userdata, message):
+        try:
+            mesaj_json = json.loads(message.payload.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            print("[Komut] JSON ayristirilamadi, mesaj yoksayildi.")
+            return
+        _komut_isle(mesaj_json, calisma_durumu)
+
     istemci.on_connect = _baglaninca
+    istemci.on_message = _mesaj_geldiginde
 
     print(f"[MQTT] Baglaniliyor: {broker}:{port} ...")
     istemci.connect(broker, port, keepalive=60)
     istemci.loop_start()
 
-    rng = np.random.default_rng()  # her calistirmada farkli senaryo (demo cesitliligi icin)
-    uretec = senaryo_adimlarini_uret(rng)
-
     print("=" * 78)
     print(f"AquaGuard Mock Yayinci - Zone {zone} - Konu: {veri_konusu}")
+    print(f"Operatör komut konusu: {komut_konusu}")
     print(f"Yayin araligi: {aralik_sn} sn  |  Durdurmak icin Ctrl+C")
     print("=" * 78)
 
     sayac = 0
     try:
-        for ornek, faz, tedavi_aktif, durulama_aktif in uretec:
+        while True:
+            ornek, faz, tedavi_aktif, durulama_aktif = next(calisma_durumu["uretec"])
             teshis = kural_tabanli_teshis(ornek)
+            if teshis["tur"]:
+                calisma_durumu["guncel_tur"] = teshis["tur"]
             mesaj = _mesaj_olustur(ornek, teshis, zone, tedavi_aktif, durulama_aktif)
 
             istemci.publish(veri_konusu, mesaj, qos=1, retain=True)

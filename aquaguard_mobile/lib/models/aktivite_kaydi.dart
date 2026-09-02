@@ -22,6 +22,7 @@ enum AktiviteTuru {
   normaleDonus,
   tedaviBaslangic,
   tedaviBitis,
+  manuelMudahale,
 }
 
 /// Iki ARDISIK okuma arasindaki durum/tedavi GECISLERINDEN aktivite kaydi
@@ -130,6 +131,8 @@ class AktiviteKaydi {
         return Icons.build_circle_outlined;
       case AktiviteTuru.tedaviBitis:
         return Icons.water_drop_outlined;
+      case AktiviteTuru.manuelMudahale:
+        return Icons.pan_tool_outlined;
     }
   }
 
@@ -144,6 +147,8 @@ class AktiviteKaydi {
       case AktiviteTuru.tedaviBaslangic:
       case AktiviteTuru.tedaviBitis:
         return const Color(0xFF1565C0);
+      case AktiviteTuru.manuelMudahale:
+        return Theme.of(context).colorScheme.primary;
     }
   }
 

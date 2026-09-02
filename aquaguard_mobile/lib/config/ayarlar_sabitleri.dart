@@ -43,6 +43,12 @@ class AyarlarSabitleri {
   static String veriKonusu(int zone) => 'aquaguard/zone$zone/veri';
   static String durumKonusu(int zone) => 'aquaguard/zone$zone/durum';
 
+  // --- Operator komut konusu -- SADECE uygulamadan cihaza (yayinlanmaz,
+  //     retained DEGIL): manuel mudahale (bkz. providers/uygulama_durumu.dart
+  //     manuelTedaviBaslat/Durdur/NormaleDondur) bu konuya JSON komut yayinlar,
+  //     firmware/mqtt_handler.h buna abone olup treatment.h'ye iletir. ---
+  static String komutKonusu(int zone) => 'aquaguard/zone$zone/komut';
+
   // --- Tedavi sureleri (firmware/config.h TEDAVI_*_SURESI_MS ile ayni, saniye) ---
   static const Map<TedaviTuru, int> tedaviSuresiSaniye = {
     TedaviTuru.asitDozlama: 30,

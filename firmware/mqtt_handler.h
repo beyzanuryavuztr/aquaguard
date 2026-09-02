@@ -38,6 +38,13 @@
  *                               Flutter uygulamasi -- aninda son durumu alir)
  *   aquaguard/zone{N}/durum  -> "online" / "offline" (Last Will Testament ile
  *                               cihazin baglanti durumu izlenebilir)
+ *   aquaguard/zone{N}/komut  -> SADECE ABONE OLUNUR (yayinlanmaz). Operator
+ *                               mudahalesi (mobil uygulama) buraya JSON komut
+ *                               yollar, RETAINED DEGILDIR:
+ *                                 {"komut":"tedavi_baslat","tedavi_turu":"asit_dozlama"}
+ *                                 {"komut":"tedavi_durdur"}
+ *                                 {"komut":"normale_dondur"}
+ *                               bkz. _komutMesajGeldiginde() asagida.
  *
  * Kutuphaneler: TinyGSM + PubSubClient + ArduinoJson
  *
@@ -74,6 +81,51 @@ static const unsigned long BAGLANTI_DENEME_ARALIGI_MS = 15000UL;
 
 static char _durumTopic[48];
 static char _veriTopic[48];
+static char _komutTopic[48];
+
+// ============================================================================
+// OPERATOR KOMUTLARI (bkz. dosya basindaki JSON sema aciklamasi)
+// ============================================================================
+//
+// PubSubClient'in callback imzasi TUM abone olunan konular icin ORTAKTIR --
+// bu cihaz sadece _komutTopic'e abone oldugu icin ek bir konu kontrolüne
+// gerek yoktur, ama ileride baska bir konuya abone olunursa `topic`
+// parametresi kontrol edilmelidir.
+void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
+  StaticJsonDocument<256> belge;
+  DeserializationError hata = deserializeJson(belge, payload, uzunluk);
+  if (hata) {
+    Serial.println(F("[Komut] JSON ayristirilamadi, mesaj yoksayildi."));
+    return;
+  }
+
+  const char* komut = belge["komut"] | "";
+
+  if (strcmp(komut, "tedavi_baslat") == 0) {
+    TedaviTuru tedavi = tedaviTuruAyristir(belge["tedavi_turu"] | "");
+    if (tedavi == TEDAVI_YOK) {
+      Serial.println(F("[Komut] Gecersiz/eksik tedavi_turu, yoksayildi."));
+      return;
+    }
+    bool basladi = tedaviBaslat(tedavi);
+    Serial.println(basladi
+        ? F("[Komut] Operator: manuel tedavi baslatildi.")
+        : F("[Komut] Operator: manuel tedavi REDDEDILDI (mutex mesgul)."));
+  } else if (strcmp(komut, "tedavi_durdur") == 0) {
+    bool durduruldu = tedaviErkenDurdur();
+    Serial.println(durduruldu
+        ? F("[Komut] Operator: aktif tedavi erken durduruldu, durulamaya geciliyor.")
+        : F("[Komut] Operator: durdurulacak aktif tedavi yok."));
+  } else if (strcmp(komut, "normale_dondur") == 0) {
+    // Sadece bir GUNLUK kaydi -- karar motoru zaten bir sonraki okumada
+    // esik asilmiyorsa "normal" dondurecektir; burada aktuator durumunda
+    // degisiklik YOKTUR (yanlis alarmda zaten hicbir aktuator calismiyordu).
+    Serial.println(F("[Komut] Operator: durumu yanlis alarm olarak isaretledi."));
+  } else {
+    Serial.print(F("[Komut] Bilinmeyen komut: "));
+    Serial.println(komut);
+  }
+}
 
 // ============================================================================
 // KURULUM
@@ -82,6 +134,7 @@ static char _veriTopic[48];
 void mqttBaslat() {
   snprintf(_veriTopic, sizeof(_veriTopic), MQTT_KONU_VERI, BOLGE_ID);
   snprintf(_durumTopic, sizeof(_durumTopic), MQTT_KONU_DURUM, BOLGE_ID);
+  snprintf(_komutTopic, sizeof(_komutTopic), MQTT_KONU_KOMUT, BOLGE_ID);
 
   _sim800Seri.begin(SIM800L_BAUD, SERIAL_8N1, SIM800L_RX_PIN, SIM800L_TX_PIN);
 
@@ -93,6 +146,7 @@ void mqttBaslat() {
   _modem.gprsConnect(GSM_APN, GSM_KULLANICI, GSM_SIFRE);
 
   _mqttClient.setServer(MQTT_BROKER_ADRESI, MQTT_BROKER_PORT);
+  _mqttClient.setCallback(_komutMesajGeldiginde);
 }
 
 // ============================================================================
@@ -146,6 +200,7 @@ void mqttBaglantiyiSagla() {
   if (baglandi) {
     Serial.println(F("[MQTT] Baglanti basarili."));
     _mqttClient.publish(_durumTopic, "online", true);
+    _mqttClient.subscribe(_komutTopic);
   } else {
     Serial.print(F("[MQTT] Baglanti basarisiz, hata kodu: "));
     Serial.println(_mqttClient.state());

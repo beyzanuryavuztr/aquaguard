@@ -165,4 +165,23 @@ class MqttServisi {
     _istemci?.disconnect();
     _istemci = null;
   }
+
+  /// OPERATOR MUDAHALESI: verilen zonun komut konusuna bir JSON komut
+  /// yayinlar (bkz. AyarlarSabitleri.komutKonusu). Retained DEGILDIR --
+  /// bu bir "an" komutudur, gec baglanan bir istemcinin eski bir komutu
+  /// tekrar almasi istenmez. Baglanti yoksa sessizce yoksayilir (demo
+  /// modunda zaten bu servis hic kullanilmaz -- bkz. UygulamaDurumu).
+  void komutGonder(int zone, Map<String, dynamic> komut) {
+    final istemci = _istemci;
+    if (istemci == null || !bagliMi) {
+      debugPrint('[AquaGuard/MQTT] Komut gönderilemedi, bağlantı yok: $komut');
+      return;
+    }
+    final yuk = MqttClientPayloadBuilder()..addString(jsonEncode(komut));
+    istemci.publishMessage(
+      AyarlarSabitleri.komutKonusu(zone),
+      MqttQos.atLeastOnce,
+      yuk.payload!,
+    );
+  }
 }

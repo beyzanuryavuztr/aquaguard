@@ -88,6 +88,23 @@ String turEtiketi(TikanmaTuru tur) {
   }
 }
 
+/// Bir tedavi turunun hangi tikanma turune karsi kullanildigini doner --
+/// manuel mudahale ekraninda operator bir TEDAVI secer (ekipmanla eslesir),
+/// ic mantik (simulasyon/demo) bunu ilgili tikanma turune cevirmelidir.
+/// simulasyon_servisi.dart'taki _tedaviEslemesi() ile TERSI yonde ayni eslemedir.
+TikanmaTuru tedaviyeKarsilikGelenTur(TedaviTuru tedavi) {
+  switch (tedavi) {
+    case TedaviTuru.asitDozlama:
+      return TikanmaTuru.kimyasal;
+    case TedaviTuru.klorEnjeksiyon:
+      return TikanmaTuru.biyolojik;
+    case TedaviTuru.yuksekBasincliYikama:
+      return TikanmaTuru.fiziksel;
+    case TedaviTuru.yok:
+      return TikanmaTuru.yok;
+  }
+}
+
 String tedaviEtiketi(TedaviTuru tedavi) {
   switch (tedavi) {
     case TedaviTuru.yok:

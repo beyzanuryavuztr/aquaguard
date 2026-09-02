@@ -433,6 +433,83 @@ class UygulamaDurumu extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ============================================================================
+  // OPERATOR MUDAHALESI (manuel komut)
+  // ============================================================================
+  //
+  // AquaGuard'in temel iddiasi OTONOM teshis+tedavidir (bkz. PROJE_BRIEF.md);
+  // asagidaki fonksiyonlar bunu degistirmez, sadece bir GUVENLIK/ESNEKLIK
+  // supabi ekler: dusuk guvenli "belirsiz" durumda sistem turu KENDISI
+  // seçemez (operator secmelidir) ve herhangi bir aktif tedavi, sahadaki bir
+  // operator tarafindan her zaman ERKEN durdurulabilmelidir. Demo modunda
+  // SimulasyonServisi'nin akisini degistirir; gercek MQTT modunda cihaza
+  // komut yayinlar (bkz. MqttServisi.komutGonder, firmware/mqtt_handler.h).
+
+  /// "Belirsiz" durumda operatorun, sistemin secemedigi tedaviyi MANUEL
+  /// olarak baslatmasini saglar.
+  Future<void> manuelTedaviBaslat(int zone, TedaviTuru tedavi) async {
+    final tur = tedaviyeKarsilikGelenTur(tedavi);
+    if (_demoModuAktif) {
+      _simulasyon?.manuelTedaviBaslat(zone, tur);
+    } else {
+      _mqtt?.komutGonder(zone, {
+        'komut': 'tedavi_baslat',
+        'tedavi_turu': tedavi.name,
+      });
+    }
+    _manuelMudahaleKaydet(
+      zone,
+      'Zon $zone: Operatör "${tedaviEtiketi(tedavi)}" tedavisini manuel olarak başlattı',
+    );
+  }
+
+  /// Su an suren bir tedaviyi operatorun ERKEN sonlandirmasini saglar
+  /// (guvenlik supabi -- her zaman zorunlu durulamadan gecer).
+  Future<void> manuelTedaviDurdur(int zone) async {
+    final guncelOkuma = _sonOkumalar[zone];
+    if (guncelOkuma == null || guncelOkuma.tedaviAktif == TedaviTuru.yok) {
+      return;
+    }
+    final guncelTur = guncelOkuma.tikanmaTuru;
+    if (_demoModuAktif) {
+      _simulasyon?.manuelTedaviDurdur(zone, guncelTur);
+    } else {
+      _mqtt?.komutGonder(zone, {'komut': 'tedavi_durdur'});
+    }
+    _manuelMudahaleKaydet(
+      zone,
+      'Zon $zone: Operatör devam eden tedaviyi manuel olarak durdurdu',
+    );
+  }
+
+  /// "Yanlis alarm" -- operator, tespiti/supheyi gecersiz sayar, tedaviye
+  /// gerek olmadan dogrudan normal izlemeye doner.
+  Future<void> manuelNormaleDondur(int zone) async {
+    if (_demoModuAktif) {
+      _simulasyon?.manuelNormaleDondur(zone);
+    } else {
+      _mqtt?.komutGonder(zone, {'komut': 'normale_dondur'});
+    }
+    _manuelMudahaleKaydet(
+      zone,
+      'Zon $zone: Operatör yanlış alarm olarak işaretledi, durum normale döndürüldü',
+    );
+  }
+
+  void _manuelMudahaleKaydet(int zone, String mesaj) {
+    final kayit = AktiviteKaydi(
+      zaman: DateTime.now(),
+      zone: zone,
+      mesaj: mesaj,
+      tur: AktiviteTuru.manuelMudahale,
+    );
+    _aktiviteGecmisi.insert(0, kayit);
+    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
+    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+    if (_bildirimlerAcik) _bildirimKuyrugu.add(kayit.mesaj);
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _mqtt?.baglantiyiKapat();

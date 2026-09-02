@@ -21,6 +21,8 @@ import 'package:provider/provider.dart';
 
 import '../models/sensor_okuma.dart';
 import '../providers/uygulama_durumu.dart';
+import '../services/disa_aktarma_factory.dart';
+import '../services/disa_aktarma_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
 
 class IstatistiklerEkrani extends StatelessWidget {
@@ -45,7 +47,18 @@ class IstatistiklerEkrani extends StatelessWidget {
     final toplamTespit = turSayaclari.values.fold(0, (a, b) => a + b);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('İstatistikler')),
+      appBar: AppBar(
+        title: const Text('İstatistikler'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'Tüm Zonların Raporunu Dışa Aktar (CSV)',
+            onPressed: tumOkumalar.isEmpty
+                ? null
+                : () => _raporuDisaAktar(context, tumOkumalar),
+          ),
+        ],
+      ),
       body: DuyarliIcerik(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -162,6 +175,19 @@ class IstatistiklerEkrani extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _raporuDisaAktar(
+    BuildContext context,
+    List<SensorOkuma> tumOkumalar,
+  ) async {
+    final csv = DisaAktarmaServisi.csvOlustur(tumOkumalar);
+    final dosyaAdi = DisaAktarmaServisi.dosyaAdiUret('tum_zonlar_raporu');
+    final konum = await csvKaydet(dosyaAdi, csv);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('CSV dışa aktarıldı: $konum')),
     );
   }
 

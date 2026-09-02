@@ -70,6 +70,16 @@ TedaviTuru tedaviTuruBelirle(TikanmaTuru tur) {
   }
 }
 
+// tedaviAdiGetir()'in TERSI -- MQTT komut mesajindaki "tedavi_turu" JSON
+// alanini (operatorun manuel sectigi tedavi) TedaviTuru'ye cevirir.
+// bkz. mqtt_handler.h _komutMesajGeldiginde()
+TedaviTuru tedaviTuruAyristir(const char* ad) {
+  if (strcmp(ad, "asit_dozlama") == 0)              return TEDAVI_ASIT;
+  if (strcmp(ad, "klor_enjeksiyon") == 0)           return TEDAVI_KLOR;
+  if (strcmp(ad, "yuksek_basincli_yikama") == 0)    return TEDAVI_YIKAMA;
+  return TEDAVI_YOK;
+}
+
 // ============================================================================
 // DAHILI DURUM MAKINESI (MUTEX'IN KENDISI BUDUR)
 // ============================================================================
@@ -161,6 +171,26 @@ void tedaviAcilDurdur() {
   _aktuatoruAyarla(TEDAVI_YIKAMA, false);
   _aktifTedavi = TEDAVI_YOK;
   _durulamaAktif = false;
+}
+
+// ============================================================================
+// OPERATOR MUDAHALESI (MQTT komutuyla tetiklenir -- bkz. mqtt_handler.h)
+// ============================================================================
+//
+// tedaviAcilDurdur()'den FARKLI: bu, GUVENLIKLI bir erken sonlandirmadir --
+// aktuatoru kapatir ama zorunlu durulama adimina GECER (mutex hemen acilmaz).
+// tedaviAcilDurdur() ise gercek bir arizada mutex'i de aninda sifirlayan
+// tam bir "sifirlama"dir. Sahadaki bir operatorun normal kullanim senaryosu
+// icin dogru fonksiyon budur.
+bool tedaviErkenDurdur() {
+  if (_aktifTedavi == TEDAVI_YOK) {
+    return false;   // durdurulacak aktif bir tedavi yok
+  }
+  _aktuatoruAyarla(_aktifTedavi, false);
+  _aktifTedavi = TEDAVI_YOK;
+  _durulamaAktif = true;
+  _durulamaBaslangicMs = millis();
+  return true;
 }
 
 // ============================================================================

@@ -30,6 +30,7 @@ import '../models/sensor_okuma.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
+import '../widgets/manuel_mudahale_paneli.dart';
 
 class AktifTedaviEkrani extends StatefulWidget {
   final int zonNumarasi;
@@ -73,6 +74,7 @@ class _AktifTedaviEkraniState extends State<AktifTedaviEkrani> {
                 padding: const EdgeInsets.all(20),
                 child: okuma.tedaviAktif != TedaviTuru.yok
                     ? _TedaviIlerlemeGorunumu(
+                        zonNumarasi: widget.zonNumarasi,
                         okuma: okuma,
                         baslangic: durum.tedaviBaslangicZamani(
                           widget.zonNumarasi,
@@ -88,10 +90,15 @@ class _AktifTedaviEkraniState extends State<AktifTedaviEkrani> {
 }
 
 class _TedaviIlerlemeGorunumu extends StatelessWidget {
+  final int zonNumarasi;
   final SensorOkuma okuma;
   final DateTime? baslangic;
 
-  const _TedaviIlerlemeGorunumu({required this.okuma, required this.baslangic});
+  const _TedaviIlerlemeGorunumu({
+    required this.zonNumarasi,
+    required this.okuma,
+    required this.baslangic,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -141,6 +148,8 @@ class _TedaviIlerlemeGorunumu extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         const _TahminiSureAciklamasi(),
+        const SizedBox(height: 20),
+        ManuelMudahalePaneli(zonNumarasi: zonNumarasi, okuma: okuma),
       ],
     );
   }

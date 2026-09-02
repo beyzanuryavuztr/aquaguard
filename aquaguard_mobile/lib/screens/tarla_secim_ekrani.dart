@@ -19,18 +19,45 @@ import '../providers/uygulama_durumu.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
+import '../widgets/tarla_haritasi.dart';
 import 'ayarlar_ekrani.dart';
+import 'tikanma_detay_ekrani.dart';
 import 'zon_dashboard_ekrani.dart';
 
-class TarlaSecimEkrani extends StatelessWidget {
+class TarlaSecimEkrani extends StatefulWidget {
   const TarlaSecimEkrani({super.key});
+
+  @override
+  State<TarlaSecimEkrani> createState() => _TarlaSecimEkraniState();
+}
+
+class _TarlaSecimEkraniState extends State<TarlaSecimEkrani> {
+  bool _haritaModuAktif = false;
 
   @override
   Widget build(BuildContext context) {
     final durum = context.watch<UygulamaDurumu>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tarlalarım')),
+      appBar: AppBar(
+        title: const Text('Tarlalarım'),
+        actions: [
+          if (durum.tarlalar.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton.filledTonal(
+                icon: Icon(
+                  _haritaModuAktif ? Icons.view_list_outlined : Icons.map_outlined,
+                ),
+                tooltip: _haritaModuAktif
+                    ? 'Liste Görünümüne Geç'
+                    : 'Harita Görünümüne Geç',
+                onPressed: () =>
+                    setState(() => _haritaModuAktif = !_haritaModuAktif),
+              ),
+            ),
+        ],
+      ),
       body: !durum.hazir
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -47,43 +74,69 @@ class TarlaSecimEkrani extends StatelessWidget {
                           onEkle: () => _tarlaEkleDuzenleFormunuGoster(context),
                         )
                       : DuyarliIcerik(
-                          child: ListView(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                            children: [
-                              Text(
-                                '${durum.tarlalar.length} tarla, '
-                                '${durum.tumZonNumaralari.length} izlenen zon',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                              const SizedBox(height: 16),
-                              ...durum.tarlalar.map(
-                                (tarla) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _TarlaKarti(
-                                    tarla: tarla,
-                                    onDuzenle: () =>
-                                        _tarlaEkleDuzenleFormunuGoster(
-                                          context,
-                                          duzenlenecekTarla: tarla,
-                                        ),
-                                    onSil: () =>
-                                        _tarlaSilmeyiOnayla(context, tarla),
-                                    onAc: () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            ZonDashboardEkrani(tarla: tarla),
-                                      ),
+                          child: _haritaModuAktif
+                              ? TarlaHaritasi(
+                                  tarlalar: durum.tarlalar,
+                                  durum: durum,
+                                  onZonSecildi: (zon) => Navigator.of(
+                                    context,
+                                  ).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          TikanmaDetayEkrani(zonNumarasi: zon),
                                     ),
                                   ),
+                                )
+                              : ListView(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    16,
+                                    16,
+                                    96,
+                                  ),
+                                  children: [
+                                    Text(
+                                      '${durum.tarlalar.length} tarla, '
+                                      '${durum.tumZonNumaralari.length} izlenen zon',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ...durum.tarlalar.map(
+                                      (tarla) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: _TarlaKarti(
+                                          tarla: tarla,
+                                          onDuzenle: () =>
+                                              _tarlaEkleDuzenleFormunuGoster(
+                                                context,
+                                                duzenlenecekTarla: tarla,
+                                              ),
+                                          onSil: () => _tarlaSilmeyiOnayla(
+                                            context,
+                                            tarla,
+                                          ),
+                                          onAc: () => Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  ZonDashboardEkrani(
+                                                    tarla: tarla,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                 ),
               ],

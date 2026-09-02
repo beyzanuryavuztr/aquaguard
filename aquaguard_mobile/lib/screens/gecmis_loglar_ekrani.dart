@@ -18,6 +18,8 @@ import 'package:provider/provider.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
+import '../services/disa_aktarma_factory.dart';
+import '../services/disa_aktarma_servisi.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 
@@ -47,6 +49,13 @@ class _GecmisLoglarEkraniState extends State<GecmisLoglarEkrani> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.tarla.ad} - Geçmiş Loglar'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'CSV Olarak Dışa Aktar',
+            onPressed: gecmis.isEmpty ? null : () => _disaAktar(context),
+          ),
+        ],
         bottom: widget.tarla.zonNumaralari.length > 1
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(48),
@@ -68,6 +77,19 @@ class _GecmisLoglarEkraniState extends State<GecmisLoglarEkrani> {
                     _GecmisSatiri(okuma: gecmis[index]),
               ),
             ),
+    );
+  }
+
+  Future<void> _disaAktar(BuildContext context) async {
+    final gecmis = context.read<UygulamaDurumu>().gecmis(_seciliZon);
+    final csv = DisaAktarmaServisi.csvOlustur(gecmis);
+    final dosyaAdi = DisaAktarmaServisi.dosyaAdiUret(
+      '${widget.tarla.ad}_zon$_seciliZon',
+    );
+    final konum = await csvKaydet(dosyaAdi, csv);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('CSV dışa aktarıldı: $konum')),
     );
   }
 }

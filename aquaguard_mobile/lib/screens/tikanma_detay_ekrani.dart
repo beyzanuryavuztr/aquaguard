@@ -19,6 +19,7 @@ import '../providers/uygulama_durumu.dart';
 import '../widgets/aciklanabilirlik_paneli.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
+import '../widgets/manuel_mudahale_paneli.dart';
 import '../widgets/mini_trend_grafigi.dart';
 import 'aktif_tedavi_ekrani.dart';
 
@@ -62,6 +63,10 @@ class TikanmaDetayEkrani extends StatelessWidget {
                     _TedaviBanner(zonNumarasi: zonNumarasi, okuma: okuma),
                     const SizedBox(height: 16),
                   ],
+                  ManuelMudahalePaneli(
+                    zonNumarasi: zonNumarasi,
+                    okuma: okuma,
+                  ),
                   if (okuma.durum == TeshisDurumu.tespitEdildi ||
                       okuma.durum == TeshisDurumu.belirsiz) ...[
                     AciklanabilirlikPaneli(okuma: okuma),

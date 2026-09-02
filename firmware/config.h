@@ -193,6 +193,13 @@
 #define MQTT_KONU_VERI        "aquaguard/zone%d/veri"
 #define MQTT_KONU_DURUM       "aquaguard/zone%d/durum"
 
+// Operator komut konusu -- SADECE mobil uygulamadan cihaza (cihaz buna
+// ABONE olur, yayinlamaz). Manuel mudahale ("belirsiz" durumda operatorun
+// tedavi secmesi veya aktif bir tedaviyi erken durdurmasi) icin kullanilir.
+// bkz. mqtt_handler.h _komutMesajGeldiginde() ve Flutter tarafinda
+// AyarlarSabitleri.komutKonusu() / providers/uygulama_durumu.dart
+#define MQTT_KONU_KOMUT       "aquaguard/zone%d/komut"
+
 // APN bilgisi (SIM karti operatorune gore degisir -- YER TUTUCU)
 #define GSM_APN               "internet"
 #define GSM_KULLANICI         ""
