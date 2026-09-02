@@ -17,6 +17,7 @@ import '../providers/uygulama_durumu.dart';
 import '../services/mqtt_servisi.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/durum_renkleri.dart';
+import '../widgets/duyarli_icerik.dart';
 import '../widgets/zon_durum_karti.dart';
 import 'ayarlar_ekrani.dart';
 import 'gecmis_loglar_ekrani.dart';
@@ -38,7 +39,10 @@ class ZonDashboardEkrani extends StatelessWidget {
         for (final mesaj in bildirimler) {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(mesaj), duration: const Duration(seconds: 4)),
+            SnackBar(
+              content: Text(mesaj),
+              duration: const Duration(seconds: 4),
+            ),
           );
         }
       });
@@ -59,7 +63,9 @@ class ZonDashboardEkrani extends StatelessWidget {
             icon: const Icon(Icons.history),
             tooltip: 'Geçmiş Loglar',
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => GecmisLoglarEkrani(tarla: tarla)),
+              MaterialPageRoute(
+                builder: (_) => GecmisLoglarEkrani(tarla: tarla),
+              ),
             ),
           ),
         ],
@@ -68,24 +74,35 @@ class ZonDashboardEkrani extends StatelessWidget {
         children: [
           if (durum.demoModuAktif)
             DemoModuBanner(
-              onAyarlaraGit: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AyarlarEkrani()),
-              ),
+              onAyarlaraGit: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const AyarlarEkrani())),
             ),
-          _OzetSatiri(tarla: tarla, durum: durum),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 24),
-              children: tarla.zonNumaralari.map((zon) {
-                return ZonDurumKarti(
-                  zonNumarasi: zon,
-                  okuma: durum.sonOkuma(zon),
-                  cevrimici: durum.zonCevrimiciMi(zon),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => TikanmaDetayEkrani(zonNumarasi: zon)),
+            child: DuyarliIcerik(
+              child: Column(
+                children: [
+                  _OzetSatiri(tarla: tarla, durum: durum),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      children: tarla.zonNumaralari.map((zon) {
+                        return ZonDurumKarti(
+                          zonNumarasi: zon,
+                          okuma: durum.sonOkuma(zon),
+                          cevrimici: durum.zonCevrimiciMi(zon),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  TikanmaDetayEkrani(zonNumarasi: zon),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                );
-              }).toList(),
+                ],
+              ),
             ),
           ),
         ],
@@ -108,16 +125,36 @@ class _OzetSatiri extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
         children: [
-          _OzetRozeti(sayi: ozet.normal, etiket: 'Normal', renk: DurumRenkleri.normal),
+          _OzetRozeti(
+            sayi: ozet.normal,
+            etiket: 'Normal',
+            renk: DurumRenkleri.normal,
+          ),
           const SizedBox(width: 8),
-          _OzetRozeti(sayi: ozet.belirsiz, etiket: 'Belirsiz', renk: DurumRenkleri.belirsiz),
+          _OzetRozeti(
+            sayi: ozet.belirsiz,
+            etiket: 'Belirsiz',
+            renk: DurumRenkleri.belirsiz,
+          ),
           const SizedBox(width: 8),
-          _OzetRozeti(sayi: ozet.tespitEdildi, etiket: 'Tespit', renk: DurumRenkleri.tespitEdildi),
+          _OzetRozeti(
+            sayi: ozet.tespitEdildi,
+            etiket: 'Tespit',
+            renk: DurumRenkleri.tespitEdildi,
+          ),
           const SizedBox(width: 8),
-          _OzetRozeti(sayi: ozet.tedavide, etiket: 'Tedavide', renk: DurumRenkleri.tedaviAktif),
+          _OzetRozeti(
+            sayi: ozet.tedavide,
+            etiket: 'Tedavide',
+            renk: DurumRenkleri.tedaviAktif,
+          ),
           if (ozet.cevrimdisi > 0) ...[
             const SizedBox(width: 8),
-            _OzetRozeti(sayi: ozet.cevrimdisi, etiket: 'Çevrimdışı', renk: DurumRenkleri.cevrimdisi),
+            _OzetRozeti(
+              sayi: ozet.cevrimdisi,
+              etiket: 'Çevrimdışı',
+              renk: DurumRenkleri.cevrimdisi,
+            ),
           ],
         ],
       ),
@@ -130,7 +167,11 @@ class _OzetRozeti extends StatelessWidget {
   final String etiket;
   final Color renk;
 
-  const _OzetRozeti({required this.sayi, required this.etiket, required this.renk});
+  const _OzetRozeti({
+    required this.sayi,
+    required this.etiket,
+    required this.renk,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +186,11 @@ class _OzetRozeti extends StatelessWidget {
           children: [
             Text(
               '$sayi',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: renk),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: renk,
+              ),
             ),
             Text(etiket, style: TextStyle(fontSize: 11, color: renk)),
           ],
@@ -162,11 +207,18 @@ class _DemoRozeti extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.smart_toy_outlined, color: Theme.of(context).colorScheme.tertiary, size: 18),
+        Icon(
+          Icons.smart_toy_outlined,
+          color: Theme.of(context).colorScheme.tertiary,
+          size: 18,
+        ),
         const SizedBox(width: 4),
         Text(
           'Demo',
-          style: TextStyle(color: Theme.of(context).colorScheme.tertiary, fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.tertiary,
+            fontSize: 12,
+          ),
         ),
       ],
     );
@@ -182,8 +234,16 @@ class _BaglantiRozeti extends StatelessWidget {
   Widget build(BuildContext context) {
     final (renk, metin, ikon) = switch (durum) {
       MqttBaglantiDurumu.bagli => (Colors.green, 'Bağlı', Icons.wifi),
-      MqttBaglantiDurumu.baglaniyor => (Colors.amber, 'Bağlanıyor', Icons.wifi_find),
-      MqttBaglantiDurumu.baglantiKesildi => (Colors.orange, 'Kesildi', Icons.wifi_off),
+      MqttBaglantiDurumu.baglaniyor => (
+        Colors.amber,
+        'Bağlanıyor',
+        Icons.wifi_find,
+      ),
+      MqttBaglantiDurumu.baglantiKesildi => (
+        Colors.orange,
+        'Kesildi',
+        Icons.wifi_off,
+      ),
       MqttBaglantiDurumu.hata => (Colors.red, 'Hata', Icons.error),
     };
 

@@ -29,6 +29,7 @@ import '../config/ayarlar_sabitleri.dart';
 import '../models/sensor_okuma.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/durum_renkleri.dart';
+import '../widgets/duyarli_icerik.dart';
 
 class AktifTedaviEkrani extends StatefulWidget {
   final int zonNumarasi;
@@ -66,16 +67,21 @@ class _AktifTedaviEkraniState extends State<AktifTedaviEkrani> {
       appBar: AppBar(title: Text('Zon ${widget.zonNumarasi} - Aktif Tedavi')),
       body: okuma == null
           ? const Center(child: Text('Veri bulunamadı'))
-          : Padding(
-              padding: const EdgeInsets.all(20),
-              child: okuma.tedaviAktif != TedaviTuru.yok
-                  ? _TedaviIlerlemeGorunumu(
-                      okuma: okuma,
-                      baslangic: durum.tedaviBaslangicZamani(widget.zonNumarasi),
-                    )
-                  : okuma.durulamaAktif
-                      ? _DurulamaGorunumu(okuma: okuma)
-                      : const _AktifTedaviYok(),
+          : DuyarliIcerik(
+              maksimumGenislik: 560,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: okuma.tedaviAktif != TedaviTuru.yok
+                    ? _TedaviIlerlemeGorunumu(
+                        okuma: okuma,
+                        baslangic: durum.tedaviBaslangicZamani(
+                          widget.zonNumarasi,
+                        ),
+                      )
+                    : okuma.durulamaAktif
+                    ? _DurulamaGorunumu(okuma: okuma)
+                    : const _AktifTedaviYok(),
+              ),
             ),
     );
   }
@@ -89,10 +95,14 @@ class _TedaviIlerlemeGorunumu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final toplamSaniye = AyarlarSabitleri.tedaviSuresiSaniye[okuma.tedaviAktif] ?? 30;
+    final toplamSaniye =
+        AyarlarSabitleri.tedaviSuresiSaniye[okuma.tedaviAktif] ?? 30;
     final gecenSaniye = baslangic == null
         ? 0
-        : DateTime.now().difference(baslangic!).inSeconds.clamp(0, toplamSaniye);
+        : DateTime.now()
+              .difference(baslangic!)
+              .inSeconds
+              .clamp(0, toplamSaniye);
     final ilerleme = toplamSaniye == 0 ? 0.0 : gecenSaniye / toplamSaniye;
     final kalanSaniye = toplamSaniye - gecenSaniye;
 
@@ -103,7 +113,9 @@ class _TedaviIlerlemeGorunumu extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           tedaviEtiketi(okuma.tedaviAktif),
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
         Text(
@@ -122,7 +134,9 @@ class _TedaviIlerlemeGorunumu extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          kalanSaniye > 0 ? 'Tahmini kalan süre: $kalanSaniye sn' : 'Tamamlanmak üzere...',
+          kalanSaniye > 0
+              ? 'Tahmini kalan süre: $kalanSaniye sn'
+              : 'Tamamlanmak üzere...',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 24),
@@ -145,7 +159,9 @@ class _DurulamaGorunumu extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           'Zorunlu Durulama Sürüyor',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         const Text(
@@ -170,7 +186,10 @@ class _AktifTedaviYok extends StatelessWidget {
         children: [
           Icon(Icons.check_circle, size: 64, color: DurumRenkleri.normal),
           SizedBox(height: 16),
-          Text('Şu anda aktif bir tedavi yok', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            'Şu anda aktif bir tedavi yok',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );

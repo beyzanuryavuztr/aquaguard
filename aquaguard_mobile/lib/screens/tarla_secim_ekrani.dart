@@ -18,6 +18,7 @@ import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/durum_renkleri.dart';
+import '../widgets/duyarli_icerik.dart';
 import 'ayarlar_ekrani.dart';
 import 'zon_dashboard_ekrani.dart';
 
@@ -29,9 +30,7 @@ class TarlaSecimEkrani extends StatelessWidget {
     final durum = context.watch<UygulamaDurumu>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tarlalarım'),
-      ),
+      appBar: AppBar(title: const Text('Tarlalarım')),
       body: !durum.hazir
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -44,35 +43,47 @@ class TarlaSecimEkrani extends StatelessWidget {
                   ),
                 Expanded(
                   child: durum.tarlalar.isEmpty
-                      ? _BosTarlaGorunumu(onEkle: () => _tarlaEkleDuzenleFormunuGoster(context))
-                      : ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                          children: [
-                            Text(
-                              '${durum.tarlalar.length} tarla, '
-                              '${durum.tumZonNumaralari.length} izlenen zon',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                            const SizedBox(height: 16),
-                            ...durum.tarlalar.map(
-                              (tarla) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _TarlaKarti(
-                                  tarla: tarla,
-                                  onDuzenle: () => _tarlaEkleDuzenleFormunuGoster(
-                                    context,
-                                    duzenlenecekTarla: tarla,
-                                  ),
-                                  onSil: () => _tarlaSilmeyiOnayla(context, tarla),
-                                  onAc: () => Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => ZonDashboardEkrani(tarla: tarla)),
+                      ? _BosTarlaGorunumu(
+                          onEkle: () => _tarlaEkleDuzenleFormunuGoster(context),
+                        )
+                      : DuyarliIcerik(
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                            children: [
+                              Text(
+                                '${durum.tarlalar.length} tarla, '
+                                '${durum.tumZonNumaralari.length} izlenen zon',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 16),
+                              ...durum.tarlalar.map(
+                                (tarla) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _TarlaKarti(
+                                    tarla: tarla,
+                                    onDuzenle: () =>
+                                        _tarlaEkleDuzenleFormunuGoster(
+                                          context,
+                                          duzenlenecekTarla: tarla,
+                                        ),
+                                    onSil: () =>
+                                        _tarlaSilmeyiOnayla(context, tarla),
+                                    onAc: () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            ZonDashboardEkrani(tarla: tarla),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                 ),
               ],
@@ -90,7 +101,9 @@ class TarlaSecimEkrani extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Tarlayı Sil'),
-        content: Text('"${tarla.ad}" tarlasını silmek istediğinize emin misiniz?'),
+        content: Text(
+          '"${tarla.ad}" tarlasını silmek istediğinize emin misiniz?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
@@ -108,8 +121,13 @@ class TarlaSecimEkrani extends StatelessWidget {
     );
   }
 
-  void _tarlaEkleDuzenleFormunuGoster(BuildContext context, {Tarla? duzenlenecekTarla}) {
-    final adController = TextEditingController(text: duzenlenecekTarla?.ad ?? '');
+  void _tarlaEkleDuzenleFormunuGoster(
+    BuildContext context, {
+    Tarla? duzenlenecekTarla,
+  }) {
+    final adController = TextEditingController(
+      text: duzenlenecekTarla?.ad ?? '',
+    );
     final zonController = TextEditingController(
       text: duzenlenecekTarla?.zonNumaralari.join(', ') ?? '',
     );
@@ -118,7 +136,9 @@ class TarlaSecimEkrani extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(duzenlenecekTarla == null ? 'Yeni Tarla Ekle' : 'Tarlayı Düzenle'),
+        title: Text(
+          duzenlenecekTarla == null ? 'Yeni Tarla Ekle' : 'Tarlayı Düzenle',
+        ),
         content: Form(
           key: formAnahtari,
           child: Column(
@@ -127,8 +147,9 @@ class TarlaSecimEkrani extends StatelessWidget {
               TextFormField(
                 controller: adController,
                 decoration: const InputDecoration(labelText: 'Tarla Adı'),
-                validator: (deger) =>
-                    (deger == null || deger.trim().isEmpty) ? 'Tarla adı gerekli' : null,
+                validator: (deger) => (deger == null || deger.trim().isEmpty)
+                    ? 'Tarla adı gerekli'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -138,10 +159,16 @@ class TarlaSecimEkrani extends StatelessWidget {
                   hintText: 'Örnek: 1, 2, 3',
                 ),
                 validator: (deger) {
-                  if (deger == null || deger.trim().isEmpty) return 'En az bir zon numarası girin';
+                  if (deger == null || deger.trim().isEmpty) {
+                    return 'En az bir zon numarası girin';
+                  }
                   final parcalar = deger.split(',').map((p) => p.trim());
-                  final hepsiGecerliSayi = parcalar.every((p) => int.tryParse(p) != null);
-                  if (!hepsiGecerliSayi) return 'Zon numaraları virgülle ayrılmış tam sayı olmalı';
+                  final hepsiGecerliSayi = parcalar.every(
+                    (p) => int.tryParse(p) != null,
+                  );
+                  if (!hepsiGecerliSayi) {
+                    return 'Zon numaraları virgülle ayrılmış tam sayı olmalı';
+                  }
 
                   final girilenZonlar = parcalar.map(int.parse).toSet();
 
@@ -150,8 +177,13 @@ class TarlaSecimEkrani extends StatelessWidget {
                   // degistirmeden tekrar kaydetmek hataya dusmemeli)
                   final durum = context.read<UygulamaDurumu>();
                   for (final digerTarla in durum.tarlalar) {
-                    if (duzenlenecekTarla != null && digerTarla.id == duzenlenecekTarla.id) continue;
-                    final cakisanlar = girilenZonlar.intersection(digerTarla.zonNumaralari.toSet());
+                    if (duzenlenecekTarla != null &&
+                        digerTarla.id == duzenlenecekTarla.id) {
+                      continue;
+                    }
+                    final cakisanlar = girilenZonlar.intersection(
+                      digerTarla.zonNumaralari.toSet(),
+                    );
                     if (cakisanlar.isNotEmpty) {
                       return 'Zon ${cakisanlar.join(", ")} zaten "${digerTarla.ad}" tarlasında kullanılıyor';
                     }
@@ -171,26 +203,31 @@ class TarlaSecimEkrani extends StatelessWidget {
             onPressed: () {
               if (!(formAnahtari.currentState?.validate() ?? false)) return;
 
-              final zonNumaralari = zonController.text
-                  .split(',')
-                  .map((parca) => int.parse(parca.trim()))
-                  .toSet()
-                  .toList()
-                ..sort();
+              final zonNumaralari =
+                  zonController.text
+                      .split(',')
+                      .map((parca) => int.parse(parca.trim()))
+                      .toSet()
+                      .toList()
+                    ..sort();
 
               final durum = context.read<UygulamaDurumu>();
 
               if (duzenlenecekTarla == null) {
-                durum.tarlaEkle(Tarla(
-                  id: 'tarla-${DateTime.now().millisecondsSinceEpoch}',
-                  ad: adController.text.trim(),
-                  zonNumaralari: zonNumaralari,
-                ));
+                durum.tarlaEkle(
+                  Tarla(
+                    id: 'tarla-${DateTime.now().millisecondsSinceEpoch}',
+                    ad: adController.text.trim(),
+                    zonNumaralari: zonNumaralari,
+                  ),
+                );
               } else {
-                durum.tarlaGuncelle(duzenlenecekTarla.kopyalaVeGuncelle(
-                  ad: adController.text.trim(),
-                  zonNumaralari: zonNumaralari,
-                ));
+                durum.tarlaGuncelle(
+                  duzenlenecekTarla.kopyalaVeGuncelle(
+                    ad: adController.text.trim(),
+                    zonNumaralari: zonNumaralari,
+                  ),
+                );
               }
 
               Navigator.of(dialogContext).pop();
@@ -215,9 +252,16 @@ class _BosTarlaGorunumu extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.grass, size: 72, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              Icons.grass,
+              size: 72,
+              color: Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(height: 16),
-            Text('Henüz tarla eklenmedi', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Henüz tarla eklenmedi',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             const Text(
               'İzlemek istediğiniz ilk tarlanızı ve zon numaralarını ekleyerek başlayın.',
@@ -273,16 +317,17 @@ class _TarlaKarti extends StatelessWidget {
                         children: [
                           Text(
                             tarla.ad,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${tarla.zonNumaralari.length} zon — '
                             '${tarla.zonNumaralari.map((z) => "Zon $z").join(", ")}',
-                            style: const TextStyle(color: Colors.black54, fontSize: 13),
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -322,7 +367,10 @@ class _TarlaKarti extends StatelessWidget {
       final oncelik = _oncelikSkoru(okuma, cevrimici);
       if (oncelik > enYuksekOncelik) {
         enYuksekOncelik = oncelik;
-        secilenRenk = DurumRenkleri.renkGetir(okuma: okuma, cevrimici: cevrimici);
+        secilenRenk = DurumRenkleri.renkGetir(
+          okuma: okuma,
+          cevrimici: cevrimici,
+        );
       }
     }
     return secilenRenk;

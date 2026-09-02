@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/uygulama_durumu.dart';
+import '../widgets/duyarli_icerik.dart';
 
 class AktiviteGecmisiEkrani extends StatelessWidget {
   const AktiviteGecmisiEkrani({super.key});
@@ -27,21 +28,25 @@ class AktiviteGecmisiEkrani extends StatelessWidget {
       appBar: AppBar(title: const Text('Aktivite Geçmişi')),
       body: aktiviteler.isEmpty
           ? const Center(child: Text('Henüz aktivite kaydı yok.'))
-          : ListView.separated(
-              itemCount: aktiviteler.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final kayit = aktiviteler[index];
-                final renk = kayit.renkGetir(context);
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: renk.withValues(alpha: 0.15),
-                    child: Icon(kayit.ikon, color: renk, size: 20),
-                  ),
-                  title: Text(kayit.mesaj),
-                  subtitle: Text('Zon ${kayit.zone} — ${DateFormat('dd.MM.yyyy HH:mm:ss').format(kayit.zaman)}'),
-                );
-              },
+          : DuyarliIcerik(
+              child: ListView.separated(
+                itemCount: aktiviteler.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final kayit = aktiviteler[index];
+                  final renk = kayit.renkGetir(context);
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: renk.withValues(alpha: 0.15),
+                      child: Icon(kayit.ikon, color: renk, size: 20),
+                    ),
+                    title: Text(kayit.mesaj),
+                    subtitle: Text(
+                      'Zon ${kayit.zone} — ${DateFormat('dd.MM.yyyy HH:mm:ss').format(kayit.zaman)}',
+                    ),
+                  );
+                },
+              ),
             ),
     );
   }

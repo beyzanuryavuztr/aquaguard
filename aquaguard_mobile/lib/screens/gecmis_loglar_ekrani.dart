@@ -19,6 +19,7 @@ import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/durum_renkleri.dart';
+import '../widgets/duyarli_icerik.dart';
 
 class GecmisLoglarEkrani extends StatefulWidget {
   final Tarla tarla;
@@ -59,10 +60,13 @@ class _GecmisLoglarEkraniState extends State<GecmisLoglarEkrani> {
       ),
       body: gecmis.isEmpty
           ? const Center(child: Text('Bu zon için henüz kayıt yok'))
-          : ListView.separated(
-              itemCount: gecmis.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) => _GecmisSatiri(okuma: gecmis[index]),
+          : DuyarliIcerik(
+              child: ListView.separated(
+                itemCount: gecmis.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, index) =>
+                    _GecmisSatiri(okuma: gecmis[index]),
+              ),
             ),
     );
   }
@@ -73,7 +77,11 @@ class _ZonSekmeleri extends StatelessWidget {
   final int seciliZon;
   final ValueChanged<int> onSecim;
 
-  const _ZonSekmeleri({required this.zonlar, required this.seciliZon, required this.onSecim});
+  const _ZonSekmeleri({
+    required this.zonlar,
+    required this.seciliZon,
+    required this.onSecim,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +117,11 @@ class _GecmisSatiri extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: renk.withValues(alpha: 0.15),
-        child: Icon(DurumRenkleri.ikonGetir(okuma: okuma, cevrimici: true), color: renk, size: 20),
+        child: Icon(
+          DurumRenkleri.ikonGetir(okuma: okuma, cevrimici: true),
+          color: renk,
+          size: 20,
+        ),
       ),
       title: Text(durumEtiketi(okuma.durum)),
       subtitle: Text(

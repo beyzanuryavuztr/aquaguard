@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 import '../models/aktivite_kaydi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/demo_modu_banner.dart';
+import '../widgets/duyarli_icerik.dart';
 import '../widgets/durum_renkleri.dart';
 import 'aktivite_gecmisi_ekrani.dart';
 import 'ayarlar_ekrani.dart';
@@ -36,7 +37,10 @@ class GenelBakisEkrani extends StatelessWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(Icons.water_drop, color: Theme.of(context).colorScheme.primary),
+            Icon(
+              Icons.water_drop,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             const SizedBox(width: 8),
             const Text('AquaGuard'),
           ],
@@ -44,91 +48,125 @@ class GenelBakisEkrani extends StatelessWidget {
       ),
       body: !durum.hazir
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.only(bottom: 32),
-              children: [
-                if (durum.demoModuAktif)
-                  DemoModuBanner(
-                    onAyarlaraGit: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AyarlarEkrani()),
+          : DuyarliIcerik(
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 32),
+                children: [
+                  if (durum.demoModuAktif)
+                    DemoModuBanner(
+                      onAyarlaraGit: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AyarlarEkrani(),
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Text(
+                      'Sistem Özeti',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Text(
-                    'Sistem Özeti',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        _IstatistikKarti(
+                          deger: durum.tarlalar.length,
+                          etiket: 'Tarla',
+                          ikon: Icons.grass,
+                        ),
+                        const SizedBox(width: 10),
+                        _IstatistikKarti(
+                          deger: durum.tumZonNumaralari.length,
+                          etiket: 'Zon',
+                          ikon: Icons.sensors,
+                        ),
+                        const SizedBox(width: 10),
+                        _IstatistikKarti(
+                          deger: ozet.tedavide,
+                          etiket: 'Aktif Tedavi',
+                          ikon: Icons.build_circle,
+                          vurgulaRenk: ozet.tedavide > 0
+                              ? DurumRenkleri.tedaviAktif
+                              : null,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      _IstatistikKarti(
-                        deger: durum.tarlalar.length,
-                        etiket: 'Tarla',
-                        ikon: Icons.grass,
-                      ),
-                      const SizedBox(width: 10),
-                      _IstatistikKarti(
-                        deger: durum.tumZonNumaralari.length,
-                        etiket: 'Zon',
-                        ikon: Icons.sensors,
-                      ),
-                      const SizedBox(width: 10),
-                      _IstatistikKarti(
-                        deger: ozet.tedavide,
-                        etiket: 'Aktif Tedavi',
-                        ikon: Icons.build_circle,
-                        vurgulaRenk: ozet.tedavide > 0 ? DurumRenkleri.tedaviAktif : null,
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      _DurumOzetRozeti(sayi: ozet.normal, etiket: 'Normal', renk: DurumRenkleri.normal),
-                      const SizedBox(width: 8),
-                      _DurumOzetRozeti(sayi: ozet.belirsiz, etiket: 'Belirsiz', renk: DurumRenkleri.belirsiz),
-                      const SizedBox(width: 8),
-                      _DurumOzetRozeti(sayi: ozet.tespitEdildi, etiket: 'Tespit', renk: DurumRenkleri.tespitEdildi),
-                      if (ozet.cevrimdisi > 0) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        _DurumOzetRozeti(
+                          sayi: ozet.normal,
+                          etiket: 'Normal',
+                          renk: DurumRenkleri.normal,
+                        ),
                         const SizedBox(width: 8),
                         _DurumOzetRozeti(
-                            sayi: ozet.cevrimdisi, etiket: 'Çevrimdışı', renk: DurumRenkleri.cevrimdisi),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Son Aktiviteler',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const AktiviteGecmisiEkrani()),
+                          sayi: ozet.belirsiz,
+                          etiket: 'Belirsiz',
+                          renk: DurumRenkleri.belirsiz,
                         ),
-                        child: const Text('Tümünü Gör'),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        _DurumOzetRozeti(
+                          sayi: ozet.tespitEdildi,
+                          etiket: 'Tespit',
+                          renk: DurumRenkleri.tespitEdildi,
+                        ),
+                        if (ozet.cevrimdisi > 0) ...[
+                          const SizedBox(width: 8),
+                          _DurumOzetRozeti(
+                            sayi: ozet.cevrimdisi,
+                            etiket: 'Çevrimdışı',
+                            renk: DurumRenkleri.cevrimdisi,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                if (sonAktiviteler.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Text('Henüz aktivite kaydı yok.', style: TextStyle(color: Colors.black54)),
-                  )
-                else
-                  ...sonAktiviteler.map((kayit) => _AktiviteSatiri(kayit: kayit)),
-              ],
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Son Aktiviteler',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AktiviteGecmisiEkrani(),
+                            ),
+                          ),
+                          child: const Text('Tümünü Gör'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (sonAktiviteler.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Text(
+                        'Henüz aktivite kaydı yok.',
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    )
+                  else
+                    ...sonAktiviteler.map(
+                      (kayit) => _AktiviteSatiri(kayit: kayit),
+                    ),
+                ],
+              ),
             ),
     );
   }
@@ -158,8 +196,18 @@ class _IstatistikKarti extends StatelessWidget {
             children: [
               Icon(ikon, color: renk),
               const SizedBox(height: 8),
-              Text('$deger', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: renk)),
-              Text(etiket, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+              Text(
+                '$deger',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: renk,
+                ),
+              ),
+              Text(
+                etiket,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
             ],
           ),
         ),
@@ -173,17 +221,31 @@ class _DurumOzetRozeti extends StatelessWidget {
   final String etiket;
   final Color renk;
 
-  const _DurumOzetRozeti({required this.sayi, required this.etiket, required this.renk});
+  const _DurumOzetRozeti({
+    required this.sayi,
+    required this.etiket,
+    required this.renk,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(color: renk.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: renk.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Column(
           children: [
-            Text('$sayi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: renk)),
+            Text(
+              '$sayi',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: renk,
+              ),
+            ),
             Text(etiket, style: TextStyle(fontSize: 11, color: renk)),
           ],
         ),
