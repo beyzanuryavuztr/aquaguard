@@ -66,10 +66,12 @@ class UygulamaDurumu extends ChangeNotifier {
 
   SensorOkuma? sonOkuma(int zone) => _sonOkumalar[zone];
   bool zonCevrimiciMi(int zone) => _zonCevrimici[zone] ?? false;
-  List<SensorOkuma> gecmis(int zone) => List.unmodifiable(_gecmisler[zone] ?? const <SensorOkuma>[]);
+  List<SensorOkuma> gecmis(int zone) =>
+      List.unmodifiable(_gecmisler[zone] ?? const <SensorOkuma>[]);
 
   /// Tum zonlardaki onemli olaylarin kalici gecmisi, EN YENI ONCE.
-  List<AktiviteKaydi> get aktiviteGecmisi => List.unmodifiable(_aktiviteGecmisi);
+  List<AktiviteKaydi> get aktiviteGecmisi =>
+      List.unmodifiable(_aktiviteGecmisi);
 
   /// Tedavi sayilari (turlere gore), KALICI gecmisten HESAPLANIR (ayri bir
   /// sayac tutulmuyor) -- boylece uygulama yeniden acildiginda sifirlanmaz,
@@ -86,7 +88,8 @@ class UygulamaDurumu extends ChangeNotifier {
       final kronolojik = (_gecmisler[zon] ?? const <SensorOkuma>[]).reversed;
       var oncekiTedavi = TedaviTuru.yok;
       for (final okuma in kronolojik) {
-        if (okuma.tedaviAktif != TedaviTuru.yok && oncekiTedavi == TedaviTuru.yok) {
+        if (okuma.tedaviAktif != TedaviTuru.yok &&
+            oncekiTedavi == TedaviTuru.yok) {
           sayaclar[okuma.tedaviAktif] = (sayaclar[okuma.tedaviAktif] ?? 0) + 1;
         }
         oncekiTedavi = okuma.tedaviAktif;
@@ -124,7 +127,11 @@ class UygulamaDurumu extends ChangeNotifier {
   /// yerde elle kopyalanmasini onler). Her zon TEK bir kovaya duser,
   /// oncelik sirasi: cevrimdisi > tedavide > tespit edildi > belirsiz > normal.
   ZonDurumOzeti durumOzetiHesapla(List<int> zonlar) {
-    var normal = 0, belirsiz = 0, tespitEdildi = 0, tedavide = 0, cevrimdisi = 0;
+    var normal = 0,
+        belirsiz = 0,
+        tespitEdildi = 0,
+        tedavide = 0,
+        cevrimdisi = 0;
     for (final zon in zonlar) {
       final okuma = _sonOkumalar[zon];
       final cevrimici = _zonCevrimici[zon] ?? false;
@@ -267,7 +274,10 @@ class UygulamaDurumu extends ChangeNotifier {
     _sonOkumalar[okuma.zone] = okuma;
     _zonCevrimici[okuma.zone] = true;
 
-    final guncelGecmis = [okuma, ...(_gecmisler[okuma.zone] ?? const <SensorOkuma>[])].take(100).toList();
+    final guncelGecmis = [
+      okuma,
+      ...(_gecmisler[okuma.zone] ?? const <SensorOkuma>[]),
+    ].take(100).toList();
     _gecmisler[okuma.zone] = guncelGecmis;
 
     unawaited(_depolama.sonOkumayiKaydet(okuma));
@@ -280,7 +290,15 @@ class UygulamaDurumu extends ChangeNotifier {
     if (onceki == null) return; // ilk veri -- gecmis karsilastirma yok
 
     void kaydet(String mesaj, AktiviteTuru tur) {
-      _aktiviteGecmisi.insert(0, AktiviteKaydi(zaman: yeni.zaman, zone: yeni.zone, mesaj: mesaj, tur: tur));
+      _aktiviteGecmisi.insert(
+        0,
+        AktiviteKaydi(
+          zaman: yeni.zaman,
+          zone: yeni.zone,
+          mesaj: mesaj,
+          tur: tur,
+        ),
+      );
       if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
       unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
       if (_bildirimlerAcik) _bildirimKuyrugu.add(mesaj);
@@ -303,7 +321,10 @@ class UygulamaDurumu extends ChangeNotifier {
           break;
         case TeshisDurumu.normal:
           if (onceki.durum != TeshisDurumu.bilinmiyor) {
-            kaydet('Zon ${yeni.zone}: Durum normale döndü', AktiviteTuru.normaleDonus);
+            kaydet(
+              'Zon ${yeni.zone}: Durum normale döndü',
+              AktiviteTuru.normaleDonus,
+            );
           }
           break;
         case TeshisDurumu.bilinmiyor:
@@ -318,7 +339,10 @@ class UygulamaDurumu extends ChangeNotifier {
           AktiviteTuru.tedaviBaslangic,
         );
       } else if (onceki.tedaviAktif != TedaviTuru.yok) {
-        kaydet('Zon ${yeni.zone}: Tedavi tamamlandı, durulama başladı', AktiviteTuru.tedaviBitis);
+        kaydet(
+          'Zon ${yeni.zone}: Tedavi tamamlandı, durulama başladı',
+          AktiviteTuru.tedaviBitis,
+        );
       }
     }
   }
@@ -345,13 +369,42 @@ class UygulamaDurumu extends ChangeNotifier {
   }
 
   Future<void> tarlaSil(String id) async {
+    final silinenTarla = _tarlalar.firstWhere((t) => t.id == id);
     _tarlalar = _tarlalar.where((t) => t.id != id).toList();
     await _depolama.tarlalariKaydet(_tarlalar);
+
+    // Silinen tarlanin zonlarindan HALA baska bir tarlada kullanilanlari
+    // koru; kalanlarin (artik yetim) onbellek/gecmis verisini temizle --
+    // aksi halde ayni zon numarasi yeniden kullanilirsa eski veri "hayalet"
+    // gibi hemen gorunur.
+    final halaKullanilanZonlar = _tarlalar
+        .expand((t) => t.zonNumaralari)
+        .toSet();
+    var yetimZonVarMi = false;
+    for (final zon in silinenTarla.zonNumaralari) {
+      if (halaKullanilanZonlar.contains(zon)) continue;
+      yetimZonVarMi = true;
+      _sonOkumalar.remove(zon);
+      _zonCevrimici.remove(zon);
+      _gecmisler.remove(zon);
+      unawaited(_depolama.zonVerisiniTemizle(zon));
+    }
+
+    // Demo modunda simulasyon, zon listesini SADECE baslatildigi anda alir --
+    // yetim kalan bir zon icin veri uretmeye devam etmesin diye (hem israf
+    // hem de az sonra silinen verinin "hayalet" gibi geri gelmesine sebep
+    // olur) guncel zon listesiyle yeniden baslatiyoruz.
+    if (yetimZonVarMi && _demoModuAktif) {
+      _simulasyonuBaslat();
+    }
+
     notifyListeners();
   }
 
   Future<void> tarlaGuncelle(Tarla guncelTarla) async {
-    _tarlalar = _tarlalar.map((t) => t.id == guncelTarla.id ? guncelTarla : t).toList();
+    _tarlalar = _tarlalar
+        .map((t) => t.id == guncelTarla.id ? guncelTarla : t)
+        .toList();
     await _depolama.tarlalariKaydet(_tarlalar);
     _yeniZonlariBaglantiyaEkle(guncelTarla.zonNumaralari);
     notifyListeners();
@@ -373,7 +426,10 @@ class UygulamaDurumu extends ChangeNotifier {
   // AYARLAR
   // ============================================================================
 
-  Future<void> mqttAyarlariniGuncelle({required String host, required int port}) async {
+  Future<void> mqttAyarlariniGuncelle({
+    required String host,
+    required int port,
+  }) async {
     _mqttHost = host;
     _mqttPort = port;
     await _depolama.mqttAyarlariniKaydet(host: host, port: port);

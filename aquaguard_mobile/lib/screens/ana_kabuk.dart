@@ -21,7 +21,9 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/uygulama_durumu.dart';
 import '../widgets/duyarli_icerik.dart';
 import 'ayarlar_ekrani.dart';
 import 'genel_bakis_ekrani.dart';
@@ -81,6 +83,29 @@ class _AnaKabukState extends State<AnaKabuk> {
 
   @override
   Widget build(BuildContext context) {
+    // Bildirimleri BURADA (kabuk seviyesinde) dinliyoruz -- Genel Bakış
+    // artik uygulamanin ana ekrani, kullanici hicbir tarlaya girmeden
+    // saatlerce orada kalabilir. Bildirim akisi tek bir sekmeye (Zon
+    // Dashboard'a) bagli kalirsa, kullanici Genel Bakış'tayken hicbir
+    // canli tikanma/tedavi uyarisi GORMEZ (veri Aktivite Gecmisi'ne
+    // kaydedilir ama aninda haber verilmez). Kabuk her zaman monte
+    // oldugu icin, hangi sekmede olursa olsun bildirimler burada gosterilir.
+    final durum = context.watch<UygulamaDurumu>();
+    final bildirimler = durum.bildirimleriAlVeTemizle();
+    if (bildirimler.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        for (final mesaj in bildirimler) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(mesaj),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      });
+    }
+
     final icerik = IndexedStack(
       index: _seciliSekme,
       children: [for (final s in _sekmeler) s.ekran],
@@ -92,17 +117,24 @@ class _AnaKabukState extends State<AnaKabuk> {
           children: [
             NavigationRail(
               selectedIndex: _seciliSekme,
-              onDestinationSelected: (index) => setState(() => _seciliSekme = index),
+              onDestinationSelected: (index) =>
+                  setState(() => _seciliSekme = index),
               labelType: NavigationRailLabelType.all,
               leading: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
                   children: [
-                    Icon(Icons.water_drop, color: Theme.of(context).colorScheme.primary, size: 28),
+                    Icon(
+                      Icons.water_drop,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 28,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       'AquaGuard',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -130,7 +162,11 @@ class _AnaKabukState extends State<AnaKabuk> {
         onDestinationSelected: (index) => setState(() => _seciliSekme = index),
         destinations: [
           for (final s in _sekmeler)
-            NavigationDestination(icon: Icon(s.ikon), selectedIcon: Icon(s.seciliIkon), label: s.etiket),
+            NavigationDestination(
+              icon: Icon(s.ikon),
+              selectedIcon: Icon(s.seciliIkon),
+              label: s.etiket,
+            ),
         ],
       ),
     );

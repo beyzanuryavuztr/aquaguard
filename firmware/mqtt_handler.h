@@ -51,6 +51,7 @@
 #define TINY_GSM_MODEM_SIM800
 
 #include <Arduino.h>
+#include <string.h>
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -122,11 +123,25 @@ void mqttBaglantiyiSagla() {
   }
 
   Serial.println(F("[MQTT] Brokera baglaniliyor..."));
-  bool baglandi = _mqttClient.connect(
-      CIHAZ_ADI,
-      MQTT_KULLANICI_ADI, MQTT_SIFRE,
-      _durumTopic, 1, true, "offline"   // Last Will Testament
-  );
+
+  // MQTT_KULLANICI_ADI bos string ("") oldugunda bile PubSubClient'in
+  // kullanici adli overload'unu cagirmak, CONNECT paketine BOS ama VAR
+  // olan bir kullanici adi alani koyar -- bazi sıkı brokerlar bunu
+  // reddeder. Bu yuzden kimlik dogrulama bilgisi yoksa parametresiz
+  // overload'u kullaniyoruz.
+  bool baglandi;
+  if (strlen(MQTT_KULLANICI_ADI) > 0) {
+    baglandi = _mqttClient.connect(
+        CIHAZ_ADI,
+        MQTT_KULLANICI_ADI, MQTT_SIFRE,
+        _durumTopic, 1, true, "offline"   // Last Will Testament
+    );
+  } else {
+    baglandi = _mqttClient.connect(
+        CIHAZ_ADI,
+        _durumTopic, 1, true, "offline"   // Last Will Testament
+    );
+  }
 
   if (baglandi) {
     Serial.println(F("[MQTT] Baglanti basarili."));

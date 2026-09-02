@@ -31,22 +31,9 @@ class ZonDashboardEkrani extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final durum = context.watch<UygulamaDurumu>();
-
-    // Provider'daki yeni bildirimleri kuyruktan alip SnackBar olarak goster.
-    final bildirimler = durum.bildirimleriAlVeTemizle();
-    if (bildirimler.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        for (final mesaj in bildirimler) {
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(mesaj),
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-      });
-    }
+    // NOT: Bildirimler artik AnaKabuk seviyesinde (kabugun kendisi) drenaj
+    // ediliyor -- kullanici hangi sekmede olursa olsun gorunmesi icin.
+    // Burada tekrar cagirmiyoruz (cift SnackBar / yaris durumu olmasin diye).
 
     return Scaffold(
       appBar: AppBar(

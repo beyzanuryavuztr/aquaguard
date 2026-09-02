@@ -18,7 +18,7 @@
  *   Bu dosya, bu gelistirme ortaminda (Arduino/Deneyap Kart derleyicisi
  *   kurulu olmadigi icin) DERLENIP TEST EDILEMEMISTIR. Kod, Arduino/ESP32
  *   C++ standartlarina ve kullanilan kutuphanelerin (TinyGSM, PubSubClient,
- *   ArduinoJson, RTClib, SD, Servo) bilinen API'lerine uygun sekilde
+ *   ArduinoJson, RTClib, SD, ESP32Servo) bilinen API'lerine uygun sekilde
  *   yazilmistir; ancak gercek Deneyap Kart uzerinde Deneyap Kart IDE'siyle
  *   derlenip fiziksel sensorlerle DOGRULANMASI GEREKIR. Pin numaralari ve
  *   kalibrasyon sabitleri icin config.h basindaki notlara bakiniz.
@@ -29,7 +29,9 @@
  *   - ArduinoJson (Benoit Blanchon), v6+
  *   - RTClib (Adafruit)
  *   - SD (Arduino core ile birlikte gelir)
- *   - Servo (Arduino core ile birlikte gelir)
+ *   - ESP32Servo (Kevin Harrington/John Bennett) -- KLASIK "Servo"
+ *     kutuphanesi DEGIL: Deneyap Kart ESP32 tabanlidir ve standart AVR
+ *     Servo kutuphanesiyle uyumlu calismaz
  *
  * Tarih:  2026-09-01
  * Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)

@@ -31,7 +31,12 @@
 #define AQUAGUARD_TREATMENT_H
 
 #include <Arduino.h>
-#include <Servo.h>
+// NOT: Klasik Arduino "Servo.h" kutuphanesi AVR (Uno/Mega) donanim
+// zamanlayicilarina gore yazilmistir ve Deneyap Kart gibi ESP32 tabanli
+// kartlarda GUVENILIR CALISMAZ/derlenmez. ESP32 icin dogru kutuphane
+// "ESP32Servo" (Kutuphane Yoneticisi'nden kurulur, API'si ayni: attach()/
+// write()) -- bu yuzden burada onu kullaniyoruz.
+#include <ESP32Servo.h>
 #include "config.h"
 #include "decision_engine.h"
 
@@ -113,7 +118,9 @@ void tedaviSistemBaslat() {
   digitalWrite(PIN_POMPA_ASIT, LOW);
   digitalWrite(PIN_POMPA_KLOR, LOW);
 
-  _yikamaServo.attach(PIN_SERVO_YIKAMA);
+  // ESP32Servo icin onerilen kurulum: standart 50Hz servo darbe frekansi.
+  _yikamaServo.setPeriodHertz(50);
+  _yikamaServo.attach(PIN_SERVO_YIKAMA, 500, 2400);
   _yikamaServo.write(0);   // baslangicta valf kapali
 
   _aktifTedavi = TEDAVI_YOK;

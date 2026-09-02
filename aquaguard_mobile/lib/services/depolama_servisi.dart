@@ -53,9 +53,7 @@ class DepolamaServisi {
     if (liste.isEmpty) {
       return Tarla.varsayilanListe();
     }
-    return liste
-        .map((e) => Tarla.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return liste.map((e) => Tarla.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<void> tarlalariKaydet(List<Tarla> tarlalar) async {
@@ -71,13 +69,17 @@ class DepolamaServisi {
   Future<({String host, int port})> mqttAyarlariniGetir() async {
     final tercihler = await _tercihler;
     final host =
-        tercihler.getString(_mqttHostAnahtari) ?? AyarlarSabitleri.varsayilanBroker;
+        tercihler.getString(_mqttHostAnahtari) ??
+        AyarlarSabitleri.varsayilanBroker;
     final port =
         tercihler.getInt(_mqttPortAnahtari) ?? AyarlarSabitleri.varsayilanPort;
     return (host: host, port: port);
   }
 
-  Future<void> mqttAyarlariniKaydet({required String host, required int port}) async {
+  Future<void> mqttAyarlariniKaydet({
+    required String host,
+    required int port,
+  }) async {
     final tercihler = await _tercihler;
     await tercihler.setString(_mqttHostAnahtari, host);
     await tercihler.setInt(_mqttPortAnahtari, port);
@@ -104,6 +106,17 @@ class DepolamaServisi {
     return SensorOkuma.fromCacheJson(jsonDecode(ham) as Map<String, dynamic>);
   }
 
+  /// Bir zonun onbellekteki son okumasini VE gecmisini tamamen siler.
+  /// Bir tarla silindiginde, artik hicbir tarlada kullanilmayan (yetim
+  /// kalan) zonlar icin cagrilir -- aksi halde biri ayni zon numarasiyla
+  /// yeni bir tarla olusturursa eski, alakasiz veriler "hayalet" gibi
+  /// hemen gorunur (yeni veri gelene kadar).
+  Future<void> zonVerisiniTemizle(int zone) async {
+    final tercihler = await _tercihler;
+    await tercihler.remove(_sonOkumaAnahtari(zone));
+    await tercihler.remove(_gecmisAnahtari(zone));
+  }
+
   // ==========================================================================
   // GECMIS KAYITLAR
   // ==========================================================================
@@ -125,7 +138,10 @@ class DepolamaServisi {
   Future<void> gecmiseEkle(SensorOkuma okuma) async {
     final tercihler = await _tercihler;
     final mevcutGecmis = await gecmisiGetir(okuma.zone);
-    final guncelGecmis = [okuma, ...mevcutGecmis].take(_gecmisMaksimumUzunluk).toList();
+    final guncelGecmis = [
+      okuma,
+      ...mevcutGecmis,
+    ].take(_gecmisMaksimumUzunluk).toList();
     await tercihler.setString(
       _gecmisAnahtari(okuma.zone),
       jsonEncode(guncelGecmis.map((o) => o.toJson()).toList()),
@@ -171,7 +187,9 @@ class DepolamaServisi {
     final ham = tercihler.getString(_aktiviteGecmisiAnahtari);
     if (ham == null) return [];
     final liste = jsonDecode(ham) as List<dynamic>;
-    return liste.map((e) => AktiviteKaydi.fromJson(e as Map<String, dynamic>)).toList();
+    return liste
+        .map((e) => AktiviteKaydi.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> aktiviteGecmisiniKaydet(List<AktiviteKaydi> gecmis) async {
