@@ -210,8 +210,102 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                     context.read<UygulamaDurumu>().bildirimleriDegistir(deger),
               ),
             ),
+            const SizedBox(height: 24),
+            _BolumBasligi(baslik: 'Hakkında'),
+            const Card(child: _HakkindaKarti()),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HakkindaKarti extends StatelessWidget {
+  const _HakkindaKarti();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.water_drop,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'AquaGuard',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'v1.0.0',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Toprak altı damla sulama sistemlerinde damlatıcı tıkanmasını '
+            'türüne göre otonom teşhis eden ve tedavi eden akıllı izleme sistemi.',
+            style: TextStyle(fontSize: 13, color: Colors.black54),
+          ),
+          const Divider(height: 24),
+          const _HakkindaSatiri(etiket: 'Takım', deger: 'Arge-T HydroLab'),
+          const _HakkindaSatiri(
+            etiket: 'Yarışma',
+            deger: 'TEKNOFEST 2026 — Tarım Teknolojileri',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HakkindaSatiri extends StatelessWidget {
+  final String etiket;
+  final String deger;
+  const _HakkindaSatiri({required this.etiket, required this.deger});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            etiket,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Text(
+            deger,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
