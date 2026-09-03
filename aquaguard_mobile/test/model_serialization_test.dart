@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:aquaguard_mobile/models/aktivite_kaydi.dart';
 import 'package:aquaguard_mobile/models/sensor_okuma.dart';
 import 'package:aquaguard_mobile/models/tarla.dart';
+import 'package:aquaguard_mobile/models/tarla_notu.dart';
 
 void main() {
   group('SensorOkuma round-trip', () {
@@ -110,22 +111,76 @@ void main() {
   });
 
   group('Tarla round-trip', () {
-    test('toJson -> fromJson tum alanlari korur', () {
-      const tarla = Tarla(id: 'tarla-2', ad: 'Güney Tarlası', zonNumaralari: [4, 5]);
+    test('toJson -> fromJson tum alanlari korur (profil alanlari dahil)', () {
+      const tarla = Tarla(
+        id: 'tarla-2',
+        ad: 'Güney Tarlası',
+        zonNumaralari: [4, 5],
+        konum: 'Şanlıurfa, Akçakale',
+        aciklama: 'Mısır ekili',
+        fotografBase64: 'aGVsbG8=',
+      );
       final geriYuklenen = Tarla.fromJson(tarla.toJson());
 
       expect(geriYuklenen.id, tarla.id);
       expect(geriYuklenen.ad, tarla.ad);
       expect(geriYuklenen.zonNumaralari, tarla.zonNumaralari);
+      expect(geriYuklenen.konum, tarla.konum);
+      expect(geriYuklenen.aciklama, tarla.aciklama);
+      expect(geriYuklenen.fotografBase64, tarla.fotografBase64);
     });
 
-    test('varsayilanListe() 3 tarla ve toplam 6 tekil zon icerir', () {
+    test('profil alanlari opsiyoneldir, verilmezse null kalir', () {
+      const tarla = Tarla(id: 'tarla-x', ad: 'Boş Tarla', zonNumaralari: [9]);
+      final geriYuklenen = Tarla.fromJson(tarla.toJson());
+
+      expect(geriYuklenen.konum, isNull);
+      expect(geriYuklenen.aciklama, isNull);
+      expect(geriYuklenen.fotografBase64, isNull);
+    });
+
+    test('kopyalaVeGuncelle fotografiKaldir:true ile fotografi temizler', () {
+      const tarla = Tarla(
+        id: 'tarla-3',
+        ad: 'Sera',
+        zonNumaralari: [6],
+        fotografBase64: 'aGVsbG8=',
+      );
+      final guncellenen = tarla.kopyalaVeGuncelle(fotografiKaldir: true);
+
+      expect(guncellenen.fotografBase64, isNull);
+      expect(guncellenen.ad, tarla.ad); // digger alanlar etkilenmemeli
+    });
+
+    test('varsayilanListe() 3 tarla ve toplam 6 tekil zon icerir, hepsinin konum/aciklamasi var', () {
       final liste = Tarla.varsayilanListe();
       expect(liste.length, 3);
 
       final tumZonlar = liste.expand((t) => t.zonNumaralari).toList();
       expect(tumZonlar.toSet().length, tumZonlar.length, reason: 'zon numaralari tekil olmali');
       expect(tumZonlar.length, 6);
+
+      for (final tarla in liste) {
+        expect(tarla.konum, isNotNull);
+        expect(tarla.aciklama, isNotNull);
+      }
+    });
+  });
+
+  group('TarlaNotu round-trip', () {
+    test('toJson -> fromJson tum alanlari korur', () {
+      final not = TarlaNotu(
+        id: 'not-1',
+        tarlaId: 'tarla-2',
+        metin: '15.09 gübreleme yapıldı',
+        zaman: DateTime(2026, 9, 15, 9, 30),
+      );
+      final geriYuklenen = TarlaNotu.fromJson(not.toJson());
+
+      expect(geriYuklenen.id, not.id);
+      expect(geriYuklenen.tarlaId, not.tarlaId);
+      expect(geriYuklenen.metin, not.metin);
+      expect(geriYuklenen.zaman, not.zaman);
     });
   });
 

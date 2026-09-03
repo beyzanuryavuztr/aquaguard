@@ -183,6 +183,12 @@ class _TarlaSecimEkraniState extends State<TarlaSecimEkrani> {
     final zonController = TextEditingController(
       text: duzenlenecekTarla?.zonNumaralari.join(', ') ?? '',
     );
+    final konumController = TextEditingController(
+      text: duzenlenecekTarla?.konum ?? '',
+    );
+    final aciklamaController = TextEditingController(
+      text: duzenlenecekTarla?.aciklama ?? '',
+    );
     final formAnahtari = GlobalKey<FormState>();
 
     showDialog<void>(
@@ -191,11 +197,12 @@ class _TarlaSecimEkraniState extends State<TarlaSecimEkrani> {
         title: Text(
           duzenlenecekTarla == null ? 'Yeni Tarla Ekle' : 'Tarlayı Düzenle',
         ),
-        content: Form(
-          key: formAnahtari,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        content: SingleChildScrollView(
+          child: Form(
+            key: formAnahtari,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               TextFormField(
                 controller: adController,
                 decoration: const InputDecoration(labelText: 'Tarla Adı'),
@@ -243,7 +250,25 @@ class _TarlaSecimEkraniState extends State<TarlaSecimEkrani> {
                   return null;
                 },
               ),
-            ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: konumController,
+                decoration: const InputDecoration(
+                  labelText: 'Konum (opsiyonel)',
+                  hintText: 'Örnek: Şanlıurfa, Harran Ovası',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: aciklamaController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Açıklama (opsiyonel)',
+                  hintText: 'Örnek: Pamuk ekili, 3 parsel',
+                ),
+              ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -262,6 +287,8 @@ class _TarlaSecimEkraniState extends State<TarlaSecimEkrani> {
                       .toSet()
                       .toList()
                     ..sort();
+              final konum = konumController.text.trim();
+              final aciklama = aciklamaController.text.trim();
 
               final durum = context.read<UygulamaDurumu>();
 
@@ -271,6 +298,8 @@ class _TarlaSecimEkraniState extends State<TarlaSecimEkrani> {
                     id: 'tarla-${DateTime.now().millisecondsSinceEpoch}',
                     ad: adController.text.trim(),
                     zonNumaralari: zonNumaralari,
+                    konum: konum.isEmpty ? null : konum,
+                    aciklama: aciklama.isEmpty ? null : aciklama,
                   ),
                 );
               } else {
@@ -278,6 +307,8 @@ class _TarlaSecimEkraniState extends State<TarlaSecimEkrani> {
                   duzenlenecekTarla.kopyalaVeGuncelle(
                     ad: adController.text.trim(),
                     zonNumaralari: zonNumaralari,
+                    konum: konum,
+                    aciklama: aciklama,
                   ),
                 );
               }

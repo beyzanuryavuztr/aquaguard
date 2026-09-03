@@ -133,6 +133,53 @@ void main() {
     });
   });
 
+  group('tarla adi sorgusu', () {
+    test('"Kuzey Tarlası nasıl" o tarlanin durumunu ve zon sayisini doner', () {
+      final yanit = AsistanServisi.yanitUret('Kuzey Tarlası nasıl?', durum);
+      expect(yanit, contains('Kuzey Tarlası'));
+      expect(yanit, contains('3 zon'));
+    });
+
+    test('sadece ayirt edici anahtar kelime de eslesir ("güney")', () {
+      final yanit = AsistanServisi.yanitUret('güney tarafı nasıl gidiyor', durum);
+      expect(yanit, contains('Güney Tarlası'));
+    });
+
+    test('konum ve aciklama bilgisi varsa yanitta gorunur', () {
+      final yanit = AsistanServisi.yanitUret('Sera Bölgesi nasıl?', durum);
+      expect(yanit, contains('Şanlıurfa'));
+    });
+
+    test('not eklenmis bir tarla icin not sayisi bilgisi eklenir', () async {
+      final tarlaId = durum.tarlalar.first.id;
+      await durum.notEkle(tarlaId, 'Test notu');
+
+      final yanit = AsistanServisi.yanitUret(
+        '${durum.tarlalar.first.ad} nasıl?',
+        durum,
+      );
+      expect(yanit, contains('1 not var'));
+    });
+  });
+
+  group('tarla notlari sorgusu', () {
+    test('not yokken "henüz not eklenmemiş" doner', () {
+      final yanit = AsistanServisi.yanitUret('Kuzey Tarlası notları', durum);
+      expect(yanit, contains('henüz not eklenmemiş'));
+    });
+
+    test('eklenen notlar listelenir', () async {
+      final tarla = durum.tarlalar.first;
+      await durum.notEkle(tarla.id, 'Birinci not');
+      await durum.notEkle(tarla.id, 'İkinci not');
+
+      final yanit = AsistanServisi.yanitUret('${tarla.ad} notları', durum);
+      expect(yanit, contains('Birinci not'));
+      expect(yanit, contains('İkinci not'));
+      expect(yanit, contains('(2)'));
+    });
+  });
+
   group('tarla/zon sayisi sorgusu', () {
     test('"kaç tarla var" varsayilan 3 tarla / 6 zonu dogru raporlar', () {
       final yanit = AsistanServisi.yanitUret('kaç tarlam var?', durum);

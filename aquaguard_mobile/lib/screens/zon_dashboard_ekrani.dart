@@ -18,9 +18,11 @@ import '../services/mqtt_servisi.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
+import '../widgets/tarla_profil_karti.dart';
 import '../widgets/zon_durum_karti.dart';
 import 'ayarlar_ekrani.dart';
 import 'gecmis_loglar_ekrani.dart';
+import 'tarla_notlari_ekrani.dart';
 import 'tikanma_detay_ekrani.dart';
 
 class ZonDashboardEkrani extends StatelessWidget {
@@ -31,13 +33,21 @@ class ZonDashboardEkrani extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final durum = context.watch<UygulamaDurumu>();
+    // NOT: widget'a gecirilen `tarla` navigasyon ANINDAKI bir anlik goruntudur
+    // -- profil (fotograf/konum/aciklama) sonradan guncellenirse (bkz.
+    // TarlaProfilKarti) provider'daki GUNCEL halini yansitmasi icin id'ye
+    // gore YENIDEN bulunur. Silinmis olma ihtimaline karsi eski degere doner.
+    final guncelTarla = durum.tarlalar
+        .where((t) => t.id == tarla.id)
+        .firstOrNull ?? tarla;
+
     // NOT: Bildirimler artik AnaKabuk seviyesinde (kabugun kendisi) drenaj
     // ediliyor -- kullanici hangi sekmede olursa olsun gorunmesi icin.
     // Burada tekrar cagirmiyoruz (cift SnackBar / yaris durumu olmasin diye).
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(tarla.ad),
+        title: Text(guncelTarla.ad),
         actions: [
           if (durum.demoModuAktif)
             const Padding(
@@ -47,11 +57,20 @@ class ZonDashboardEkrani extends StatelessWidget {
           else
             _BaglantiRozeti(durum: durum.baglantiDurumu),
           IconButton(
+            icon: const Icon(Icons.sticky_note_2_outlined),
+            tooltip: 'Notlar',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => TarlaNotlariEkrani(tarla: guncelTarla),
+              ),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'Geçmiş Loglar',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => GecmisLoglarEkrani(tarla: tarla),
+                builder: (_) => GecmisLoglarEkrani(tarla: guncelTarla),
               ),
             ),
           ),
@@ -69,11 +88,15 @@ class ZonDashboardEkrani extends StatelessWidget {
             child: DuyarliIcerik(
               child: Column(
                 children: [
-                  _OzetSatiri(tarla: tarla, durum: durum),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: TarlaProfilKarti(tarla: guncelTarla),
+                  ),
+                  _OzetSatiri(tarla: guncelTarla, durum: durum),
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.only(bottom: 24),
-                      children: tarla.zonNumaralari.map((zon) {
+                      children: guncelTarla.zonNumaralari.map((zon) {
                         return ZonDurumKarti(
                           zonNumarasi: zon,
                           okuma: durum.sonOkuma(zon),

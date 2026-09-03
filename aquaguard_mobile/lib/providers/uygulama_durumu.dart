@@ -22,6 +22,7 @@ import 'package:flutter/foundation.dart';
 import '../models/aktivite_kaydi.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
+import '../models/tarla_notu.dart';
 import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
 import '../services/mqtt_servisi.dart';
@@ -54,6 +55,7 @@ class UygulamaDurumu extends ChangeNotifier {
   // icin kalici depolanir -- bir operator sizinti supheyle vanayi kapattiysa,
   // uygulama kapanip acilsa bile bu bilgi kaybolmamali.
   final Set<int> _sulamasiDurdurulanZonlar = {};
+  final List<TarlaNotu> _tarlaNotlari = [];
 
   // ============================================================================
   // DISARIYA ACIK (READ-ONLY) DURUM
@@ -74,6 +76,13 @@ class UygulamaDurumu extends ChangeNotifier {
 
   SensorOkuma? sonOkuma(int zone) => _sonOkumalar[zone];
   bool zonCevrimiciMi(int zone) => _zonCevrimici[zone] ?? false;
+
+  /// Verilen tarlaya ait notlar, EN YENI ONCE.
+  List<TarlaNotu> tarlaNotlari(String tarlaId) {
+    final liste = _tarlaNotlari.where((n) => n.tarlaId == tarlaId).toList()
+      ..sort((a, b) => b.zaman.compareTo(a.zaman));
+    return List.unmodifiable(liste);
+  }
 
   /// Zonun ana vanasi operator tarafindan MANUEL kapatilmis mi? (teshis
   /// durumundan bagimsiz bir kontrol -- bkz. sulamayiDurdur/sulamayiBaslat)
@@ -185,6 +194,9 @@ class UygulamaDurumu extends ChangeNotifier {
     _sulamasiDurdurulanZonlar
       ..clear()
       ..addAll(await _depolama.sulamaKapaliZonlariGetir());
+    _tarlaNotlari
+      ..clear()
+      ..addAll(await _depolama.tarlaNotlariGetir());
 
     // Cevrimdisi mod: baglanmadan ONCE son bilinen degerleri yukle,
     // boylece ekran hicbir zaman bomben acilmiyor.
@@ -385,6 +397,15 @@ class UygulamaDurumu extends ChangeNotifier {
     _tarlalar = _tarlalar.where((t) => t.id != id).toList();
     await _depolama.tarlalariKaydet(_tarlalar);
 
+    // Silinen tarlanin notlari da yetim kalir -- baska hicbir tarla ID'si
+    // asla ayni degeri tekrar kullanmayacagindan (zon numaralarinin aksine),
+    // burada temizlemezsek notlar SESSIZCE sonsuza kadar depoda birikir.
+    final notSilindiMi = _tarlaNotlari.any((n) => n.tarlaId == id);
+    if (notSilindiMi) {
+      _tarlaNotlari.removeWhere((n) => n.tarlaId == id);
+      unawaited(_depolama.tarlaNotlariniKaydet(_tarlaNotlari));
+    }
+
     // Silinen tarlanin zonlarindan HALA baska bir tarlada kullanilanlari
     // koru; kalanlarin (artik yetim) onbellek/gecmis verisini temizle --
     // aksi halde ayni zon numarasi yeniden kullanilirsa eski veri "hayalet"
@@ -580,6 +601,32 @@ class UygulamaDurumu extends ChangeNotifier {
       zone,
       'Zon $zone: Operatör sulamayı (ana vana) yeniden başlattı',
     );
+  }
+
+  // ============================================================================
+  // TARLA NOTLARI (operatorun serbest metin notlari)
+  // ============================================================================
+
+  Future<void> notEkle(String tarlaId, String metin) async {
+    final temiz = metin.trim();
+    if (temiz.isEmpty) return;
+    _tarlaNotlari.insert(
+      0,
+      TarlaNotu(
+        id: 'not-${DateTime.now().microsecondsSinceEpoch}',
+        tarlaId: tarlaId,
+        metin: temiz,
+        zaman: DateTime.now(),
+      ),
+    );
+    await _depolama.tarlaNotlariniKaydet(_tarlaNotlari);
+    notifyListeners();
+  }
+
+  Future<void> notSil(String notId) async {
+    _tarlaNotlari.removeWhere((n) => n.id == notId);
+    await _depolama.tarlaNotlariniKaydet(_tarlaNotlari);
+    notifyListeners();
   }
 
   @override

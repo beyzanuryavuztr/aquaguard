@@ -24,6 +24,7 @@
 library;
 
 import '../models/sensor_okuma.dart';
+import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
 
 class AsistanServisi {
@@ -32,6 +33,7 @@ class AsistanServisi {
   static const List<String> ornekSorular = [
     'Genel durum nasıl?',
     'Zon 3 nasıl?',
+    'Kuzey Tarlası nasıl?',
     'Kaç tedavi yapıldı?',
     'En çok hangi tıkanma türü görülüyor?',
     'Hangi zonlarda sulama durduruldu?',
@@ -63,6 +65,19 @@ class AsistanServisi {
     if (zonEslesmesi != null) {
       final zon = int.parse(zonEslesmesi.group(1)!);
       return _zonYanitiUret(zon, durum);
+    }
+
+    final eslesenTarla = _tarlaEslestir(s, durum);
+    if (eslesenTarla != null) {
+      final notlarSoruluyorMu = _herhangiBiriGeciyorMu(s, [
+        'not var',
+        'notlar',
+        'ne yazılmış',
+        'not düş',
+      ]);
+      return notlarSoruluyorMu
+          ? _tarlaNotlariYanitiUret(eslesenTarla, durum)
+          : _tarlaYanitiUret(eslesenTarla, durum);
     }
 
     if (_herhangiBiriGeciyorMu(s, [
@@ -213,6 +228,74 @@ class AsistanServisi {
       satirlar.add('⚠ Bu zonun sulaması operatör tarafından durduruldu.');
     }
     return satirlar.join('\n');
+  }
+
+  /// Sorunun icinde bir tarla adi geciyor mu diye bakar. Tarla adinin
+  /// TAMAMINI degil, ILK (genelde en ayirt edici) kelimesini arar --
+  /// "Kuzey Tarlası" icin "kuzey" yeterlidir, kullanicinin tam adi
+  /// yazmasi gerekmez. NOT: cok kisa/genel kelimelerle baslayan ozel
+  /// tarla adlarinda (ornegin "Sulama Tarlası") baska niyetlerle
+  /// (ornegin "sulama" sorgusu) yanlislikla eslesebilir -- bu bilinen,
+  /// kabul edilebilir bir sinirlamadir (kural tabanli, LLM olmayan bir
+  /// asistanin dogasi geregi).
+  static Tarla? _tarlaEslestir(String s, UygulamaDurumu durum) {
+    for (final tarla in durum.tarlalar) {
+      final adKelimeleri = _normallestir(tarla.ad).split(' ');
+      final anahtarKelime = adKelimeleri.first;
+      if (anahtarKelime.length >= 3 && s.contains(anahtarKelime)) {
+        return tarla;
+      }
+    }
+    return null;
+  }
+
+  static String _tarlaYanitiUret(Tarla tarla, UygulamaDurumu durum) {
+    final ozet = durum.durumOzetiHesapla(tarla.zonNumaralari);
+    final satirlar = <String>[
+      '${tarla.ad}: ${tarla.zonNumaralari.length} zon '
+          '(${tarla.zonNumaralari.map((z) => 'Zon $z').join(", ")}).',
+    ];
+    if (tarla.konum?.isNotEmpty ?? false) {
+      satirlar.add('Konum: ${tarla.konum}');
+    }
+    if (tarla.aciklama?.isNotEmpty ?? false) {
+      satirlar.add(tarla.aciklama!);
+    }
+
+    final durumParcalari = <String>[];
+    if (ozet.normal > 0) durumParcalari.add('${ozet.normal} normal');
+    if (ozet.tedavide > 0) durumParcalari.add('${ozet.tedavide} tedavide');
+    if (ozet.tespitEdildi > 0) {
+      durumParcalari.add('${ozet.tespitEdildi} tıkanma tespit edildi');
+    }
+    if (ozet.belirsiz > 0) durumParcalari.add('${ozet.belirsiz} belirsiz');
+    if (ozet.cevrimdisi > 0) durumParcalari.add('${ozet.cevrimdisi} çevrimdışı');
+    if (durumParcalari.isNotEmpty) {
+      satirlar.add('Durum: ${durumParcalari.join(', ')}.');
+    }
+
+    final notSayisi = durum.tarlaNotlari(tarla.id).length;
+    if (notSayisi > 0) {
+      satirlar.add(
+        '$notSayisi not var (görmek için "${tarla.ad} notları" diye sorabilirsiniz).',
+      );
+    }
+    return satirlar.join('\n');
+  }
+
+  static String _tarlaNotlariYanitiUret(Tarla tarla, UygulamaDurumu durum) {
+    final notlar = durum.tarlaNotlari(tarla.id);
+    if (notlar.isEmpty) {
+      return '${tarla.ad} için henüz not eklenmemiş.';
+    }
+    const gosterilecekAdet = 5;
+    final liste = notlar
+        .take(gosterilecekAdet)
+        .map((n) => '• ${n.metin}')
+        .join('\n');
+    final fazlasiVarMi = notlar.length > gosterilecekAdet;
+    return '${tarla.ad} notları (${notlar.length}):\n$liste'
+        '${fazlasiVarMi ? '\n… ve ${notlar.length - gosterilecekAdet} not daha.' : ''}';
   }
 
   static String _tedaviSayilariYanitiUret(UygulamaDurumu durum) {

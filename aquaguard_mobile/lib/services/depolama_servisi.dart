@@ -26,6 +26,7 @@ import '../config/ayarlar_sabitleri.dart';
 import '../models/aktivite_kaydi.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
+import '../models/tarla_notu.dart';
 
 class DepolamaServisi {
   static const _tarlalarAnahtari = 'aquaguard_tarlalar';
@@ -35,6 +36,7 @@ class DepolamaServisi {
   static const _demoModuAnahtari = 'aquaguard_demo_modu_acik';
   static const _aktiviteGecmisiAnahtari = 'aquaguard_aktivite_gecmisi';
   static const _sulamaKapaliZonlarAnahtari = 'aquaguard_sulama_kapali_zonlar';
+  static const _tarlaNotlariAnahtari = 'aquaguard_tarla_notlari';
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>
@@ -230,6 +232,29 @@ class DepolamaServisi {
     await tercihler.setStringList(
       _sulamaKapaliZonlarAnahtari,
       zonlar.map((z) => z.toString()).toList(),
+    );
+  }
+
+  // ==========================================================================
+  // TARLA NOTLARI (operatorun serbest metin notlari, TUM tarlalar icin TEK
+  // liste olarak saklanir -- tarlaId alanina gore filtrelenir)
+  // ==========================================================================
+
+  Future<List<TarlaNotu>> tarlaNotlariGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_tarlaNotlariAnahtari);
+    if (ham == null) return [];
+    final liste = jsonDecode(ham) as List<dynamic>;
+    return liste
+        .map((e) => TarlaNotu.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> tarlaNotlariniKaydet(List<TarlaNotu> notlar) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(
+      _tarlaNotlariAnahtari,
+      jsonEncode(notlar.map((n) => n.toJson()).toList()),
     );
   }
 }
