@@ -192,6 +192,11 @@ class SimulasyonServisi {
 
   final Map<int, Iterator<SimAdim>> _iteratorlar = {};
   final Map<int, math.Random> _rnglar = {};
+  // OPERATOR MUDAHALESI: sulamasi manuel durdurulmus zonlar -- bkz.
+  // sulamayiDuraklat()/sulamayiDevamEttir(). Bu zonlar icin _birAdimUret()
+  // yeni veri uretmez (vana kapaliyken sensor okumasinin "ilerlemesi"
+  // anlamsizdir); UI son bilinen okumayi donduralm gosterir.
+  final Set<int> _sulamasiDurdurulanZonlar = {};
   Timer? _zamanlayici;
 
   SimulasyonServisi({required this.zonlar, required this.veriUretildiginde});
@@ -202,6 +207,7 @@ class SimulasyonServisi {
     final tohumRng = math.Random();
     _iteratorlar.clear();
     _rnglar.clear();
+    _sulamasiDurdurulanZonlar.clear();
     for (final zon in zonlar) {
       final rng = math.Random(tohumRng.nextInt(0x7FFFFFFF));
       _rnglar[zon] = rng;
@@ -218,10 +224,23 @@ class SimulasyonServisi {
     _zamanlayici = null;
     _iteratorlar.clear();
     _rnglar.clear();
+    _sulamasiDurdurulanZonlar.clear();
   }
+
+  /// OPERATOR MUDAHALESI: zonun ana vanasini manuel kapatir -- zamanlayici
+  /// tikinde bu zon icin ARTIK yeni veri uretilmez (son okuma donuk kalir).
+  void sulamayiDuraklat(int zone) => _sulamasiDurdurulanZonlar.add(zone);
+
+  /// Manuel kapatilmis sulamayi yeniden acar -- bir sonraki tikte kaldigi
+  /// senaryo adimindan (kesintiye ugramamis gibi) devam eder.
+  void sulamayiDevamEttir(int zone) => _sulamasiDurdurulanZonlar.remove(zone);
+
+  bool sulamaDuraklatilmisMi(int zone) =>
+      _sulamasiDurdurulanZonlar.contains(zone);
 
   void _birAdimUret() {
     for (final zon in zonlar) {
+      if (_sulamasiDurdurulanZonlar.contains(zon)) continue;
       final iterator = _iteratorlar[zon];
       if (iterator == null || !iterator.moveNext()) continue;
       veriUretildiginde(

@@ -177,6 +177,7 @@ class GenelBakisEkrani extends StatelessWidget {
                           zonNumarasi: zon,
                           okuma: durum.sonOkuma(zon),
                           cevrimici: durum.zonCevrimiciMi(zon),
+                          sulamaDurdurulduMu: durum.sulamasiDurduruldu(zon),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) =>

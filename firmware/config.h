@@ -59,6 +59,12 @@
 #define PIN_POMPA_KLOR        26   // Klor enjeksiyon pompasi (DC motor surucu/role)
 #define PIN_SERVO_YIKAMA      14   // Yuksek basincli yikama valfi (servo motor, PWM)
 
+// --- Ana sulama vanasi (operator MQTT komutuyla acar/kapatir -- bkz.
+//     mqtt_handler.h "sulama_durdur"/"sulama_baslat", TEDAVI aktuatorlerinden
+//     BAGIMSIZ: zonun butun sulamasini keser, tedavi/teshis akisiyla ilgisi
+//     yoktur, sahada sizinti supheci/bakim gibi durumlar icindir) ---
+#define PIN_ANA_VANA          13   // Role uzerinden ana su hatti solenoidi
+
 // --- SD kart (SPI) ---
 #define PIN_SD_CS              5
 

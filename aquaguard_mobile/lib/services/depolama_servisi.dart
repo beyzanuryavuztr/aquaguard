@@ -34,6 +34,7 @@ class DepolamaServisi {
   static const _bildirimlerAnahtari = 'aquaguard_bildirimler_acik';
   static const _demoModuAnahtari = 'aquaguard_demo_modu_acik';
   static const _aktiviteGecmisiAnahtari = 'aquaguard_aktivite_gecmisi';
+  static const _sulamaKapaliZonlarAnahtari = 'aquaguard_sulama_kapali_zonlar';
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>
@@ -210,6 +211,25 @@ class DepolamaServisi {
     await tercihler.setString(
       _aktiviteGecmisiAnahtari,
       jsonEncode(gecmis.map((k) => k.toJson()).toList()),
+    );
+  }
+
+  // ==========================================================================
+  // SULAMA KONTROLU (manuel kapatilmis zonlar -- kalici, bkz. yorum yukarida)
+  // ==========================================================================
+
+  Future<Set<int>> sulamaKapaliZonlariGetir() async {
+    final tercihler = await _tercihler;
+    final liste = tercihler.getStringList(_sulamaKapaliZonlarAnahtari);
+    if (liste == null) return {};
+    return liste.map(int.parse).toSet();
+  }
+
+  Future<void> sulamaKapaliZonlariniKaydet(Set<int> zonlar) async {
+    final tercihler = await _tercihler;
+    await tercihler.setStringList(
+      _sulamaKapaliZonlarAnahtari,
+      zonlar.map((z) => z.toString()).toList(),
     );
   }
 }

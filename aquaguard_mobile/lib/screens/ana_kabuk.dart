@@ -25,6 +25,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/uygulama_durumu.dart';
 import '../widgets/duyarli_icerik.dart';
+import 'asistan_ekrani.dart';
 import 'ayarlar_ekrani.dart';
 import 'genel_bakis_ekrani.dart';
 import 'istatistikler_ekrani.dart';
@@ -72,6 +73,12 @@ class _AnaKabukState extends State<AnaKabuk> {
       ikon: Icons.bar_chart_outlined,
       seciliIkon: Icons.bar_chart,
       etiket: 'İstatistikler',
+    ),
+    _SekmeTanimi(
+      ekran: AsistanEkrani(),
+      ikon: Icons.smart_toy_outlined,
+      seciliIkon: Icons.smart_toy,
+      etiket: 'Asistan',
     ),
     _SekmeTanimi(
       ekran: AyarlarEkrani(),

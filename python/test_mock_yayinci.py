@@ -162,6 +162,27 @@ class TestKomutIsle:
         _komut_isle({"komut": "boyle_bir_komut_yok"}, calisma_durumu)
         assert calisma_durumu["uretec"] is eski_uretec
 
+    def test_sulama_durdur_bayragi_kapatir(self):
+        calisma_durumu = self._durum()
+        calisma_durumu["sulama_acik"] = True
+        _komut_isle({"komut": "sulama_durdur"}, calisma_durumu)
+        assert calisma_durumu["sulama_acik"] is False
+
+    def test_sulama_baslat_bayragi_acar(self):
+        calisma_durumu = self._durum()
+        calisma_durumu["sulama_acik"] = False
+        _komut_isle({"komut": "sulama_baslat"}, calisma_durumu)
+        assert calisma_durumu["sulama_acik"] is True
+
+    def test_sulama_durdur_ureteci_DEGISTIRMEZ(self):
+        # Ana vana kapatma, teshis akisindan bagimsizdir -- senaryo ureteci
+        # ayni kalmali (donduralm kalir, degismez); calistir() dongusu bunu
+        # ilerletmemeyi kendisi yonetir (bkz. calisma_durumu["sulama_acik"]).
+        calisma_durumu = self._durum()
+        eski_uretec = calisma_durumu["uretec"]
+        _komut_isle({"komut": "sulama_durdur"}, calisma_durumu)
+        assert calisma_durumu["uretec"] is eski_uretec
+
 
 class TestMesajOlustur:
     def test_sema_firmware_ile_tutarli_alanlari_icerir(self):

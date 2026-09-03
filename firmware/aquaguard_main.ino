@@ -41,6 +41,7 @@
 #include "sensors.h"
 #include "decision_engine.h"
 #include "treatment.h"
+#include "ana_vana.h"
 #include "logger.h"
 #include "mqtt_handler.h"
 
@@ -78,6 +79,9 @@ void setup() {
 
   tedaviSistemBaslat();
   Serial.println(F("[SISTEM] Tedavi kontrol sistemi baslatildi (mutex hazir)."));
+
+  anaVanaBaslat();
+  Serial.println(F("[SISTEM] Ana sulama vanasi baslatildi (varsayilan: acik)."));
 
   loggerBaslat();
   Serial.println(F("[SISTEM] SD kart / RTC loglama baslatildi."));
@@ -121,6 +125,14 @@ void loop() {
 // ============================================================================
 
 void islemDongusunuCalistir() {
+  // Ana vana operator tarafindan MANUEL kapatilmissa: sulama akmiyorken
+  // debi/basinc okumalari anlamsiz (yanlis "tikanma" alarmina yol acar) --
+  // teshis dongusunu atla, sadece durumu logla. bkz. ana_vana.h.
+  if (!anaVanaAcikMi()) {
+    Serial.println(F("[SULAMA] Ana vana manuel kapali -- olcum/teshis atlaniyor."));
+    return;
+  }
+
   _sonOkuma = tumSensorleriOku();
   _sonTeshis = kuralTabanliTeshis(_sonOkuma);
 

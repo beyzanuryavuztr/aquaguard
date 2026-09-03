@@ -25,6 +25,12 @@ Amac:
     (firmware/mqtt_handler.h + treatment.h ile AYNI davranis: erken durdurma
     once zorunlu durulamadan gecer, mutex atlanmaz).
 
+    "sulama_durdur"/"sulama_baslat" komutlari (bkz. UygulamaDurumu.
+    sulamayiDurdur/sulamayiBaslat, firmware/ana_vana.h) teshis akisindan
+    BAGIMSIZDIR -- ana vana kapatildiginda bu script o zon icin YAYIN
+    YAPMAYI DURDURUR (gercek cihazda sensor okumasi anlamsiz hale geldigi
+    icin firmware de ayni sekilde teshis dongusunu atlar).
+
 Senaryo mantigi (bir "hikaye" dongusu):
     1) NORMAL   - sensorler normal deger etrafinda dalgalanir
     2) KOTULESME - rastgele secilen bir tikanma turune dogru kademeli kayma
@@ -207,6 +213,12 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict) -> None:
     elif komut == "normale_dondur":
         print("[Komut] Operatör: durum yanlış alarm olarak işaretlendi, normale dönülüyor.")
         calisma_durumu["uretec"] = senaryo_adimlarini_uret(rng)
+    elif komut == "sulama_durdur":
+        print("[Komut] Operatör: ana vana MANUEL kapatıldı, sulama durdu.")
+        calisma_durumu["sulama_acik"] = False
+    elif komut == "sulama_baslat":
+        print("[Komut] Operatör: ana vana yeniden açıldı, sulama başladı.")
+        calisma_durumu["sulama_acik"] = True
     else:
         print(f"[Komut] Bilinmeyen komut: {komut!r}")
 
@@ -259,7 +271,12 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
     # Operator komutlarinin (ayri bir ag thread'inde calisan on_message
     # geri cagirimi ile) o an aktif olan ureteci DEGISTIREBILMESI icin
     # paylasilan, mutable bir durum sozlugu -- bkz. _komut_isle().
-    calisma_durumu = {"uretec": senaryo_adimlarini_uret(rng), "rng": rng, "guncel_tur": None}
+    calisma_durumu = {
+        "uretec": senaryo_adimlarini_uret(rng),
+        "rng": rng,
+        "guncel_tur": None,
+        "sulama_acik": True,
+    }
 
     def _baglaninca(client, userdata, connect_flags, reason_code, properties):
         if reason_code == 0:
@@ -293,6 +310,13 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
     sayac = 0
     try:
         while True:
+            if not calisma_durumu["sulama_acik"]:
+                # Ana vana kapali: senaryo uretecini ILERLETME (donduralm
+                # kalsin) ve yeni veri yayinlama -- firmware/ana_vana.h ile
+                # ayni davranis (bkz. dosya basi aciklamasi).
+                time.sleep(aralik_sn)
+                continue
+
             ornek, faz, tedavi_aktif, durulama_aktif = next(calisma_durumu["uretec"])
             teshis = kural_tabanli_teshis(ornek)
             if teshis["tur"]:

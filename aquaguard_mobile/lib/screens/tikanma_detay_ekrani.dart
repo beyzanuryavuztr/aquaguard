@@ -21,6 +21,7 @@ import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/manuel_mudahale_paneli.dart';
 import '../widgets/mini_trend_grafigi.dart';
+import '../widgets/sulama_kontrol_karti.dart';
 import 'aktif_tedavi_ekrani.dart';
 
 class TikanmaDetayEkrani extends StatelessWidget {
@@ -51,6 +52,7 @@ class TikanmaDetayEkrani extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  SulamaKontrolKarti(zonNumarasi: zonNumarasi),
                   if (!cevrimici) _CevrimdisiBanner(okuma: okuma),
                   _DurumOzetKarti(
                     okuma: okuma,

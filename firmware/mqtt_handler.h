@@ -66,6 +66,7 @@
 #include "sensors.h"
 #include "decision_engine.h"
 #include "treatment.h"
+#include "ana_vana.h"
 
 // ============================================================================
 // GLOBAL NESNELER
@@ -121,6 +122,12 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
     // esik asilmiyorsa "normal" dondurecektir; burada aktuator durumunda
     // degisiklik YOKTUR (yanlis alarmda zaten hicbir aktuator calismiyordu).
     Serial.println(F("[Komut] Operator: durumu yanlis alarm olarak isaretledi."));
+  } else if (strcmp(komut, "sulama_durdur") == 0) {
+    anaVanayiKapat();
+    Serial.println(F("[Komut] Operator: ana vana MANUEL kapatildi, sulama durdu."));
+  } else if (strcmp(komut, "sulama_baslat") == 0) {
+    anaVanayiAc();
+    Serial.println(F("[Komut] Operator: ana vana yeniden acildi, sulama basladi."));
   } else {
     Serial.print(F("[Komut] Bilinmeyen komut: "));
     Serial.println(komut);

@@ -23,6 +23,7 @@ class ZonDurumKarti extends StatelessWidget {
   final int zonNumarasi;
   final SensorOkuma? okuma;
   final bool cevrimici;
+  final bool sulamaDurdurulduMu;
   final VoidCallback onTap;
 
   const ZonDurumKarti({
@@ -30,6 +31,7 @@ class ZonDurumKarti extends StatelessWidget {
     required this.zonNumarasi,
     required this.okuma,
     required this.cevrimici,
+    this.sulamaDurdurulduMu = false,
     required this.onTap,
   });
 
@@ -90,6 +92,10 @@ class ZonDurumKarti extends StatelessWidget {
                                   const SizedBox(width: 8),
                                   _GuvenRozeti(guven: okuma!.guven, renk: renk),
                                 ],
+                                if (sulamaDurdurulduMu) ...[
+                                  const SizedBox(width: 8),
+                                  const _SulamaDurdurulduRozeti(),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -118,6 +124,40 @@ class ZonDurumKarti extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SulamaDurdurulduRozeti extends StatelessWidget {
+  const _SulamaDurdurulduRozeti();
+
+  @override
+  Widget build(BuildContext context) {
+    final renk = Theme.of(context).colorScheme.onTertiaryContainer;
+    return Tooltip(
+      message: 'Sulama manuel olarak durduruldu',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.pause_circle_outline, size: 12, color: renk),
+            const SizedBox(width: 4),
+            Text(
+              'Sulama Kapalı',
+              style: TextStyle(
+                color: renk,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );

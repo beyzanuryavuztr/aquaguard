@@ -48,6 +48,12 @@ class UygulamaDurumu extends ChangeNotifier {
   final List<String> _bildirimKuyrugu = [];
   final Map<int, DateTime> _tedaviBaslangicZamanlari = {};
   final List<AktiviteKaydi> _aktiviteGecmisi = [];
+  // OPERATOR MUDAHALESI: sulamasi manuel durdurulmus zonlar -- ana vana
+  // acik/kapali durumu, teshis akisindan BAGIMSIZ bir operator kontrolu
+  // (bkz. sulamayiDurdur/sulamayiBaslat). Yeniden acilista kaybolmamasi
+  // icin kalici depolanir -- bir operator sizinti supheyle vanayi kapattiysa,
+  // uygulama kapanip acilsa bile bu bilgi kaybolmamali.
+  final Set<int> _sulamasiDurdurulanZonlar = {};
 
   // ============================================================================
   // DISARIYA ACIK (READ-ONLY) DURUM
@@ -68,6 +74,11 @@ class UygulamaDurumu extends ChangeNotifier {
 
   SensorOkuma? sonOkuma(int zone) => _sonOkumalar[zone];
   bool zonCevrimiciMi(int zone) => _zonCevrimici[zone] ?? false;
+
+  /// Zonun ana vanasi operator tarafindan MANUEL kapatilmis mi? (teshis
+  /// durumundan bagimsiz bir kontrol -- bkz. sulamayiDurdur/sulamayiBaslat)
+  bool sulamasiDurduruldu(int zone) =>
+      _sulamasiDurdurulanZonlar.contains(zone);
   List<SensorOkuma> gecmis(int zone) =>
       List.unmodifiable(_gecmisler[zone] ?? const <SensorOkuma>[]);
 
@@ -171,6 +182,9 @@ class UygulamaDurumu extends ChangeNotifier {
     _mqttPort = ayarlar.port;
     _bildirimlerAcik = await _depolama.bildirimlerAcikMi();
     _demoModuAktif = await _depolama.demoModuAcikMi();
+    _sulamasiDurdurulanZonlar
+      ..clear()
+      ..addAll(await _depolama.sulamaKapaliZonlariGetir());
 
     // Cevrimdisi mod: baglanmadan ONCE son bilinen degerleri yukle,
     // boylece ekran hicbir zaman bomben acilmiyor.
@@ -255,6 +269,13 @@ class UygulamaDurumu extends ChangeNotifier {
       veriUretildiginde: _veriGeldiginde,
     );
     _simulasyon!.baslat();
+    // SimulasyonServisi.baslat() kendi ic "duraklatilmis zonlar" kaydini
+    // sifirlar -- daha once (kalici depodan yuklenmis) manuel kapatilmis
+    // zonlar varsa yeni servise TEKRAR uygula, aksi halde vana "yeniden
+    // acilmis" gibi gorunur.
+    for (final zon in _sulamasiDurdurulanZonlar) {
+      _simulasyon!.sulamayiDuraklat(zon);
+    }
     _baglantiDurumuDegistiginde(MqttBaglantiDurumu.bagli);
     for (final zon in tumZonNumaralari) {
       _zonDurumuDegistiginde(zon, true);
@@ -511,6 +532,54 @@ class UygulamaDurumu extends ChangeNotifier {
     unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
     if (_bildirimlerAcik) _bildirimKuyrugu.add(kayit.mesaj);
     notifyListeners();
+  }
+
+  // ============================================================================
+  // SULAMA KONTROLU (ana vana acik/kapali -- teshis akisindan BAGIMSIZ)
+  // ============================================================================
+  //
+  // Karar motoru "tikanma var/yok" teshis eder; bu bolum ise sahadaki
+  // operatorun tamamen ayri bir nedenle (sizinti supheci, bakim, komsu
+  // parselde is yapiliyor vb.) bir zonun sulamasini TAMAMEN durdurmasini
+  // saglar -- tedaviyi durdurmaktan farkli olarak, burada "yanlis teshis"
+  // degil "sahada baska bir sebep" soz konusudur. Demo modunda ilgili
+  // zonun veri akisi duraklatilir (son okuma donuk kalir); gercek MQTT
+  // modunda cihaza komut yayinlanir.
+
+  /// Zonun ana vanasini MANUEL olarak kapatir.
+  Future<void> sulamayiDurdur(int zone) async {
+    if (_sulamasiDurdurulanZonlar.contains(zone)) return;
+    _sulamasiDurdurulanZonlar.add(zone);
+    unawaited(
+      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
+    );
+    if (_demoModuAktif) {
+      _simulasyon?.sulamayiDuraklat(zone);
+    } else {
+      _mqtt?.komutGonder(zone, {'komut': 'sulama_durdur'});
+    }
+    _manuelMudahaleKaydet(
+      zone,
+      'Zon $zone: Operatör sulamayı (ana vana) manuel olarak durdurdu',
+    );
+  }
+
+  /// Manuel kapatilmis sulamayi yeniden acar.
+  Future<void> sulamayiBaslat(int zone) async {
+    if (!_sulamasiDurdurulanZonlar.contains(zone)) return;
+    _sulamasiDurdurulanZonlar.remove(zone);
+    unawaited(
+      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
+    );
+    if (_demoModuAktif) {
+      _simulasyon?.sulamayiDevamEttir(zone);
+    } else {
+      _mqtt?.komutGonder(zone, {'komut': 'sulama_baslat'});
+    }
+    _manuelMudahaleKaydet(
+      zone,
+      'Zon $zone: Operatör sulamayı (ana vana) yeniden başlattı',
+    );
   }
 
   @override
