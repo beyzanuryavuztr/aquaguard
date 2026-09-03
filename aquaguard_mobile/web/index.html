@@ -32,8 +32,48 @@
 
   <title>AquaGuard</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Flutter'in engine/JS yuku ilk boyandigi kareye (flutter-first-frame) kadar
+    saniyelerce surebilir; o sureye kadar tarayici sadece background_color'i
+    (duz gri-beyaz) gosterir -- "bos/cokmus" izlenimi verir. Bunun yerine
+    marka rengiyle (teal) tutarli, animasyonlu bir su damlasi gosteriyoruz.
+    Flutter, ilk kareyi cizdiginde standart "flutter-first-frame" olayini
+    kendisi yayinlar (bkz. https://docs.flutter.dev/platform-integration/web/initialization)
+    -- bu olayi dinleyip yukleme ekranini kaldiriyoruz.
+  -->
+  <style>
+    #aq-yukleniyor {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #F4F6F8;
+      z-index: 9999;
+    }
+    #aq-yukleniyor svg {
+      animation: aq-nabiz 1.4s ease-in-out infinite;
+    }
+    @keyframes aq-nabiz {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(.9); }
+    }
+  </style>
 </head>
 <body>
+  <div id="aq-yukleniyor">
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M32 6C32 6 14 30 14 42a18 18 0 0 0 36 0C50 30 32 6 32 6Z" fill="#0F766E"/>
+    </svg>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('aq-yukleniyor');
+      if (el) el.remove();
+    });
+  </script>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
