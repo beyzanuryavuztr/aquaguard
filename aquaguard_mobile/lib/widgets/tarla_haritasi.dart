@@ -130,7 +130,10 @@ class _TarlaBloku extends StatelessWidget {
               const Spacer(),
               Text(
                 '${tarla.zonNumaralari.length} parsel',
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),

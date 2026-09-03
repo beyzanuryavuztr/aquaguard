@@ -72,7 +72,10 @@ class IstatistiklerEkrani extends StatelessWidget {
               toplamTespit == 0
                   ? 'Henüz tıkanma tespiti kaydedilmedi.'
                   : 'Şimdiye kadar tespit edilen $toplamTespit tıkanma olayının türe göre dağılımı:',
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 16),
             Card(
@@ -302,11 +305,11 @@ class _EtkiVeTasarrufKarti extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'PROJE_BRIEF.md doğrulanmış istatistiklerine dayanır (canlı veriden değil).',
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.black54,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -365,7 +368,11 @@ class _EtkiSatiri extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(ikon, size: 20, color: Colors.black45),
+          Icon(
+            ikon,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -374,7 +381,12 @@ class _EtkiSatiri extends StatelessWidget {
                 Text(baslik, style: const TextStyle(fontSize: 13)),
                 Text(
                   kaynak,
-                  style: const TextStyle(fontSize: 10, color: Colors.black38),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),

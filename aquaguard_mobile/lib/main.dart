@@ -31,17 +31,16 @@ class AquaGuardUygulamasi extends StatelessWidget {
       child: MaterialApp(
         title: 'AquaGuard',
         debugShowCheckedModeBanner: false,
-        theme: AquaGuardTema.acikTema(),
-        darkTheme: AquaGuardTema.koyuTema(),
-        // BILINCLI KARAR: koyu tema ThemeData olarak tanimli (ileride
-        // etkinlestirilebilir) ama SISTEM ayarina birakilmiyor. Uygulama
-        // genelinde bircok yerde metin rengi Theme.of(context).colorScheme
-        // yerine sabit Colors.black54/black87 kullaniyor (bkz. proje notlari)
-        // -- bu, koyu temada okunmaz/dusuk kontrastli metne yol acar. Bir
-        // yaris jurisi karsisinda YARIM kalmis bir koyu tema riske atmaktansa,
-        // iki turdur cilalanan tek (acik) temayi HER ZAMAN garanti etmek
-        // tercih edildi.
-        themeMode: ThemeMode.light,
+        theme: AquaGuardTema.koyuTema(),
+        // BILINCLI KARAR (2026-09-03 yenilemesi): uygulama artik SADECE koyu
+        // tema kullanir -- "tarla gunesinde ekran okunabilirligi" ve
+        // profesyonel bir "kontrol merkezi" hissi icin kullanicinin acik
+        // talebi. Tek tema = tek garanti edilen gorunum (onceki turdeki
+        // "ThemeMode.system riskli, tek temayi garanti et" ilkesinin aynisi,
+        // simdi koyu yonde). Butun ekranlardaki sabit Colors.black* /
+        // Colors.white kullanimlari bu gecisle birlikte Theme.of(context)
+        // renklerine tasindi (bkz. proje notlari).
+        themeMode: ThemeMode.dark,
         home: const AnaKabuk(),
       ),
     );

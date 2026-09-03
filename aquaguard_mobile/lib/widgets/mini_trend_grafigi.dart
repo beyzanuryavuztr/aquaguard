@@ -43,9 +43,9 @@ class MiniTrendGrafigi extends StatelessWidget {
               children: [
                 Text(
                   baslik,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelMedium?.copyWith(color: Colors.black54),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 Text(
                   '${guncelDeger.toStringAsFixed(guncelDeger.abs() < 10 ? 2 : 0)} $birim',

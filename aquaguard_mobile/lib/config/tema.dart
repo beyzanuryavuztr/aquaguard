@@ -7,23 +7,25 @@
 ///   burada tanimlanir; ekranlar sadece Theme.of(context) uzerinden
 ///   bu degerleri kullanir, kendi renk/boyut sabitlerini uydurmaz.
 ///
-///   TASARIM KARARI (2026-09-02 yenileme): `ColorScheme.fromSeed()`'in
-///   otomatik uretttigi tonal palet (tek bir renkten turetilen soluk,
-///   yesile-cekik yuzeyler) "ucuz/jenerik" izlenimi veriyordu -- Stripe/
-///   Linear/Notion gibi profesyonel dashboard'larin hicbiri boyle
-///   calismaz. Bunun yerine ELLE seçilmiş bir palet kullanilir:
-///     - Marka rengi: koyu, doygun bir deniz mavisi-yesili (teal) --
-///       "su + teknoloji" cagrisimini yesilden daha net verir ve durum
-///       renklerinden (yesil=normal, sari=belirsiz, kirmizi=tespit)
-///       AYRISIR (marka rengiyle durum rengi karismasin diye kasitli).
-///     - Yuzeyler: DUZ BEYAZ kartlar + yumusak golge (soluk yesil-gri
-///       "tonal container" degil) -- bu, "flat renkli kutu" degil
-///       "gercek kart" hissi verir.
-///     - Tipografi: Google Fonts "Plus Jakarta Sans" -- varsayilan
-///       Roboto yerine, modern SaaS dashboard'larinda yaygin kullanilan,
-///       daha ozgun bir yazi tipi.
+///   TASARIM KARARI (2026-09-03 -- "SDI Tıkanma Yonetim Merkezi" yenilemesi):
+///   Onceki turun acik/beyaz-kart temasi terk edildi. Bu surum SADECE koyu
+///   temayi kullanir (ThemeMode.system'a birakilmaz -- bkz. main.dart) --
+///   hem "tarla gunesinde ekran okunabilirligi" (kullanicinin acik talebi)
+///   hem de teknik/profesyonel bir "kontrol merkezi" hissi icin. Renk paleti
+///   kullanicinin verdigi kesin hex degerleriyle birebir uygulanmistir:
+///     - Ana (marka): #0D2137 (koyu lacivert/petrol) -- ETKILESIMLI (buton/
+///       secili durum) renk DEGIL, derin marka/yuzey rengi olarak kullanilir
+///       (nav rail, app bar arka planlari, gradyanlar).
+///     - Vurgu: #00BFA6 (turkuvaz) -- ColorScheme.primary'dir; koyu arka
+///       planda YETERLI KONTRAST veren, tiklanabilir/etkilesimli her seyin
+///       (buton, secili sekme, linkler) rengi budur.
+///     - Basari: #43A047, Uyari: #FFB300, Tehlike: #E53935.
+///   Bu 3 durum rengi, DurumRenkleri sinifindaki "tedavide" (ayrı bir mavi,
+///   #2E90FA) haric TUM zon/tedavi durum gostergelerinin de temelidir --
+///   marka rengiyle (turkuvaz) durum rengi KASITLI olarak AYRISIR (aksi
+///   halde "bu turkuvaz marka mı yoksa bir durum mu?" belirsizligi olusur).
 ///
-/// Tarih:  2026-09-01 (buyuk yenileme: 2026-09-02)
+/// Tarih:  2026-09-01 (koyu tema yenilemesi: 2026-09-03)
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
@@ -33,122 +35,76 @@ import 'package:google_fonts/google_fonts.dart';
 class AquaGuardTema {
   AquaGuardTema._();
 
-  // --- Marka paleti (elle secilmis, ColorScheme.fromSeed KULLANILMIYOR) ---
-  static const Color marka = Color(
-    0xFF0F766E,
-  ); // derin deniz mavisi-yesili (teal-700)
-  static const Color markaAcik = Color(
-    0xFF14B8A6,
-  ); // vurgular icin daha canli ton
-  static const Color markaKoyuMetin = Color(0xFF042F2C);
-  static const Color ikincilYesil = Color(
-    0xFF2E7D32,
-  ); // durum "normal" ile bilincli hizali
+  // --- Kullanicinin verdigi kesin palet ---
+  static const Color anaRenk = Color(0xFF0D2137); // koyu lacivert/petrol
+  static const Color vurguRenk = Color(0xFF00BFA6); // turkuvaz/aqua
+  static const Color uyariRenk = Color(0xFFFFB300); // amber
+  static const Color tehlikeRenk = Color(0xFFE53935); // kirmizi
+  static const Color basariRenk = Color(0xFF43A047); // yesil
+  static const Color arkaPlanRenk = Color(0xFF121820); // cok koyu gri
+  static const Color kartRenk = Color(0xFF1A2332); // yari saydam koyu
 
-  static const double kartRadius = 18;
+  static const double kartRadius = 16;
   static const double kucukRadius = 12;
 
   static TextTheme _tipografi(TextTheme taban, Color renk) {
-    return GoogleFonts.plusJakartaSansTextTheme(
+    return GoogleFonts.interTextTheme(
       taban,
     ).apply(bodyColor: renk, displayColor: renk);
-  }
-
-  static ThemeData acikTema() {
-    const renkSemasi = ColorScheme(
-      brightness: Brightness.light,
-      primary: marka,
-      onPrimary: Colors.white,
-      primaryContainer: Color(0xFFCCFBF1),
-      onPrimaryContainer: markaKoyuMetin,
-      secondary: ikincilYesil,
-      onSecondary: Colors.white,
-      secondaryContainer: Color(0xFFDCFCE7),
-      onSecondaryContainer: Color(0xFF0B3B14),
-      tertiary: Color(0xFFB45309),
-      onTertiary: Colors.white,
-      tertiaryContainer: Color(0xFFFEF3C7),
-      onTertiaryContainer: Color(0xFF4A2E03),
-      error: Color(0xFFB3261E),
-      onError: Colors.white,
-      errorContainer: Color(0xFFF9DEDC),
-      onErrorContainer: Color(0xFF410E0B),
-      surface: Colors.white,
-      onSurface: Color(0xFF1B2430),
-      surfaceContainerLowest: Color(0xFFF4F6F8),
-      surfaceContainerLow: Color(0xFFF7F9FA),
-      surfaceContainer: Colors.white,
-      surfaceContainerHigh: Color(0xFFF1F4F6),
-      surfaceContainerHighest: Color(0xFFEAEFF2),
-      onSurfaceVariant: Color(0xFF5B6B79),
-      outline: Color(0xFFD6DEE3),
-      outlineVariant: Color(0xFFE7ECEF),
-      shadow: Color(0xFF0B1B2B),
-      scrim: Colors.black,
-      inverseSurface: Color(0xFF1B2430),
-      onInverseSurface: Colors.white,
-      inversePrimary: markaAcik,
-    );
-
-    return _temaOlustur(renkSemasi);
   }
 
   static ThemeData koyuTema() {
     const renkSemasi = ColorScheme(
       brightness: Brightness.dark,
-      primary: Color(0xFF5EEAD4),
-      onPrimary: Color(0xFF003731),
-      primaryContainer: Color(0xFF0B5B53),
-      onPrimaryContainer: Color(0xFFCCFBF1),
-      secondary: Color(0xFF86E0A0),
-      onSecondary: Color(0xFF0B3B14),
-      secondaryContainer: Color(0xFF1E5128),
-      onSecondaryContainer: Color(0xFFDCFCE7),
-      tertiary: Color(0xFFFBBF6B),
-      onTertiary: Color(0xFF4A2E03),
-      tertiaryContainer: Color(0xFF7A4B0B),
-      onTertiaryContainer: Color(0xFFFEF3C7),
-      error: Color(0xFFF2B8B5),
-      onError: Color(0xFF601410),
-      errorContainer: Color(0xFF8C1D18),
-      onErrorContainer: Color(0xFFF9DEDC),
-      surface: Color(0xFF121A22),
-      onSurface: Color(0xFFE3E8EC),
-      surfaceContainerLowest: Color(0xFF0B1117),
-      surfaceContainerLow: Color(0xFF161F27),
-      surfaceContainer: Color(0xFF1A232C),
-      surfaceContainerHigh: Color(0xFF212B34),
-      surfaceContainerHighest: Color(0xFF2B3640),
-      onSurfaceVariant: Color(0xFFAAB6C0),
-      outline: Color(0xFF3A4750),
-      outlineVariant: Color(0xFF2A343C),
+      primary: vurguRenk,
+      onPrimary: Color(0xFF00251F),
+      primaryContainer: Color(0xFF00473C),
+      onPrimaryContainer: Color(0xFF7BFFE9),
+      secondary: basariRenk,
+      onSecondary: Colors.white,
+      secondaryContainer: Color(0xFF1E4D24),
+      onSecondaryContainer: Color(0xFFC8F5CC),
+      tertiary: uyariRenk,
+      onTertiary: Color(0xFF3D2900),
+      tertiaryContainer: Color(0xFF5C3F00),
+      onTertiaryContainer: Color(0xFFFFE4A8),
+      error: tehlikeRenk,
+      onError: Colors.white,
+      errorContainer: Color(0xFF601410),
+      onErrorContainer: Color(0xFFFFDAD6),
+      surface: arkaPlanRenk,
+      onSurface: Color(0xFFE6ECF1),
+      surfaceContainerLowest: Color(0xFF0A0F15),
+      surfaceContainerLow: Color(0xFF141C25),
+      surfaceContainer: kartRenk,
+      surfaceContainerHigh: Color(0xFF212C3A),
+      surfaceContainerHighest: Color(0xFF2A3747),
+      onSurfaceVariant: Color(0xFF9AACBC),
+      outline: Color(0xFF3A4A5C),
+      outlineVariant: Color(0xFF283645),
       shadow: Colors.black,
       scrim: Colors.black,
-      inverseSurface: Color(0xFFE3E8EC),
-      onInverseSurface: Color(0xFF121A22),
-      inversePrimary: marka,
+      inverseSurface: Color(0xFFE6ECF1),
+      onInverseSurface: anaRenk,
+      inversePrimary: Color(0xFF00695C),
     );
 
-    return _temaOlustur(renkSemasi);
-  }
-
-  static ThemeData _temaOlustur(ColorScheme renkSemasi) {
-    final tabanTema = ThemeData(brightness: renkSemasi.brightness);
+    final tabanTema = ThemeData(brightness: Brightness.dark);
     final metinTemasi = _tipografi(tabanTema.textTheme, renkSemasi.onSurface);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: renkSemasi,
-      scaffoldBackgroundColor: renkSemasi.surfaceContainerLowest,
+      scaffoldBackgroundColor: renkSemasi.surface,
       textTheme: metinTemasi,
 
       appBarTheme: AppBarTheme(
-        backgroundColor: renkSemasi.surfaceContainerLowest,
+        backgroundColor: anaRenk,
         foregroundColor: renkSemasi.onSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.plusJakartaSans(
+        titleTextStyle: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: renkSemasi.onSurface,
@@ -156,8 +112,7 @@ class AquaGuardTema {
       ),
 
       cardTheme: CardThemeData(
-        elevation: 1.5,
-        shadowColor: renkSemasi.shadow.withValues(alpha: 0.08),
+        elevation: 0,
         color: renkSemasi.surfaceContainer,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
@@ -175,7 +130,7 @@ class AquaGuardTema {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(kucukRadius),
           ),
-          textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
       ),
 
@@ -209,6 +164,7 @@ class AquaGuardTema {
           horizontal: 16,
           vertical: 14,
         ),
+        hintStyle: TextStyle(color: renkSemasi.onSurfaceVariant),
       ),
 
       chipTheme: ChipThemeData(
@@ -216,7 +172,7 @@ class AquaGuardTema {
         side: BorderSide.none,
         backgroundColor: renkSemasi.surfaceContainerHigh,
         selectedColor: renkSemasi.primaryContainer,
-        labelStyle: GoogleFonts.plusJakartaSans(color: renkSemasi.onSurface),
+        labelStyle: GoogleFonts.inter(color: renkSemasi.onSurface),
       ),
 
       dividerTheme: DividerThemeData(
@@ -226,16 +182,15 @@ class AquaGuardTema {
 
       listTileTheme: ListTileThemeData(
         iconColor: renkSemasi.onSurfaceVariant,
+        textColor: renkSemasi.onSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kucukRadius),
         ),
       ),
 
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: renkSemasi.inverseSurface,
-        contentTextStyle: GoogleFonts.plusJakartaSans(
-          color: renkSemasi.onInverseSurface,
-        ),
+        backgroundColor: renkSemasi.surfaceContainerHighest,
+        contentTextStyle: GoogleFonts.inter(color: renkSemasi.onSurface),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kucukRadius),
@@ -243,29 +198,51 @@ class AquaGuardTema {
       ),
 
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: renkSemasi.surfaceContainerLowest,
+        backgroundColor: anaRenk,
         selectedIconTheme: IconThemeData(color: renkSemasi.primary),
-        selectedLabelTextStyle: GoogleFonts.plusJakartaSans(
+        unselectedIconTheme: IconThemeData(
+          color: renkSemasi.onSurfaceVariant,
+        ),
+        selectedLabelTextStyle: GoogleFonts.inter(
           color: renkSemasi.primary,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelTextStyle: GoogleFonts.plusJakartaSans(
+        unselectedLabelTextStyle: GoogleFonts.inter(
           color: renkSemasi.onSurfaceVariant,
         ),
         indicatorColor: renkSemasi.primaryContainer,
       ),
 
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: renkSemasi.surfaceContainerLowest,
+        backgroundColor: anaRenk,
         indicatorColor: renkSemasi.primaryContainer,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final secili = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color: secili ? renkSemasi.primary : renkSemasi.onSurfaceVariant,
+          );
+        }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final secili = states.contains(WidgetState.selected);
-          return GoogleFonts.plusJakartaSans(
+          return GoogleFonts.inter(
             color: secili ? renkSemasi.primary : renkSemasi.onSurfaceVariant,
             fontWeight: secili ? FontWeight.w600 : FontWeight.w400,
             fontSize: 12,
           );
         }),
+      ),
+
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? renkSemasi.primary
+              : renkSemasi.onSurfaceVariant,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? renkSemasi.primaryContainer
+              : renkSemasi.surfaceContainerHighest,
+        ),
       ),
     );
   }

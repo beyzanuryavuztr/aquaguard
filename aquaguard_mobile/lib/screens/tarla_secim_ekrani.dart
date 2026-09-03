@@ -346,10 +346,12 @@ class _BosTarlaGorunumu extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'İzlemek istediğiniz ilk tarlanızı ve zon numaralarını ekleyerek başlayın.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black54),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
@@ -407,8 +409,8 @@ class _TarlaKarti extends StatelessWidget {
                           Text(
                             '${tarla.zonNumaralari.length} zon — '
                             '${tarla.zonNumaralari.map((z) => "Zon $z").join(", ")}',
-                            style: const TextStyle(
-                              color: Colors.black54,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 13,
                             ),
                           ),

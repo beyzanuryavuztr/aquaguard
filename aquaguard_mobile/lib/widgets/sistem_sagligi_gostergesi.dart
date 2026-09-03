@@ -95,9 +95,12 @@ class SistemSagligiGostergesi extends StatelessWidget {
                           color: renk,
                         ),
                       ),
-                      const Text(
+                      Text(
                         'sağlıklı',
-                        style: TextStyle(fontSize: 11, color: Colors.black54),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -124,7 +127,10 @@ class SistemSagligiGostergesi extends StatelessWidget {
                   Text(
                     '$toplam zondan $saglikliSayisi tanesi normal veya '
                     'aktif olarak tedavi ediliyor.',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),

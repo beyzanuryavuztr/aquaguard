@@ -156,9 +156,14 @@ class _DurumOzetKarti extends StatelessWidget {
               ],
             ),
             const Divider(height: 24),
-            _bilgiSatiri('Tıkanma Türü', turEtiketi(okuma.tikanmaTuru)),
-            _bilgiSatiri('Güven Skoru', '%${okuma.guven.toStringAsFixed(1)}'),
+            _bilgiSatiri(context, 'Tıkanma Türü', turEtiketi(okuma.tikanmaTuru)),
             _bilgiSatiri(
+              context,
+              'Güven Skoru',
+              '%${okuma.guven.toStringAsFixed(1)}',
+            ),
+            _bilgiSatiri(
+              context,
               'Son Güncelleme',
               DateFormat('dd.MM.yyyy HH:mm:ss').format(okuma.zaman),
             ),
@@ -168,13 +173,18 @@ class _DurumOzetKarti extends StatelessWidget {
     );
   }
 
-  Widget _bilgiSatiri(String etiket, String deger) {
+  Widget _bilgiSatiri(BuildContext context, String etiket, String deger) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(etiket, style: const TextStyle(color: Colors.black54)),
+          Text(
+            etiket,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           Text(deger, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),

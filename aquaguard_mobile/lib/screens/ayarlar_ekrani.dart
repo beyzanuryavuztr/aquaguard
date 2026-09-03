@@ -100,8 +100,8 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                                 'Herhangi bir ağ/donanım bağlantısı gerekmez.'
                           : 'Uygulama, aşağıdaki MQTT brokerına bağlanarak gerçek '
                                 'Deneyap Kart verisini dinliyor.',
-                      style: const TextStyle(
-                        color: Colors.black54,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 13,
                       ),
                     ),
@@ -116,13 +116,16 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
+                child: Text(
                   'Demo modu açıkken bu ayarlar devre dışıdır. Gerçek donanıma '
                   'bağlanmak için önce Demo Modu\'nu kapatın.',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               )
             else

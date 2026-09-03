@@ -51,10 +51,13 @@ class AciklanabilirlikPaneli extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Kural motoru, pH/EC/ORP değerlerini her tıkanma türünün literatür '
               'imzasıyla karşılaştırarak bu güven skorlarını üretti:',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 16),
             for (final girdi in girdiler) ...[
@@ -112,7 +115,9 @@ class _GuvenCubugu extends StatelessWidget {
               '%${guven.toStringAsFixed(1)}',
               style: TextStyle(
                 fontWeight: kazananMi ? FontWeight.bold : FontWeight.normal,
-                color: kazananMi ? renk : Colors.black54,
+                color: kazananMi
+                    ? renk
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],

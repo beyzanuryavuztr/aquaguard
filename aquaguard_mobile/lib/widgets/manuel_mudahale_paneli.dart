@@ -90,7 +90,10 @@ class _DurdurKarti extends StatelessWidget {
               'Devam eden ${tedaviEtiketi(okuma.tedaviAktif)} işlemini sahada gerekli '
               'görürseniz erken sonlandırabilirsiniz. Güvenlik gereği sistem '
               'ardından zorunlu durulama adımına geçecektir.',
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -140,12 +143,15 @@ class _SecimKarti extends StatelessWidget {
           children: [
             const _PanelBasligi(metin: 'Operatör Kontrolü Gerekiyor'),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Sistem tıkanma türünü yeterli güvenle belirleyemedi. Aşağıdaki '
               '"Neden Bu Karar?" panelindeki güven skorlarını ve sensör '
               'eğilimlerini inceleyerek uygun tedaviyi siz seçebilir ya da '
               'durumu yanlış alarm olarak işaretleyebilirsiniz.',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 12),
             Wrap(

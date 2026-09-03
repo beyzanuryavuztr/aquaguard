@@ -127,7 +127,9 @@ class _TedaviIlerlemeGorunumu extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           '${turEtiketi(okuma.tikanmaTuru)} tıkanmaya karşı tetiklendi',
-          style: const TextStyle(color: Colors.black54),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 32),
         ClipRRect(
@@ -164,7 +166,11 @@ class _DurulamaGorunumu extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.water_drop, size: 64, color: Colors.blueGrey),
+        Icon(
+          Icons.water_drop,
+          size: 64,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(height: 16),
         Text(
           'Zorunlu Durulama Sürüyor',
@@ -173,11 +179,13 @@ class _DurulamaGorunumu extends StatelessWidget {
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Tedavi tamamlandı. Güvenlik gereği, yeni bir tedavi başlamadan önce '
           'sistem zorunlu durulama süresini bekliyor.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.black54),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -210,20 +218,21 @@ class _TahminiSureAciklamasi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.05),
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.info_outline, size: 18, color: Colors.black45),
-          SizedBox(width: 8),
+          Icon(Icons.info_outline, size: 18, color: onSurfaceVariant),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Süre, cihazın yapılandırılmış tedavi süresine göre tahmini olarak hesaplanır.',
-              style: TextStyle(fontSize: 12, color: Colors.black45),
+              style: TextStyle(fontSize: 12, color: onSurfaceVariant),
             ),
           ),
         ],

@@ -155,7 +155,10 @@ class _GecmisSatiri extends StatelessWidget {
       isThreeLine: true,
       trailing: Text(
         DateFormat('dd.MM HH:mm:ss').format(okuma.zaman),
-        style: const TextStyle(fontSize: 12, color: Colors.black54),
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }

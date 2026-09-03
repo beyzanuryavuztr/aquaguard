@@ -161,14 +161,16 @@ class GenelBakisEkrani extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     if (tumZonlar.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 12,
                         ),
                         child: Text(
                           'Henüz izlenen zon yok.',
-                          style: TextStyle(color: Colors.black54),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       )
                     else
@@ -209,14 +211,16 @@ class GenelBakisEkrani extends StatelessWidget {
                       ),
                     ),
                     if (sonAktiviteler.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 12,
                         ),
                         child: Text(
                           'Henüz aktivite kaydı yok.',
-                          style: TextStyle(color: Colors.black54),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       )
                     else
@@ -265,7 +269,10 @@ class _IstatistikKarti extends StatelessWidget {
               ),
               Text(
                 etiket,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
