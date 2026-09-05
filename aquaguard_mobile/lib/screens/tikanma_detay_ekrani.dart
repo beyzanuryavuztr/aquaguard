@@ -6,7 +6,14 @@
 ///   ve guven skorunu detayli gosterir. Tedavi aktifse, aktif tedavi
 ///   ekranina gecis icin bir banner/buton gosterir.
 ///
-/// Tarih:  2026-09-01
+///   ASAMA 3 GENISLEMESI (2026-09-04): sabit 6'lı sparkline izgarasinin
+///   yerini, "once ozet karta dokun, sonra buyuk grafige bak" akisiyla
+///   SensorKarti + tek buyuk SensorTrendGrafigi aldi; ayrica mutex kilit
+///   gostergesi, karar katmani durustluk etiketi ve tedavi once/sonra
+///   karsilastirmasi eklendi. Mevcut SulamaKontrolKarti, ManuelMudahalePaneli
+///   ve AciklanabilirlikPaneli KORUNDU, yerlerinde kaldi.
+///
+/// Tarih:  2026-09-01 (Asama 3 genislemesi: 2026-09-04)
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
@@ -14,14 +21,19 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/sensor_imzalari.dart';
 import '../models/sensor_okuma.dart';
+import '../models/tedavi_karsilastirmasi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/aciklanabilirlik_paneli.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/manuel_mudahale_paneli.dart';
-import '../widgets/mini_trend_grafigi.dart';
+import '../widgets/mutex_kilit_gostergesi.dart';
+import '../widgets/sensor_karti.dart';
+import '../widgets/sensor_trend_grafigi.dart';
 import '../widgets/sulama_kontrol_karti.dart';
+import '../widgets/tikanma_turu_ikonu.dart';
 import 'aktif_tedavi_ekrani.dart';
 
 class TikanmaDetayEkrani extends StatelessWidget {
@@ -35,14 +47,8 @@ class TikanmaDetayEkrani extends StatelessWidget {
     final okuma = durum.sonOkuma(zonNumarasi);
     final cevrimici = durum.zonCevrimiciMi(zonNumarasi);
     final renk = DurumRenkleri.renkGetir(okuma: okuma, cevrimici: cevrimici);
-
-    // Sparkline'lar icin son 20 okuma, ESKIDEN YENIYE sirali.
-    final sonOkumalar = durum
-        .gecmis(zonNumarasi)
-        .take(20)
-        .toList()
-        .reversed
-        .toList();
+    final gecmisEnYeniOnce = durum.gecmis(zonNumarasi);
+    final oncesiSonrasi = tedaviOncesiSonrasiBul(gecmisEnYeniOnce);
 
     return Scaffold(
       appBar: AppBar(title: Text('Zon $zonNumarasi Detayı')),
@@ -60,6 +66,10 @@ class TikanmaDetayEkrani extends StatelessWidget {
                     renk: renk,
                   ),
                   const SizedBox(height: 16),
+                  const _KararKatmaniEtiketi(),
+                  const SizedBox(height: 16),
+                  MutexKilitGostergesi(aktifTedavi: okuma.tedaviAktif),
+                  const SizedBox(height: 16),
                   if (okuma.tedaviAktif != TedaviTuru.yok ||
                       okuma.durulamaAktif) ...[
                     _TedaviBanner(zonNumarasi: zonNumarasi, okuma: okuma),
@@ -74,12 +84,16 @@ class TikanmaDetayEkrani extends StatelessWidget {
                     AciklanabilirlikPaneli(okuma: okuma),
                     const SizedBox(height: 16),
                   ],
+                  if (oncesiSonrasi != null) ...[
+                    _OncesiSonrasiKarti(oncesiSonrasi: oncesiSonrasi),
+                    const SizedBox(height: 16),
+                  ],
                   Text(
-                    'Sensör Eğilimleri',
+                    'Sensör Analizi',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  _SensorTrendIzgarasi(sonOkumalar: sonOkumalar),
+                  _SensorAnaliziBolumu(gecmisEnYeniOnce: gecmisEnYeniOnce),
                 ],
               ),
             ),
@@ -156,7 +170,7 @@ class _DurumOzetKarti extends StatelessWidget {
               ],
             ),
             const Divider(height: 24),
-            _bilgiSatiri(context, 'Tıkanma Türü', turEtiketi(okuma.tikanmaTuru)),
+            _tikanmaTuruSatiri(context),
             _bilgiSatiri(
               context,
               'Güven Skoru',
@@ -169,6 +183,35 @@ class _DurumOzetKarti extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _tikanmaTuruSatiri(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Tıkanma Türü',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Row(
+            children: [
+              if (okuma.tikanmaTuru != TikanmaTuru.yok) ...[
+                TikanmaTuruIkonu(tur: okuma.tikanmaTuru, boyut: 16),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                turEtiketi(okuma.tikanmaTuru),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -188,6 +231,151 @@ class _DurumOzetKarti extends StatelessWidget {
           Text(deger, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
+    );
+  }
+}
+
+/// DURUSTLUK NOTU: brief, teshisin hangi "katman" tarafindan yapildiginin
+/// gosterilmesini istiyor. Gercek: RF (Katman 2), sadece
+/// python/aquaguard_karar_motoru.py icinde OFFLINE model dogrulamasi icin
+/// var -- hicbir CANLI uygulamada (bu Dart demosu dahil) gercek zamanli RF
+/// cikarimi CALISMIYOR. Bu yuzden burada HER ZAMAN "Kural Tabanli (Katman 1)"
+/// gosterilir; RF'in offline dogrulama katmani oldugu kucuk notla belirtilir.
+/// Asla "yapay zeka karar veriyor" gibi yanlis bir izlenim verilmez.
+class _KararKatmaniEtiketi extends StatelessWidget {
+  const _KararKatmaniEtiketi();
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.account_tree, size: 18, color: onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Karar Katmanı: Kural Tabanlı (Katman 1 — birincil)',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Yapay zeka (Katman 2) yalnızca çevrimdışı doğrulama içindir, canlı teşhiste kullanılmaz.',
+                  style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OncesiSonrasiKarti extends StatelessWidget {
+  final TedaviOncesiSonrasi oncesiSonrasi;
+  const _OncesiSonrasiKarti({required this.oncesiSonrasi});
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    final iyilesmeVar = oncesiSonrasi.sonraDebi > oncesiSonrasi.onceDebi;
+    final fark = oncesiSonrasi.sonraDebi - oncesiSonrasi.onceDebi;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Son Tedavi Etkisi',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${DateFormat('dd.MM HH:mm').format(oncesiSonrasi.tedaviBaslangicZamani)} tarihli tedavi öncesi/sonrası debi',
+              style: TextStyle(fontSize: 11, color: onSurfaceVariant),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _debiKutusu(
+                    context,
+                    etiket: 'Önce',
+                    deger: oncesiSonrasi.onceDebi,
+                  ),
+                ),
+                Icon(Icons.arrow_forward, color: onSurfaceVariant, size: 18),
+                Expanded(
+                  child: _debiKutusu(
+                    context,
+                    etiket: 'Sonra',
+                    deger: oncesiSonrasi.sonraDebi,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  iyilesmeVar ? Icons.trending_up : Icons.trending_down,
+                  size: 16,
+                  color: iyilesmeVar
+                      ? DurumRenkleri.normal
+                      : DurumRenkleri.tespitEdildi,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${fark >= 0 ? '+' : ''}${fark.toStringAsFixed(2)} LPM',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: iyilesmeVar
+                        ? DurumRenkleri.normal
+                        : DurumRenkleri.tespitEdildi,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _debiKutusu(
+    BuildContext context, {
+    required String etiket,
+    required double deger,
+  }) {
+    return Column(
+      children: [
+        Text(
+          etiket,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${deger.toStringAsFixed(2)} LPM',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ],
     );
   }
 }
@@ -224,50 +412,147 @@ class _TedaviBanner extends StatelessWidget {
   }
 }
 
-class _SensorTrendIzgarasi extends StatelessWidget {
-  final List<SensorOkuma> sonOkumalar;
-  const _SensorTrendIzgarasi({required this.sonOkumalar});
+class _SensorTanimi {
+  final String baslik;
+  final String birim;
+  final Color renk;
+  final IconData ikon;
+  final double Function(SensorOkuma) secici;
+  final List<EsikCizgisi> esikler;
+
+  const _SensorTanimi({
+    required this.baslik,
+    required this.birim,
+    required this.renk,
+    required this.ikon,
+    required this.secici,
+    this.esikler = const [],
+  });
+}
+
+final _sensorTanimlari = <_SensorTanimi>[
+  _SensorTanimi(
+    baslik: 'pH',
+    birim: '',
+    renk: const Color(0xFF6D4C41),
+    ikon: Icons.science,
+    secici: (o) => o.ph,
+  ),
+  _SensorTanimi(
+    baslik: 'EC',
+    birim: 'mS/cm',
+    renk: const Color(0xFF00838F),
+    ikon: Icons.bolt,
+    secici: (o) => o.ec,
+  ),
+  _SensorTanimi(
+    baslik: 'ORP',
+    birim: 'mV',
+    renk: const Color(0xFF6A1B9A),
+    ikon: Icons.swap_vert,
+    secici: (o) => o.orp,
+  ),
+  _SensorTanimi(
+    baslik: 'Türbidite',
+    birim: 'NTU',
+    renk: const Color(0xFFEF6C00),
+    ikon: Icons.blur_on,
+    secici: (o) => o.turbidite,
+    esikler: [
+      EsikCizgisi(
+        deger: turbiditeEsigi,
+        etiket: 'Eşik ${turbiditeEsigi.toStringAsFixed(0)} NTU',
+        renk: DurumRenkleri.tespitEdildi,
+      ),
+    ],
+  ),
+  _SensorTanimi(
+    baslik: 'Debi',
+    birim: 'LPM',
+    renk: const Color(0xFF1565C0),
+    ikon: Icons.water,
+    secici: (o) => o.debi,
+    esikler: [
+      EsikCizgisi(
+        deger: referansDebi - debiDususEsigi,
+        etiket:
+            'Alt sınır ${(referansDebi - debiDususEsigi).toStringAsFixed(1)} LPM',
+        renk: DurumRenkleri.tespitEdildi,
+      ),
+    ],
+  ),
+  _SensorTanimi(
+    baslik: 'ΔBasınç',
+    birim: 'bar',
+    renk: const Color(0xFFC62828),
+    ikon: Icons.speed,
+    secici: (o) => o.deltaBasinc,
+    esikler: [
+      EsikCizgisi(
+        deger: basincArtisEsigi,
+        etiket: 'Üst sınır ${basincArtisEsigi.toStringAsFixed(2)} bar',
+        renk: DurumRenkleri.tespitEdildi,
+      ),
+    ],
+  ),
+];
+
+class _SensorAnaliziBolumu extends StatefulWidget {
+  final List<SensorOkuma> gecmisEnYeniOnce;
+  const _SensorAnaliziBolumu({required this.gecmisEnYeniOnce});
+
+  @override
+  State<_SensorAnaliziBolumu> createState() => _SensorAnaliziBolumuState();
+}
+
+class _SensorAnaliziBolumuState extends State<_SensorAnaliziBolumu> {
+  // Varsayilan olarak Debi secili -- tikanma tespitinde en dogrudan
+  // gostergedir (referans esigiyle birebir iliskili).
+  int _secilenIndeks = 4;
 
   @override
   Widget build(BuildContext context) {
-    final tanimlar =
-        <
-          (
-            String baslik,
-            String birim,
-            Color renk,
-            double Function(SensorOkuma) secici,
-          )
-        >[
-          ('pH', '', const Color(0xFF6D4C41), (o) => o.ph),
-          ('EC', 'mS/cm', const Color(0xFF00838F), (o) => o.ec),
-          ('ORP', 'mV', const Color(0xFF6A1B9A), (o) => o.orp),
-          ('Türbidite', 'NTU', const Color(0xFFEF6C00), (o) => o.turbidite),
-          ('Debi', 'LPM', const Color(0xFF1565C0), (o) => o.debi),
-          (
-            'Diferansiyel Basınç',
-            'bar',
-            const Color(0xFFC62828),
-            (o) => o.deltaBasinc,
-          ),
-        ];
+    final guncelOkuma = widget.gecmisEnYeniOnce.isNotEmpty
+        ? widget.gecmisEnYeniOnce.first
+        : null;
+    final tanim = _sensorTanimlari[_secilenIndeks];
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.5,
-      children: tanimlar.map((tanim) {
-        final (baslik, birim, renk, secici) = tanim;
-        return MiniTrendGrafigi(
-          baslik: baslik,
-          birim: birim,
-          renk: renk,
-          degerler: sonOkumalar.map(secici).toList(),
-        );
-      }).toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 1.1,
+          children: [
+            for (var i = 0; i < _sensorTanimlari.length; i++)
+              SensorKarti(
+                ikon: _sensorTanimlari[i].ikon,
+                baslik: _sensorTanimlari[i].baslik,
+                birim: _sensorTanimlari[i].birim,
+                deger: guncelOkuma != null
+                    ? _sensorTanimlari[i].secici(guncelOkuma)
+                    : 0,
+                renk: _sensorTanimlari[i].renk,
+                secili: i == _secilenIndeks,
+                onTap: () => setState(() => _secilenIndeks = i),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SensorTrendGrafigi(
+          key: ValueKey(tanim.baslik),
+          baslik: tanim.baslik,
+          birim: tanim.birim,
+          renk: tanim.renk,
+          gecmisEnYeniOnce: widget.gecmisEnYeniOnce,
+          secici: tanim.secici,
+          esikler: tanim.esikler,
+        ),
+      ],
     );
   }
 }
