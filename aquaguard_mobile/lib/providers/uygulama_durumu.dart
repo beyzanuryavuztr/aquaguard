@@ -26,6 +26,7 @@ import '../models/enerji_durumu.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
+import '../services/bildirim_servisi.dart';
 import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
 import '../services/mqtt_servisi.dart';
@@ -51,7 +52,7 @@ class UygulamaDurumu extends ChangeNotifier {
   BildirimTercihleri _bildirimTercihleri = const BildirimTercihleri();
   bool _hazir = false;
 
-  final List<String> _bildirimKuyrugu = [];
+  final List<AktiviteKaydi> _bildirimKuyrugu = [];
   final Map<int, DateTime> _tedaviBaslangicZamanlari = {};
   final List<AktiviteKaydi> _aktiviteGecmisi = [];
   // OPERATOR MUDAHALESI: sulamasi manuel durdurulmus zonlar -- ana vana
@@ -143,8 +144,8 @@ class UygulamaDurumu extends ChangeNotifier {
     return liste;
   }
 
-  List<String> bildirimleriAlVeTemizle() {
-    final kopya = List<String>.from(_bildirimKuyrugu);
+  List<AktiviteKaydi> bildirimleriAlVeTemizle() {
+    final kopya = List<AktiviteKaydi>.from(_bildirimKuyrugu);
     _bildirimKuyrugu.clear();
     return kopya;
   }
@@ -199,6 +200,7 @@ class UygulamaDurumu extends ChangeNotifier {
   // ============================================================================
 
   Future<void> baslat() async {
+    unawaited(BildirimServisi.baslat());
     _tarlalar = await _depolama.tarlalariGetir();
     final ayarlar = await _depolama.mqttAyarlariniGetir();
     _mqttHost = ayarlar.host;
@@ -408,7 +410,7 @@ class UygulamaDurumu extends ChangeNotifier {
       _aktiviteGecmisi.insert(0, kayit);
       if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
       unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-      if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit.mesaj);
+      if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit);
     }
   }
 
@@ -454,7 +456,7 @@ class UygulamaDurumu extends ChangeNotifier {
     if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
     unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
     if (_bildirimKategoriAcikMi(AktiviteTuru.dusukPil)) {
-      _bildirimKuyrugu.add(kayit.mesaj);
+      _bildirimKuyrugu.add(kayit);
     }
   }
 
@@ -638,7 +640,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _aktiviteGecmisi.insert(0, kayit);
     if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
     unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit.mesaj);
+    if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit);
     notifyListeners();
   }
 
@@ -724,7 +726,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _aktiviteGecmisi.insert(0, kayit);
     if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
     unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    _bildirimKuyrugu.add(kayit.mesaj);
+    _bildirimKuyrugu.add(kayit);
     notifyListeners();
 
     return vanasiYeniKapatilanlar;
@@ -819,7 +821,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _aktiviteGecmisi.insert(0, kayit);
     if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
     unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit.mesaj);
+    if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit);
     notifyListeners();
   }
 

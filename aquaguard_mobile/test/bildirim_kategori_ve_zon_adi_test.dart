@@ -35,7 +35,7 @@ void main() {
     final bildirimler = durum.bildirimleriAlVeTemizle();
 
     expect(bildirimler, isNotEmpty);
-    expect(bildirimler.first, contains('yanlış alarm'));
+    expect(bildirimler.first.mesaj, contains('yanlış alarm'));
 
     durum.dispose();
   });
@@ -139,7 +139,7 @@ void main() {
       final bildirimler = durum.bildirimleriAlVeTemizle();
 
       expect(
-        bildirimler.any((b) => b.contains('Pil seviyesi düşük')),
+        bildirimler.any((b) => b.mesaj.contains('Pil seviyesi düşük')),
         isFalse,
       );
 

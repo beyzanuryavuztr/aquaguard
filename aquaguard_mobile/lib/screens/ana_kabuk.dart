@@ -29,7 +29,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/aktivite_kaydi.dart';
 import '../providers/uygulama_durumu.dart';
+import '../services/bildirim_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
 import 'ayarlar_ekrani.dart';
 import 'genel_bakis_ekrani.dart';
@@ -93,12 +95,22 @@ class _AnaKabukState extends State<AnaKabuk> {
     final bildirimler = durum.bildirimleriAlVeTemizle();
     if (bildirimler.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        for (final mesaj in bildirimler) {
+        for (final kayit in bildirimler) {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(mesaj),
+              content: Text(kayit.mesaj),
               duration: const Duration(seconds: 4),
+            ),
+          );
+          // Yerel bildirim (SnackBar sadece on plandayken gorunur) --
+          // BildirimServisi kendi icinde try/catch ile korunur, burada
+          // ek bir hata isleme gerekmez.
+          unawaited(
+            BildirimServisi.goster(
+              id: kayit.hashCode,
+              baslik: bildirimBasligiGetir(kayit.tur),
+              icerik: kayit.mesaj,
             ),
           );
         }

@@ -174,3 +174,25 @@ class AktiviteKaydi {
     ),
   );
 }
+
+/// Yerel bildirim (BildirimServisi) ve SnackBar basligi olarak kullanilir --
+/// [AktiviteKaydi.mesaj] zaten zon/detay iceren govde metnidir, bu sadece
+/// kisa bir kategori basligidir.
+String bildirimBasligiGetir(AktiviteTuru tur) {
+  switch (tur) {
+    case AktiviteTuru.tespit:
+      return 'Tıkanma Tespit Edildi';
+    case AktiviteTuru.belirsiz:
+      return 'Operatör Kontrolü Gerekiyor';
+    case AktiviteTuru.normaleDonus:
+      return 'Durum Normale Döndü';
+    case AktiviteTuru.tedaviBaslangic:
+      return 'Tedavi Başladı';
+    case AktiviteTuru.tedaviBitis:
+      return 'Tedavi Tamamlandı';
+    case AktiviteTuru.manuelMudahale:
+      return 'Operatör Müdahalesi';
+    case AktiviteTuru.dusukPil:
+      return 'Düşük Pil Uyarısı';
+  }
+}
