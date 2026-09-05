@@ -28,6 +28,7 @@ import '../models/tikanma_olayi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/disa_aktarma_factory.dart';
 import '../services/disa_aktarma_servisi.dart';
+import '../services/rapor_pdf_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/tikanma_turu_ikonu.dart';
 
@@ -104,6 +105,18 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
       appBar: AppBar(
         title: const Text('Tedavi Geçmişi'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: 'Görüntülenen Raporu PDF Olarak Dışa Aktar',
+            onPressed: () => _pdfRaporuOlustur(
+              context,
+              turSayaclari: turSayaclari,
+              tedaviSayaclari: durum.tedaviSayaclari,
+              basariAnalizi: basariAnalizi,
+              olaylar: filtreliOlaylar,
+              zonAdiGetir: durum.zonAdiGetir,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
             tooltip: 'Tüm Zonların Raporunu Dışa Aktar (CSV)',
@@ -289,6 +302,24 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
         ),
       ),
     );
+  }
+
+  Future<void> _pdfRaporuOlustur(
+    BuildContext context, {
+    required Map<TikanmaTuru, int> turSayaclari,
+    required Map<TedaviTuru, int> tedaviSayaclari,
+    required TedaviBasariAnalizi basariAnalizi,
+    required List<TikanmaOlayi> olaylar,
+    required String Function(int) zonAdiGetir,
+  }) async {
+    final belge = await RaporPdfServisi.olustur(
+      turSayaclari: turSayaclari,
+      tedaviSayaclari: tedaviSayaclari,
+      basariAnalizi: basariAnalizi,
+      olaylar: olaylar,
+      zonAdiGetir: zonAdiGetir,
+    );
+    await RaporPdfServisi.onizlemeyiAc(belge);
   }
 
   Future<void> _raporuDisaAktar(
