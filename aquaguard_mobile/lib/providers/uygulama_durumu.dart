@@ -38,6 +38,7 @@ class UygulamaDurumu extends ChangeNotifier {
   SimulasyonServisi? _simulasyon;
   bool _demoModuAktif = true;
   DemoHizi _demoHizi = DemoHizi.normal;
+  bool _onboardingGoruldu = false;
 
   List<Tarla> _tarlalar = [];
   final Map<int, SensorOkuma> _sonOkumalar = {};
@@ -75,6 +76,7 @@ class UygulamaDurumu extends ChangeNotifier {
   BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
   bool get demoModuAktif => _demoModuAktif;
   DemoHizi get demoHizi => _demoHizi;
+  bool get onboardingGoruldu => _onboardingGoruldu;
 
   /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
   /// varsayilan "Zon N" bicimini doner -- tum ekranlar zon basligini
@@ -204,6 +206,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _bildirimTercihleri = await _depolama.bildirimTercihleriniGetir();
     _demoModuAktif = await _depolama.demoModuAcikMi();
     _demoHizi = await _depolama.demoHiziGetir();
+    _onboardingGoruldu = await _depolama.onboardingGorulduMu();
     _sulamasiDurdurulanZonlar
       ..clear()
       ..addAll(await _depolama.sulamaKapaliZonlariGetir());
@@ -348,6 +351,15 @@ class UygulamaDurumu extends ChangeNotifier {
     _demoHizi = hiz;
     await _depolama.demoHiziniKaydet(hiz);
     _simulasyon?.hiziDegistir(hiz.sure);
+    notifyListeners();
+  }
+
+  /// Onboarding turu tamamlandiginda (veya "Atla" ile gecildiginde) bir
+  /// daha GORUNMEMESI icin kalici olarak isaretler.
+  Future<void> onboardingiTamamla() async {
+    if (_onboardingGoruldu) return;
+    _onboardingGoruldu = true;
+    await _depolama.onboardingGorulduOlarakIsaretle();
     notifyListeners();
   }
 

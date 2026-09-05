@@ -37,6 +37,7 @@ class DepolamaServisi {
   static const _bildirimTercihleriAnahtari = 'aquaguard_bildirim_tercihleri';
   static const _demoModuAnahtari = 'aquaguard_demo_modu_acik';
   static const _demoHiziAnahtari = 'aquaguard_demo_hizi';
+  static const _onboardingGorulduAnahtari = 'aquaguard_onboarding_goruldu';
   static const _aktiviteGecmisiAnahtari = 'aquaguard_aktivite_gecmisi';
   static const _sulamaKapaliZonlarAnahtari = 'aquaguard_sulama_kapali_zonlar';
   static const _tarlaNotlariAnahtari = 'aquaguard_tarla_notlari';
@@ -217,6 +218,20 @@ class DepolamaServisi {
   Future<void> demoHiziniKaydet(DemoHizi hiz) async {
     final tercihler = await _tercihler;
     await tercihler.setString(_demoHiziAnahtari, hiz.name);
+  }
+
+  // ==========================================================================
+  // ONBOARDING TURU (ilk acilista bir kez gosterilir)
+  // ==========================================================================
+
+  Future<bool> onboardingGorulduMu() async {
+    final tercihler = await _tercihler;
+    return tercihler.getBool(_onboardingGorulduAnahtari) ?? false;
+  }
+
+  Future<void> onboardingGorulduOlarakIsaretle() async {
+    final tercihler = await _tercihler;
+    await tercihler.setBool(_onboardingGorulduAnahtari, true);
   }
 
   // ==========================================================================

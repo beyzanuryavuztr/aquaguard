@@ -4,10 +4,11 @@
 /// Amac:
 ///   Provider ile UygulamaDurumu'nu (ana state) uygulama agacinin en
 ///   tepesine yerlestirir, MaterialApp'i tema ile kurar. Ilk (soguk) acilista
-///   GirisEkrani gosterilir (marka + Demo Modu secimi); "Devam Et" oradan
-///   Ana Kabuk'a (Genel Bakış / Tedavi Geçmişi / Ayarlar) gecer.
+///   -- onboarding turu daha once GORULMEDIYSE -- once OnboardingEkrani,
+///   sonra GirisEkrani gosterilir (marka + Demo Modu secimi); "Devam Et"
+///   oradan Ana Kabuk'a (Genel Bakış / Tedavi Geçmişi / Ayarlar) gecer.
 ///
-/// Tarih:  2026-09-01 (Giris Ekrani: 2026-09-05)
+/// Tarih:  2026-09-01 (Giris Ekrani: 2026-09-05, Onboarding: 2026-09-05)
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
@@ -17,6 +18,7 @@ import 'package:provider/provider.dart';
 import 'config/tema.dart';
 import 'providers/uygulama_durumu.dart';
 import 'screens/giris_ekrani.dart';
+import 'screens/onboarding_ekrani.dart';
 
 void main() {
   runApp(const AquaGuardUygulamasi());
@@ -42,8 +44,27 @@ class AquaGuardUygulamasi extends StatelessWidget {
         // Colors.white kullanimlari bu gecisle birlikte Theme.of(context)
         // renklerine tasindi (bkz. proje notlari).
         themeMode: ThemeMode.dark,
-        home: const GirisEkrani(),
+        home: const _BaslangicYonlendirici(),
       ),
     );
+  }
+}
+
+/// Ilk (soğuk) açılışta, onboarding turu daha önce görülmediyse ONU
+/// (bkz. screens/onboarding_ekrani.dart), görüldüyse doğrudan GirisEkrani'ni
+/// gösterir. UygulamaDurumu.baslat() (SharedPreferences'tan asenkron
+/// yükleme) bitene kadar kısa bir yükleniyor göstergesi gösterir.
+class _BaslangicYonlendirici extends StatelessWidget {
+  const _BaslangicYonlendirici();
+
+  @override
+  Widget build(BuildContext context) {
+    final durum = context.watch<UygulamaDurumu>();
+    if (!durum.hazir) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return durum.onboardingGoruldu
+        ? const GirisEkrani()
+        : const OnboardingEkrani();
   }
 }
