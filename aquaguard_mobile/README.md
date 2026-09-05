@@ -15,11 +15,11 @@ Projenin tam teknik özeti için depo kökündeki `PROJE_BRIEF.md` dosyasına ba
 
 ```
 lib/
-├── config/       Sensör imzaları, tema, sabitler (Python/firmware ile tutarlı tutulmalı)
-├── models/       Veri modelleri (SensorOkuma, Tarla, AktiviteKaydi)
-├── services/     MQTT istemcisi, karar motoru, simülasyon (demo) servisi, yerel depolama
+├── config/       Sensör imzaları, tema, kalibrasyon sabitleri (Python/firmware ile tutarlı tutulmalı)
+├── models/       Veri modelleri (SensorOkuma, Tarla, AktiviteKaydi, BakimGorevi, ...)
+├── services/     MQTT istemcisi, PDF rapor, bildirim, PIN/güvenli depolama, yerel depolama
 ├── providers/    UygulamaDurumu -- tek durum kaynağı (Provider/ChangeNotifier)
-├── screens/      Ekranlar (Genel Bakış, Tarlalar, İstatistikler, Ayarlar, ...)
+├── screens/      Ekranlar (Genel Bakış, Tedavi Geçmişi, Trend Analizi, Ayarlar, ...)
 └── widgets/      Tekrar kullanılan bileşenler
 ```
 
