@@ -18,6 +18,7 @@ import '../config/sensor_imzalari.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/mqtt_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
+import 'hakkinda_ekrani.dart';
 
 class AyarlarEkrani extends StatefulWidget {
   const AyarlarEkrani({super.key});
@@ -292,6 +293,17 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
             const SizedBox(height: 24),
             _BolumBasligi(baslik: 'Eşik Değerleri'),
             _EsikDegerleriKarti(),
+            const SizedBox(height: 24),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('Hakkında'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const HakkindaEkrani()),
+                ),
+              ),
+            ),
           ],
         ),
       ),
