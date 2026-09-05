@@ -20,6 +20,7 @@ import '../models/aktivite_kaydi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/aktif_tedaviler_bolumu.dart';
 import '../widgets/demo_modu_banner.dart';
+import '../widgets/demo_senaryo_paneli.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/enerji_gostergesi.dart';
@@ -84,7 +85,7 @@ class GenelBakisEkrani extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (durum.demoModuAktif)
+                    if (durum.demoModuAktif) ...[
                       DemoModuBanner(
                         onAyarlaraGit: () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -92,6 +93,11 @@ class GenelBakisEkrani extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: DemoSenaryoPaneli(),
+                      ),
+                    ],
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                       child: SistemSagligiGostergesi(ozet: ozet),

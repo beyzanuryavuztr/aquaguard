@@ -604,6 +604,81 @@ class UygulamaDurumu extends ChangeNotifier {
   }
 
   // ============================================================================
+  // DEMO SENARYO TETIKLEME (sadece Demo Modu'nda anlamli)
+  // ============================================================================
+  //
+  // Juri/izleyici onunde uygulamanin rastgele demo akisini beklemek yerine,
+  // tek dokunuşla ISTENEN senaryoyu hemen gostermek icin. Mevcut operator-
+  // mudahalesi altyapisini (SimulasyonServisi.manuelTedaviBaslat/
+  // manuelNormaleDondur -- yukaridaki bolum) DOGRUDAN kullanir, yeni bir
+  // simulasyon mekanizmasi icat edilmez. Hedef zon numaralari (1-4) SABITTIR
+  // -- bu, Tarla.varsayilanListe()'nin fiziksel prototiple birebir eslesen
+  // "1 çiftlik / 4 zon" karariyla dogrudan iliskilidir (bkz. models/tarla.dart);
+  // panel zaten sadece Demo Modu'nda gosterilir, gercek donanimda anlamsizdir.
+
+  /// Zonlari onceden ayarlanmis bir duruma sokan demo senaryolari.
+  Future<void> demoSenaryosuTetikle(DemoSenaryosu senaryo) async {
+    if (!_demoModuAktif || _simulasyon == null) return;
+    final mevcutZonlar = tumZonNumaralari;
+
+    // Onceki senaryonun kalintisi kalmasin diye ONCE tum zonlari normale
+    // dondur, boylece her tetikleme kullaniciya AYNI temiz baslangic
+    // noktasindan gosterilir (rastgele arka plan durumuna bagli degildir).
+    for (final zon in mevcutZonlar) {
+      _simulasyon!.manuelNormaleDondur(zon);
+    }
+
+    String aciklama;
+    switch (senaryo) {
+      case DemoSenaryosu.saglikli:
+        aciklama = 'Sağlıklı Sistem';
+        break;
+      case DemoSenaryosu.kimyasal:
+        if (mevcutZonlar.contains(2)) {
+          _simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.kimyasal);
+        }
+        aciklama = 'Kimyasal Tıkanma (Zon 2)';
+        break;
+      case DemoSenaryosu.biyolojik:
+        if (mevcutZonlar.contains(1)) {
+          _simulasyon!.manuelTedaviBaslat(1, TikanmaTuru.biyolojik);
+        }
+        aciklama = 'Biyolojik Tıkanma (Zon 1)';
+        break;
+      case DemoSenaryosu.fiziksel:
+        if (mevcutZonlar.contains(3)) {
+          _simulasyon!.manuelTedaviBaslat(3, TikanmaTuru.fiziksel);
+        }
+        aciklama = 'Fiziksel Tıkanma (Zon 3)';
+        break;
+      case DemoSenaryosu.mutexKilidi:
+        // Iki FARKLI zonu AYNI ANDA iki farkli tedaviyle tetikler -- her
+        // zonun kendi tedavi kanali kilidini BAGIMSIZ gosterdigini kanitlar
+        // (bkz. widgets/mutex_kilit_gostergesi.dart).
+        if (mevcutZonlar.contains(2)) {
+          _simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.kimyasal);
+        }
+        if (mevcutZonlar.contains(4)) {
+          _simulasyon!.manuelTedaviBaslat(4, TikanmaTuru.biyolojik);
+        }
+        aciklama = 'Mutex Kilit Gösterimi (Zon 2 + Zon 4)';
+        break;
+    }
+
+    final kayit = AktiviteKaydi(
+      zaman: DateTime.now(),
+      zone: 0,
+      mesaj: 'Demo senaryosu tetiklendi: $aciklama',
+      tur: AktiviteTuru.manuelMudahale,
+    );
+    _aktiviteGecmisi.insert(0, kayit);
+    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
+    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+    if (_bildirimlerAcik) _bildirimKuyrugu.add(kayit.mesaj);
+    notifyListeners();
+  }
+
+  // ============================================================================
   // TARLA NOTLARI (operatorun serbest metin notlari)
   // ============================================================================
 
@@ -645,6 +720,10 @@ void unawaited(Future<void> future) {
     debugPrint('AquaGuard depolama hatasi: $hata');
   });
 }
+
+/// Demo Modu'nda tek dokunuşla tetiklenebilecek onceden tanimli senaryolar
+/// (bkz. UygulamaDurumu.demoSenaryosuTetikle).
+enum DemoSenaryosu { saglikli, kimyasal, biyolojik, fiziksel, mutexKilidi }
 
 /// Bir zon grubunun (tarla veya tum sistem) durum dagilimi. Genel Bakış ve
 /// Zon Dashboard ekranlarinin ikisi de UygulamaDurumu.durumOzetiHesapla()
