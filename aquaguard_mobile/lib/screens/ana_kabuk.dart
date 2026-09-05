@@ -2,10 +2,16 @@
 /// ===============================================
 ///
 /// Amac:
-///   Uygulamanin 4 ana bolumunu (Genel Bakış, Tarlalar, İstatistikler,
-///   Ayarlar) birbirine baglar. IndexedStack kullanilir ki sekmeler arasi
-///   gecişte her ekranin durumu (scroll pozisyonu, form girdileri vb.)
-///   KORUNSUN -- her sekme degisiminde sifirdan olusturulmasin.
+///   Uygulamanin 3 kalici sekmesini (Genel Bakış, İstatistikler, Ayarlar)
+///   birbirine baglar. IndexedStack kullanilir ki sekmeler arasi gecişte
+///   her ekranin durumu (scroll pozisyonu, form girdileri vb.) KORUNSUN --
+///   her sekme degisiminde sifirdan olusturulmasin.
+///
+///   TASARIM KARARI (2026-09-04): "Tarlalar" artik kalici bir sekme DEGIL --
+///   varsayilan/demo verisi artik TEK ciftlik oldugundan (bkz. models/tarla.dart),
+///   ciftlik secimi/yonetimi Genel Bakış'in app bar'indaki bir ikondan
+///   ACILAN bir ekrana tasindi (coklu ciftlik EKLEME yetenegi hala var,
+///   sadece artik gunluk kullanimda one cikan bir sekme degil).
 ///
 ///   DUYARLI DAVRANIS: brief "once web/Chrome test" diyor -- yani birincil
 ///   yuzey genis bir masaustu tarayici penceresidir. Dar (mobil) ekranda alt
@@ -28,7 +34,6 @@ import '../widgets/duyarli_icerik.dart';
 import 'ayarlar_ekrani.dart';
 import 'genel_bakis_ekrani.dart';
 import 'istatistikler_ekrani.dart';
-import 'tarla_secim_ekrani.dart';
 
 class _SekmeTanimi {
   final Widget ekran;
@@ -60,12 +65,6 @@ class _AnaKabukState extends State<AnaKabuk> {
       ikon: Icons.dashboard_outlined,
       seciliIkon: Icons.dashboard,
       etiket: 'Genel Bakış',
-    ),
-    _SekmeTanimi(
-      ekran: TarlaSecimEkrani(),
-      ikon: Icons.grass_outlined,
-      seciliIkon: Icons.grass,
-      etiket: 'Tarlalar',
     ),
     _SekmeTanimi(
       ekran: IstatistiklerEkrani(),

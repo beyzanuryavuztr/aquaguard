@@ -75,36 +75,24 @@ class Tarla {
   );
 
   /// Uygulama ilk acildiginda (kayitli tarla yokken) gosterilecek varsayilan
-  /// ornek tarlalar. Bilerek TEK degil COKLU tarla/zon ile baslar --
-  /// AquaGuard'in temel iddialarindan biri "birden fazla tarla destegi"dir
-  /// (bkz. PROJE_BRIEF.md SS4.4); tek zonlu bir demo bu yetenegi hic
-  /// gostermez ve her ekran (Istatistikler, Aktivite Gecmisi, Tarlalar) gercek
-  /// veri olmadigi icin bomboş gorunur. 3 tarla / 6 zon, Simulasyon Modu'nun
-  /// her zonu BAGIMSIZ rastgele bir senaryoyla calistirmasiyla birlikte,
-  /// demoyu ilk acilista bile dolu ve gercekci gosterir. Konum/aciklama
-  /// alanlari da AYNI nedenle bos birakilmaz -- profil kartinin/asistanin
-  /// ilk acilista bile "gercek bir ciftlik" hissi vermesi icin doldurulur.
+  /// ciftlik. TASARIM KARARI (2026-09-04 -- "SDI Tıkanma Yonetim Merkezi"
+  /// yenilemesi): onceki surum bilerek 3 tarla/6 zonla basliyordu (coklu
+  /// tarla destegini gostermek icin); yeni brief ise demo/varsayilan
+  /// durumun FIZIKSEL PROTOTIPLE (brief SS3'teki "3+1 bolmeli seffaf akrilik
+  /// test duzenegi" = 4 bolme/zon) BIREBIR eslesmesini istiyor -- juri
+  /// demoda gercek cihazla yan yana bakacagi icin bu tutarlilik onemli.
+  /// Coklu ciftlik EKLEME yetenegi (tarlaEkle) koddan kaldirilmadi, sadece
+  /// varsayilan/demo verisi artik tek ciftlik. Konum/aciklama alanlari,
+  /// profil kartinin/asistanin ilk acilista bile "gercek bir ciftlik"
+  /// hissi vermesi icin doldurulur.
   static List<Tarla> varsayilanListe() => const [
     Tarla(
       id: 'tarla-1',
-      ad: 'Kuzey Tarlası',
-      zonNumaralari: [1, 2, 3],
+      ad: 'Ana Çiftlik',
+      zonNumaralari: [1, 2, 3, 4],
       konum: 'Şanlıurfa, Harran Ovası',
-      aciklama: 'Pamuk ekili, toprak altı damla sulama ile 3 parsel.',
-    ),
-    Tarla(
-      id: 'tarla-2',
-      ad: 'Güney Tarlası',
-      zonNumaralari: [4, 5],
-      konum: 'Şanlıurfa, Akçakale yolu üzeri',
-      aciklama: 'Mısır ekili, 2 parsel.',
-    ),
-    Tarla(
-      id: 'tarla-3',
-      ad: 'Sera Bölgesi',
-      zonNumaralari: [6],
-      konum: 'Şanlıurfa, merkez sera tesisi',
-      aciklama: 'Kapalı sera, domates yetiştiriciliği.',
+      aciklama:
+          'Pamuk ekili, toprak altı damla sulama ile 4 parsel (prototip test düzeneğiyle birebir eşleşir).',
     ),
   ];
 }

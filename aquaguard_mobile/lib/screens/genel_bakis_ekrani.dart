@@ -18,13 +18,17 @@ import 'package:provider/provider.dart';
 
 import '../models/aktivite_kaydi.dart';
 import '../providers/uygulama_durumu.dart';
+import '../widgets/aktif_tedaviler_bolumu.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/durum_renkleri.dart';
+import '../widgets/enerji_gostergesi.dart';
 import '../widgets/sistem_sagligi_gostergesi.dart';
 import '../widgets/zon_durum_karti.dart';
+import '../widgets/zon_semasi.dart';
 import 'aktivite_gecmisi_ekrani.dart';
 import 'ayarlar_ekrani.dart';
+import 'tarla_secim_ekrani.dart';
 import 'tikanma_detay_ekrani.dart';
 
 class GenelBakisEkrani extends StatelessWidget {
@@ -50,6 +54,15 @@ class GenelBakisEkrani extends StatelessWidget {
             const Text('AquaGuard'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.grass_outlined),
+            tooltip: 'Çiftlikler',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TarlaSecimEkrani()),
+            ),
+          ),
+        ],
       ),
       body: !durum.hazir
           ? const Center(child: CircularProgressIndicator())
@@ -82,6 +95,13 @@ class GenelBakisEkrani extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                       child: SistemSagligiGostergesi(ozet: ozet),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: const EnerjiGostergesi(),
+                      ),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -154,6 +174,29 @@ class GenelBakisEkrani extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
+                        'Zon Şeması',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: ZonSemasi(
+                        zonlar: tumZonlar,
+                        okumaGetir: durum.sonOkuma,
+                        cevrimiciMi: durum.zonCevrimiciMi,
+                        onZonSecildi: (zon) => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => TikanmaDetayEkrani(zonNumarasi: zon),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
                         'Tüm Zonlar',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
@@ -188,6 +231,28 @@ class GenelBakisEkrani extends StatelessWidget {
                           ),
                         ),
                       ),
+                    if (ozet.tedavide > 0) ...[
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Aktif Tedaviler',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      AktifTedavilerBolumu(
+                        zonlar: tumZonlar,
+                        okumaGetir: durum.sonOkuma,
+                        baslangicGetir: durum.tedaviBaslangicZamani,
+                        onZonSecildi: (zon) => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => TikanmaDetayEkrani(zonNumarasi: zon),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),

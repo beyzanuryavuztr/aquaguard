@@ -25,8 +25,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/ayarlar_sabitleri.dart';
 import '../models/sensor_okuma.dart';
+import '../models/tedavi_ilerlemesi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -102,16 +102,12 @@ class _TedaviIlerlemeGorunumu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final toplamSaniye =
-        AyarlarSabitleri.tedaviSuresiSaniye[okuma.tedaviAktif] ?? 30;
-    final gecenSaniye = baslangic == null
-        ? 0
-        : DateTime.now()
-              .difference(baslangic!)
-              .inSeconds
-              .clamp(0, toplamSaniye);
-    final ilerleme = toplamSaniye == 0 ? 0.0 : gecenSaniye / toplamSaniye;
-    final kalanSaniye = toplamSaniye - gecenSaniye;
+    final ilerlemeBilgisi = TedaviIlerlemesi.hesapla(
+      tedavi: okuma.tedaviAktif,
+      baslangic: baslangic,
+    );
+    final ilerleme = ilerlemeBilgisi.oran;
+    final kalanSaniye = ilerlemeBilgisi.kalanSaniye;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,

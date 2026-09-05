@@ -152,13 +152,13 @@ void main() {
       expect(guncellenen.ad, tarla.ad); // digger alanlar etkilenmemeli
     });
 
-    test('varsayilanListe() 3 tarla ve toplam 6 tekil zon icerir, hepsinin konum/aciklamasi var', () {
+    test('varsayilanListe() 1 tarla ve toplam 4 tekil zon icerir (fiziksel prototiple eslesir), hepsinin konum/aciklamasi var', () {
       final liste = Tarla.varsayilanListe();
-      expect(liste.length, 3);
+      expect(liste.length, 1);
 
       final tumZonlar = liste.expand((t) => t.zonNumaralari).toList();
       expect(tumZonlar.toSet().length, tumZonlar.length, reason: 'zon numaralari tekil olmali');
-      expect(tumZonlar.length, 6);
+      expect(tumZonlar.length, 4);
 
       for (final tarla in liste) {
         expect(tarla.konum, isNotNull);

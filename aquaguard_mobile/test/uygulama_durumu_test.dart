@@ -37,13 +37,13 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final durum = UygulamaDurumu();
 
-      await durum.baslat(); // varsayilan: demo modu acik, 3 tarla / 6 zon
+      await durum.baslat(); // varsayilan: demo modu acik, 1 tarla / 4 zon
 
       final ozet = durum.durumOzetiHesapla(durum.tumZonNumaralari);
       final toplam = ozet.normal + ozet.belirsiz + ozet.tespitEdildi + ozet.tedavide + ozet.cevrimdisi;
 
-      expect(durum.tumZonNumaralari.length, 6);
-      expect(toplam, 6, reason: 'her zon tam olarak bir durum kovasina dusmeli');
+      expect(durum.tumZonNumaralari.length, 4);
+      expect(toplam, 4, reason: 'her zon tam olarak bir durum kovasina dusmeli');
       // Demo modu baslar baslamaz tum zonlari "cevrimici=true" isaretler.
       expect(ozet.cevrimdisi, 0);
 
