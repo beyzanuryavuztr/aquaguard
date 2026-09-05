@@ -227,6 +227,16 @@ class SimulasyonServisi {
     _sulamasiDurdurulanZonlar.clear();
   }
 
+  /// Jüri sunumu icin veri uretim HIZINI degistirir -- baslat()'in aksine
+  /// zon iteratorlerini/RNG'lerini SIFIRLAMAZ, sadece zamanlayicinin
+  /// periyodunu degistirir. Boylece hiz degisirken devam eden bir
+  /// senaryo (ornegin bir tedavi ortasinda) KESINTIYE UGRAMAZ.
+  void hiziDegistir(Duration yeniAralik) {
+    if (_zamanlayici == null) return; // calismiyorsa hicbir sey yapma
+    _zamanlayici!.cancel();
+    _zamanlayici = Timer.periodic(yeniAralik, (_) => _birAdimUret());
+  }
+
   /// OPERATOR MUDAHALESI: zonun ana vanasini manuel kapatir -- zamanlayici
   /// tikinde bu zon icin ARTIK yeni veri uretilmez (son okuma donuk kalir).
   void sulamayiDuraklat(int zone) => _sulamasiDurdurulanZonlar.add(zone);

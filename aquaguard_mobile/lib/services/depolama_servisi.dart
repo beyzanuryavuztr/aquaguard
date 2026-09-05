@@ -25,6 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/ayarlar_sabitleri.dart';
 import '../models/aktivite_kaydi.dart';
 import '../models/bildirim_tercihleri.dart';
+import '../models/demo_hizi.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -35,6 +36,7 @@ class DepolamaServisi {
   static const _mqttPortAnahtari = 'aquaguard_mqtt_port';
   static const _bildirimTercihleriAnahtari = 'aquaguard_bildirim_tercihleri';
   static const _demoModuAnahtari = 'aquaguard_demo_modu_acik';
+  static const _demoHiziAnahtari = 'aquaguard_demo_hizi';
   static const _aktiviteGecmisiAnahtari = 'aquaguard_aktivite_gecmisi';
   static const _sulamaKapaliZonlarAnahtari = 'aquaguard_sulama_kapali_zonlar';
   static const _tarlaNotlariAnahtari = 'aquaguard_tarla_notlari';
@@ -199,6 +201,22 @@ class DepolamaServisi {
   Future<void> demoModunuAyarla(bool acik) async {
     final tercihler = await _tercihler;
     await tercihler.setBool(_demoModuAnahtari, acik);
+  }
+
+  /// Demo Modu veri üretim hızı (jüri sunumu için ayarlanabilir -- bkz.
+  /// models/demo_hizi.dart). Varsayılan "Normal" (1.5sn).
+  Future<DemoHizi> demoHiziGetir() async {
+    final tercihler = await _tercihler;
+    final ad = tercihler.getString(_demoHiziAnahtari);
+    return DemoHizi.values.firstWhere(
+      (h) => h.name == ad,
+      orElse: () => DemoHizi.normal,
+    );
+  }
+
+  Future<void> demoHiziniKaydet(DemoHizi hiz) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(_demoHiziAnahtari, hiz.name);
   }
 
   // ==========================================================================

@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/aktivite_kaydi.dart';
 import '../models/bildirim_tercihleri.dart';
+import '../models/demo_hizi.dart';
 import '../models/enerji_durumu.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
@@ -36,6 +37,7 @@ class UygulamaDurumu extends ChangeNotifier {
   MqttServisi? _mqtt;
   SimulasyonServisi? _simulasyon;
   bool _demoModuAktif = true;
+  DemoHizi _demoHizi = DemoHizi.normal;
 
   List<Tarla> _tarlalar = [];
   final Map<int, SensorOkuma> _sonOkumalar = {};
@@ -72,6 +74,7 @@ class UygulamaDurumu extends ChangeNotifier {
   MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
   BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
   bool get demoModuAktif => _demoModuAktif;
+  DemoHizi get demoHizi => _demoHizi;
 
   /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
   /// varsayilan "Zon N" bicimini doner -- tum ekranlar zon basligini
@@ -200,6 +203,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _mqttPort = ayarlar.port;
     _bildirimTercihleri = await _depolama.bildirimTercihleriniGetir();
     _demoModuAktif = await _depolama.demoModuAcikMi();
+    _demoHizi = await _depolama.demoHiziGetir();
     _sulamasiDurdurulanZonlar
       ..clear()
       ..addAll(await _depolama.sulamaKapaliZonlariGetir());
@@ -294,7 +298,7 @@ class UygulamaDurumu extends ChangeNotifier {
       zonlar: tumZonNumaralari,
       veriUretildiginde: _veriGeldiginde,
     );
-    _simulasyon!.baslat();
+    _simulasyon!.baslat(aralik: _demoHizi.sure);
     // SimulasyonServisi.baslat() kendi ic "duraklatilmis zonlar" kaydini
     // sifirlar -- daha once (kalici depodan yuklenmis) manuel kapatilmis
     // zonlar varsa yeni servise TEKRAR uygula, aksi halde vana "yeniden
@@ -334,6 +338,17 @@ class UygulamaDurumu extends ChangeNotifier {
     _simulasyon = null;
     notifyListeners();
     await _mqttyeBaglan();
+  }
+
+  /// Demo Modu'nun veri üretim hızını değiştirir (bkz. models/demo_hizi.dart) --
+  /// sadece Demo Modu açıkken anlamlıdır; SimulasyonServisi.hiziDegistir()
+  /// sayesinde devam eden bir senaryo (örn. bir tedavi ortasında) hız
+  /// değişince KESİNTİYE UĞRAMAZ.
+  Future<void> demoHiziniAyarla(DemoHizi hiz) async {
+    _demoHizi = hiz;
+    await _depolama.demoHiziniKaydet(hiz);
+    _simulasyon?.hiziDegistir(hiz.sure);
+    notifyListeners();
   }
 
   // ============================================================================

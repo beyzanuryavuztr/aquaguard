@@ -53,6 +53,8 @@ void main() {
       expect(find.text('SDI Tıkanma Yönetim Merkezi'), findsOneWidget);
       expect(find.text('Demo Modu'), findsOneWidget);
       expect(find.text('1 çiftlik, 4 zon izleniyor'), findsOneWidget);
+      expect(find.text('Arge-T HydroLab • TEKNOFEST 2026'), findsOneWidget);
+      expect(find.text('v1.0.0'), findsOneWidget);
       expect(find.text('Devam Et'), findsOneWidget);
 
       durum.dispose();
@@ -73,6 +75,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Devam Et'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Devam Et'));
     await tester.pumpAndSettle();
 
