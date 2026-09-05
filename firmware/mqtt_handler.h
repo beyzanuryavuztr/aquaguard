@@ -103,6 +103,13 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
   const char* komut = belge["komut"] | "";
 
   if (strcmp(komut, "tedavi_baslat") == 0) {
+    // GUVENLIK: ana vana kapaliyken (akis yok) YENI bir kimyasal dozlama/
+    // yikama BASLATILAMAZ -- akissiz bir hatta dozlama, kimyasalin asiri
+    // yogunlasmasina/pompanin kuru calismasina yol acar. bkz. ana_vana.h.
+    if (!anaVanaAcikMi()) {
+      Serial.println(F("[Komut] Operator: manuel tedavi REDDEDILDI (ana vana kapali, akis yok)."));
+      return;
+    }
     TedaviTuru tedavi = tedaviTuruAyristir(belge["tedavi_turu"] | "");
     if (tedavi == TEDAVI_YOK) {
       Serial.println(F("[Komut] Gecersiz/eksik tedavi_turu, yoksayildi."));
@@ -123,6 +130,14 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
     // degisiklik YOKTUR (yanlis alarmda zaten hicbir aktuator calismiyordu).
     Serial.println(F("[Komut] Operator: durumu yanlis alarm olarak isaretledi."));
   } else if (strcmp(komut, "sulama_durdur") == 0) {
+    // GUVENLIK: vana kapatilirken bir tedavi/durulama SURUYORSA, akis
+    // olmadan dozlamaya/durulamaya devam etmek tehlikelidir -- aninda VE
+    // TAM olarak durdur (tedaviAcilDurdur, durulamayi da atlar -- durulama
+    // zaten akis gerektirir, akissiz "guvenli" durulama diye bir sey yoktur).
+    if (tedaviMesgulMu()) {
+      tedaviAcilDurdur();
+      Serial.println(F("[GUVENLIK] Ana vana kapatiliyor -- suren tedavi/durulama ANINDA durduruldu (akis yok)."));
+    }
     anaVanayiKapat();
     Serial.println(F("[Komut] Operator: ana vana MANUEL kapatildi, sulama durdu."));
   } else if (strcmp(komut, "sulama_baslat") == 0) {

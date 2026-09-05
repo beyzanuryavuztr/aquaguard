@@ -129,6 +129,19 @@ void islemDongusunuCalistir() {
   // debi/basinc okumalari anlamsiz (yanlis "tikanma" alarmina yol acar) --
   // teshis dongusunu atla, sadece durumu logla. bkz. ana_vana.h.
   if (!anaVanaAcikMi()) {
+    // GUVENLIK YEDEGI (birincil kontrol mqtt_handler.h'deki "sulama_durdur"
+    // isleyicisindedir -- vana kapanma anini ORADA aninda yakalar): vana
+    // baska bir yoldan kapanmis olabilecegi ihtimaline karsi, burada da
+    // suren bir tedavi/durulama varsa aninda durdur.
+    if (tedaviMesgulMu()) {
+      tedaviAcilDurdur();
+      Serial.println(F("[GUVENLIK] Ana vana kapali -- suren tedavi/durulama ANINDA durduruldu (akis yok)."));
+    }
+    // Vana kapaliyken debi/basinc okumalari ANLAMSIZDIR (sifir akis fiziksel
+    // tikanma gibi gorunur) -- son bilinen teshisi guvenli "veri yok"
+    // durumuna sifirla, MQTT eski/gecersiz bir "tespit_edildi" durumunu
+    // sonsuza kadar tekrar tekrar yayinlamasin (bkz. veriYayinla dongusu).
+    _sonTeshis = TeshisSonucu{};
     Serial.println(F("[SULAMA] Ana vana manuel kapali -- olcum/teshis atlaniyor."));
     return;
   }
