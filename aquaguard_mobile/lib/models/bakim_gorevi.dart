@@ -43,8 +43,15 @@ class BakimGorevi {
   /// gun kala (hangisi daha erken gelirse) -- kisa periyotlarda (ör. 30
   /// gun) mantiksiz uzun bir "yaklaşıyor" penceresi olusmamasi icin.
   BakimDurumu durumu([DateTime? simdi]) {
-    final kalan = kalanGun(simdi);
-    if (kalan < 0) return BakimDurumu.gecikti;
+    final su = simdi ?? DateTime.now();
+    // ACIMASIZ DENETIM NOTU (2026-09-06): Duration.inDays SIFIRA DOGRU
+    // yuvarlar (Duration(hours: -12).inDays == 0, -1 DEGIL) -- kalanGun()'e
+    // dayanan bir "kalan < 0" kontrolu, sona erme tarihinin uzerinden HENUZ
+    // 24 saat gecmemis bir gorevi "gecikti" olarak YAKALAYAMAZDI (yanlislikla
+    // "yaklaşıyor" gosterirdi). Bunun yerine DateTime karsilastirmasi
+    // (isAfter) kullanilir -- yuvarlama hatasina karsi kesin.
+    if (su.isAfter(sonrakiTarih)) return BakimDurumu.gecikti;
+    final kalan = kalanGun(su);
     final yaklasiyorEsigi = (periyotGun * 0.2).clamp(1, 7).round();
     if (kalan <= yaklasiyorEsigi) return BakimDurumu.yaklasiyor;
     return BakimDurumu.normal;

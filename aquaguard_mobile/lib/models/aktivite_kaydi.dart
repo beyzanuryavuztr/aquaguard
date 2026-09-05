@@ -196,3 +196,23 @@ String bildirimBasligiGetir(AktiviteTuru tur) {
       return 'Düşük Pil Uyarısı';
   }
 }
+
+/// Bir [AktiviteKaydi] icin yerel bildirim ID'si uretir -- ACIMASIZ
+/// DENETIM NOTU (2026-09-06): daha once dogrudan `kayit.hashCode`
+/// (Object'in VARSAYILAN kimlik-tabanli hashCode'u) kullaniliyordu. Bunun
+/// iki sorunu var: (1) Android'in bildirim ID'si 32-bit IMZALI bir `int`
+/// olmak ZORUNDADIR -- Dart'in kimlik hashCode'unun bu araliga sigacagi
+/// GARANTI DEGILDIR, platform kanalinda beklenmeyen kesilme/tasma riski
+/// tasir; (2) kimlik-tabanli hashCode her nesne ornegi icin FARKLIDIR,
+/// yani ayni ICERIGE sahip iki kayit bile asla ayni ID'yi almaz (kasitli
+/// bir tekillestirme/guncelleme ihtiyaci olmasa da, bu ongorulemez bir
+/// davranistir). Bunun yerine ZAMAN+ZON+TUR'den turetilen, 31-bit pozitif
+/// araliga (0x7FFFFFFF ile maskelenerek) SIKISTIRILMIS deterministik bir
+/// ID kullanilir -- her platformda guvenli VE ayni kayit icin tekrarlanabilir.
+int bildirimIdGetir(AktiviteKaydi kayit) {
+  final ham =
+      kayit.zaman.millisecondsSinceEpoch ^
+      (kayit.zone * 1000003) ^
+      (kayit.tur.index * 7919);
+  return ham & 0x7FFFFFFF;
+}

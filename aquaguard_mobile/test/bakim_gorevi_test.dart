@@ -58,6 +58,26 @@ void main() {
       expect(gorev.durumu(DateTime(2026, 2, 5)), BakimDurumu.gecikti);
     });
 
+    test(
+      'REGRESYON: sona erme tarihinden SADECE birkaç saat sonrası bile gecikti sayılır '
+      '(Duration.inDays sıfıra yuvarlar, 2026-09-06 acımasız denetimde bulundu)',
+      () {
+        final gorev = BakimGorevi(
+          id: 't1',
+          baslik: 'Test',
+          aciklama: '',
+          periyotGun: 30,
+          sonYapilmaTarihi: DateTime(2026, 1, 1),
+        );
+        // sonrakiTarih = 31 Ocak 00:00. Sadece 12 saat sonrasi (henuz TAM
+        // bir gun bile gecmemis) -- Duration(hours: -12).inDays sifira
+        // yuvarlanir, "kalan < 0" kontrolu bunu KACIRIRDI.
+        final onIkiSaatSonra = DateTime(2026, 1, 31, 12);
+
+        expect(gorev.durumu(onIkiSaatSonra), BakimDurumu.gecikti);
+      },
+    );
+
     test('kisa periyotta (30 gun) yaklasiyor penceresi 7 gunu GECMEZ', () {
       final gorev = BakimGorevi(
         id: 't1',

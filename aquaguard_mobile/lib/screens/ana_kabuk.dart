@@ -115,7 +115,7 @@ class _AnaKabukState extends State<AnaKabuk> {
           // ek bir hata isleme gerekmez.
           unawaited(
             BildirimServisi.goster(
-              id: kayit.hashCode,
+              id: bildirimIdGetir(kayit),
               baslik: bildirimBasligiGetir(kayit.tur),
               icerik: kayit.mesaj,
             ),

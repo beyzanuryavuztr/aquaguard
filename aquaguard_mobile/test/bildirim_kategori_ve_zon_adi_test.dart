@@ -22,6 +22,15 @@ void main() {
   test('tespit bildirimleri kapatilinca manuelNormaleDondur bildirimi HALA gelir (operator eylemi her zaman bildirilir)', () async {
     final durum = UygulamaDurumu();
     await durum.baslat();
+    // ACIMASIZ DENETIM NOTU (2026-09-06): baslat() GERCEK gunun tarihine
+    // gore (bkz. EnerjiDurumu.pilYuzdesiHesapla) dusuk pil esigi altindaysa
+    // KENDILIGINDEN bir "dusuk pil" bildirimi kuyruklayabilir -- bu,
+    // asagidaki bildirimTercihleriniGuncelle cagrisindan ONCE, yani dusukPil
+    // tercihi henuz varsayilan (true) iken olur. Tarihe bagli bu yan etkiyi
+    // burada temizlemezsek, `bildirimler.first` gunun durumuna gore YANLIŞ
+    // (pil) mesaji secebilir -- test sonucu hangi gun calistirildigina bagli
+    // hale gelirdi. Testin KENDI eylemine odaklanmasi icin onceki kuyrugu at.
+    durum.bildirimleriAlVeTemizle();
     await durum.bildirimTercihleriniGuncelle(
       const BildirimTercihleri(
         tespit: false,
@@ -116,7 +125,16 @@ void main() {
 
       if (dusukMu) {
         final bildirimler = durum.bildirimleriAlVeTemizle();
-        expect(bildirimler, contains(dusukPilKayitlari.first.mesaj));
+        // ACIMASIZ DENETIM NOTU (2026-09-06): `bildirimler` bir
+        // List<AktiviteKaydi>'dir (Oncelik 8'de List<String>'den
+        // tasindi) -- `contains(bir String)` bu listede ASLA eslesmez,
+        // sessizce yanlis-negatif verirdi. Bu dal (dusukMu=true) sadece
+        // GERCEK pil dongusu dusuk oldugunda calistigi icin bu hata
+        // aylarca fark edilmeden kalmisti. `.mesaj` uzerinden karsilastir.
+        expect(
+          bildirimler.map((b) => b.mesaj),
+          contains(dusukPilKayitlari.first.mesaj),
+        );
       }
 
       durum.dispose();
