@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 
 import '../models/aktivite_kaydi.dart';
 import '../providers/uygulama_durumu.dart';
+import '../widgets/acil_durdurma_fab.dart';
 import '../widgets/aktif_tedaviler_bolumu.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/demo_senaryo_paneli.dart';
@@ -305,6 +306,9 @@ class GenelBakisEkrani extends StatelessWidget {
                 ),
               ),
             ),
+      floatingActionButton: durum.hazir && tumZonlar.isNotEmpty
+          ? const AcilDurdurmaFab()
+          : null,
     );
   }
 }

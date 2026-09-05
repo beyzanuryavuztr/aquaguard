@@ -660,6 +660,64 @@ class UygulamaDurumu extends ChangeNotifier {
     );
   }
 
+  // ============================================================================
+  // ACIL DURDURMA (tum sistem geneli guvenlik supabi)
+  // ============================================================================
+  //
+  // Dashboard'daki "ACİL DURDUR" FAB'ının dayandigi tek-tuşluk toplu eylem:
+  // TUM zonlardaki aktif tedavileri (guvenlik geregi zorunlu durulamadan
+  // GECIRIREK -- manuelTedaviDurdur ile AYNI guvenlik kurali, atlanmaz) durdurur
+  // VE henuz kapali olmayan tum zonlarin ana vanalarini kapatir. Sadece BU
+  // cagriyla kapatilan zonlarin listesini doner -- "Geri Al" (bkz.
+  // widgets/acil_durdurma_fab.dart) SADECE bu zonlarin vanasini yeniden acar;
+  // durdurulan tedaviler GERI ALINMAZ (zaten guvenlik durulamasindan gecmis
+  // olabilir, bu ISLEM GERI DONDURULEMEZ -- ayni "Tedaviyi Durdur" butonunun
+  // her zaman guvenlik oncelikli, tek yonlu davranisi).
+
+  Future<List<int>> acilDurdurmaTetikle() async {
+    final zonlar = tumZonNumaralari;
+    final vanasiYeniKapatilanlar = <int>[];
+
+    for (final zon in zonlar) {
+      final okuma = _sonOkumalar[zon];
+      if (okuma != null && okuma.tedaviAktif != TedaviTuru.yok) {
+        if (_demoModuAktif) {
+          _simulasyon?.manuelTedaviDurdur(zon, okuma.tikanmaTuru);
+        } else {
+          _mqtt?.komutGonder(zon, {'komut': 'tedavi_durdur'});
+        }
+      }
+      if (!_sulamasiDurdurulanZonlar.contains(zon)) {
+        vanasiYeniKapatilanlar.add(zon);
+        _sulamasiDurdurulanZonlar.add(zon);
+        if (_demoModuAktif) {
+          _simulasyon?.sulamayiDuraklat(zon);
+        } else {
+          _mqtt?.komutGonder(zon, {'komut': 'sulama_durdur'});
+        }
+      }
+    }
+    unawaited(
+      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
+    );
+
+    final kayit = AktiviteKaydi(
+      zaman: DateTime.now(),
+      zone: 0,
+      mesaj:
+          'ACİL DURDURMA tetiklendi: tüm tedaviler durduruldu, '
+          '${vanasiYeniKapatilanlar.length} zonun ana vanası kapatıldı',
+      tur: AktiviteTuru.manuelMudahale,
+    );
+    _aktiviteGecmisi.insert(0, kayit);
+    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
+    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+    _bildirimKuyrugu.add(kayit.mesaj);
+    notifyListeners();
+
+    return vanasiYeniKapatilanlar;
+  }
+
   /// Manuel kapatilmis sulamayi yeniden acar.
   Future<void> sulamayiBaslat(int zone) async {
     if (!_sulamasiDurdurulanZonlar.contains(zone)) return;
