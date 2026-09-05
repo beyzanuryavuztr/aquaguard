@@ -45,14 +45,14 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(tester.takeException(), isNull);
     expect(find.text('Zon 1'), findsOneWidget);
     expect(find.text('Zon 4'), findsOneWidget);
 
     await tester.tap(find.text('Zon 2'));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(secilenZon, 2);
   });
 
@@ -71,7 +71,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(tester.takeException(), isNull);
     expect(find.text('—'), findsOneWidget);
@@ -96,4 +96,46 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Henüz izlenen zon yok.'), findsOneWidget);
   });
+
+  testWidgets(
+    'tespit edilen bir tikanma dugumu zaman icinde nabiz atar (boyutu degisir), istisna olusmaz',
+    (tester) async {
+      final tespitOkuma = SensorOkuma(
+        zaman: DateTime(2026, 9, 5, 10),
+        zone: 1,
+        ph: 6.8,
+        ec: 1.2,
+        orp: 300,
+        turbidite: 15.0,
+        debi: 2.0,
+        deltaBasinc: 0.4,
+        durum: TeshisDurumu.tespitEdildi,
+        tikanmaTuru: TikanmaTuru.fiziksel,
+        guven: 95,
+        tedaviAktif: TedaviTuru.yok,
+        durulamaAktif: false,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ZonSemasi(
+              zonlar: const [1],
+              okumaGetir: (_) => tespitOkuma,
+              cevrimiciMi: (_) => true,
+              onZonSecildi: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final ilkBoyut = tester.getSize(find.byType(Container).first);
+
+      await tester.pump(const Duration(milliseconds: 450));
+      final ortaBoyut = tester.getSize(find.byType(Container).first);
+
+      expect(tester.takeException(), isNull);
+      expect(ortaBoyut, isNot(equals(ilkBoyut)));
+    },
+  );
 }

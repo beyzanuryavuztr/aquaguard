@@ -79,7 +79,13 @@ void main() {
     await tester.ensureVisible(find.text('Devam Et'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Devam Et'));
-    await tester.pumpAndSettle();
+    // pumpAndSettle DEGIL: AnaKabuk -> Genel Bakış -> ZonSemasi'ndeki zon
+    // dugumleri artik surekli tekrarlanan (nabiz) bir AnimationController
+    // tasiyor (bkz. widgets/zon_semasi.dart, Oncelik 11) -- pumpAndSettle
+    // sonsuz animasyon karsisinda hicbir zaman "durulmaz" ve zaman asimina
+    // ugrar.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(tester.takeException(), isNull);
     expect(find.text('Genel Bakış'), findsWidgets);
