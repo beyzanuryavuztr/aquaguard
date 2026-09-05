@@ -30,6 +30,7 @@ import '../services/bildirim_servisi.dart';
 import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
 import '../services/mqtt_servisi.dart';
+import '../services/pin_servisi.dart';
 import '../services/simulasyon_servisi.dart';
 import '../widgets/durum_renkleri.dart';
 
@@ -40,6 +41,12 @@ class UygulamaDurumu extends ChangeNotifier {
   bool _demoModuAktif = true;
   DemoHizi _demoHizi = DemoHizi.normal;
   bool _onboardingGoruldu = false;
+  bool _pinKorumasiAktif = false;
+  // Bu oturumda PIN kilidi henuz acilmadi mi? -- SADECE bellekte (kalici
+  // DEGIL): her SOGUK acilista yeniden kilitlenmesi ISTENEN davranis.
+  bool _pinKilitliSuAn = false;
+  int _basarisizPinDenemesi = 0;
+  DateTime? _pinKilitBitisZamani;
 
   List<Tarla> _tarlalar = [];
   final Map<int, SensorOkuma> _sonOkumalar = {};
@@ -78,6 +85,21 @@ class UygulamaDurumu extends ChangeNotifier {
   bool get demoModuAktif => _demoModuAktif;
   DemoHizi get demoHizi => _demoHizi;
   bool get onboardingGoruldu => _onboardingGoruldu;
+  bool get pinKorumasiAktif => _pinKorumasiAktif;
+  bool get pinKilitliSuAn => _pinKorumasiAktif && _pinKilitliSuAn;
+
+  /// 3 basarisiz denemeden sonra 30 saniyelik kilit -- SADECE bellekte
+  /// tutulur (kalici depolanmaz): uygulama yeniden baslatilirsa kilit
+  /// sifirlanir. Bu bilerek yapilmis bir kapsam karari -- gercek bir
+  /// guvenlik urunu bunu kalici tutar, ama bu bir yarisma/demo uygulamasi
+  /// ve asiri mühendislik burada oncelik degil.
+  bool get pinGirisiKilitliMi =>
+      _pinKilitBitisZamani != null &&
+      DateTime.now().isBefore(_pinKilitBitisZamani!);
+
+  Duration? get pinKilidiKalanSure => pinGirisiKilitliMi
+      ? _pinKilitBitisZamani!.difference(DateTime.now())
+      : null;
 
   /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
   /// varsayilan "Zon N" bicimini doner -- tum ekranlar zon basligini
@@ -209,6 +231,8 @@ class UygulamaDurumu extends ChangeNotifier {
     _demoModuAktif = await _depolama.demoModuAcikMi();
     _demoHizi = await _depolama.demoHiziGetir();
     _onboardingGoruldu = await _depolama.onboardingGorulduMu();
+    _pinKorumasiAktif = await _depolama.pinKorumasiAcikMi();
+    _pinKilitliSuAn = _pinKorumasiAktif;
     _sulamasiDurdurulanZonlar
       ..clear()
       ..addAll(await _depolama.sulamaKapaliZonlariGetir());
@@ -362,6 +386,52 @@ class UygulamaDurumu extends ChangeNotifier {
     if (_onboardingGoruldu) return;
     _onboardingGoruldu = true;
     await _depolama.onboardingGorulduOlarakIsaretle();
+    notifyListeners();
+  }
+
+  /// PIN korumasini ACAR -- [yeniPin] guvenli depoya yazilir. Ayarlar
+  /// ekranindaki "PIN Belirle" akisi tarafindan cagrilir.
+  Future<void> pinKorumasiniAc(String yeniPin) async {
+    await PinServisi.pinKaydet(yeniPin);
+    await _depolama.pinKorumasiniKaydet(true);
+    _pinKorumasiAktif = true;
+    notifyListeners();
+  }
+
+  Future<void> pinKorumasiniKapat() async {
+    await PinServisi.pinSil();
+    await _depolama.pinKorumasiniKaydet(false);
+    _pinKorumasiAktif = false;
+    _pinKilitliSuAn = false;
+    notifyListeners();
+  }
+
+  /// Girilen PIN'i dogrular. Yanlissa basarisiz deneme sayacini artirir ve
+  /// 3. yanlistan sonra 30 saniyelik bir giris kilidi baslatir (bkz.
+  /// pinGirisiKilitliMi). Dogruysa oturum kilidini acar ve sayaci sifirlar.
+  Future<bool> pinDenemesiYap(String girilen) async {
+    if (pinGirisiKilitliMi) return false;
+    final dogruMu = await PinServisi.pinDogrula(girilen);
+    if (dogruMu) {
+      _basarisizPinDenemesi = 0;
+      _pinKilitBitisZamani = null;
+      _pinKilitliSuAn = false;
+      notifyListeners();
+      return true;
+    }
+    _basarisizPinDenemesi++;
+    if (_basarisizPinDenemesi >= 3) {
+      _pinKilitBitisZamani = DateTime.now().add(const Duration(seconds: 30));
+      _basarisizPinDenemesi = 0;
+    }
+    notifyListeners();
+    return false;
+  }
+
+  /// Biyometrik dogrulama basarili oldugunda cagrilir -- PIN girisine
+  /// gerek kalmadan oturum kilidini acar.
+  void pinKilidiniBiyometrikIleAc() {
+    _pinKilitliSuAn = false;
     notifyListeners();
   }
 

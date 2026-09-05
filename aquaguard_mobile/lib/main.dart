@@ -19,6 +19,7 @@ import 'config/tema.dart';
 import 'providers/uygulama_durumu.dart';
 import 'screens/giris_ekrani.dart';
 import 'screens/onboarding_ekrani.dart';
+import 'screens/pin_kilit_ekrani.dart';
 
 void main() {
   runApp(const AquaGuardUygulamasi());
@@ -63,8 +64,8 @@ class _BaslangicYonlendirici extends StatelessWidget {
     if (!durum.hazir) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    return durum.onboardingGoruldu
-        ? const GirisEkrani()
-        : const OnboardingEkrani();
+    if (!durum.onboardingGoruldu) return const OnboardingEkrani();
+    if (durum.pinKilitliSuAn) return const PinKilitEkrani();
+    return const GirisEkrani();
   }
 }

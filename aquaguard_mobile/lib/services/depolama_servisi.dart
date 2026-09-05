@@ -42,6 +42,7 @@ class DepolamaServisi {
   static const _sulamaKapaliZonlarAnahtari = 'aquaguard_sulama_kapali_zonlar';
   static const _tarlaNotlariAnahtari = 'aquaguard_tarla_notlari';
   static const _zonTakmaAdlariAnahtari = 'aquaguard_zon_takma_adlari';
+  static const _pinKorumasiAnahtari = 'aquaguard_pin_korumasi_acik';
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>
@@ -232,6 +233,19 @@ class DepolamaServisi {
   Future<void> onboardingGorulduOlarakIsaretle() async {
     final tercihler = await _tercihler;
     await tercihler.setBool(_onboardingGorulduAnahtari, true);
+  }
+
+  /// PIN korumasinin ACIK/KAPALI oldugunu tutar (PIN'in KENDISI degil --
+  /// gercek PIN degeri hassas oldugu icin ayri, guvenli bir depoda tutulur,
+  /// bkz. services/pin_servisi.dart).
+  Future<bool> pinKorumasiAcikMi() async {
+    final tercihler = await _tercihler;
+    return tercihler.getBool(_pinKorumasiAnahtari) ?? false;
+  }
+
+  Future<void> pinKorumasiniKaydet(bool acik) async {
+    final tercihler = await _tercihler;
+    await tercihler.setBool(_pinKorumasiAnahtari, acik);
   }
 
   // ==========================================================================
