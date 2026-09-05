@@ -68,7 +68,10 @@ void main() {
     // scrollUntilVisible gibi coklu-adimli etkilesimler bununla nadiren
     // cakisabilir (bkz. onceki asamalarda bulunan flakiness). Test yuzeyini
     // TUM icerigi kapsayacak kadar uzun yaparak kaydirmaya hic gerek birakmiyoruz.
-    await tester.binding.setSurfaceSize(const Size(500, 2600));
+    // Yukseklik 2600 -> 3800: yeni "Bakım Takvimi" karti (4 gorev satiri,
+    // her biri isThreeLine) eklendi, Hakkında satiri artik daha asagida
+    // (bkz. Oncelik 12).
+    await tester.binding.setSurfaceSize(const Size(500, 3800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final durum = UygulamaDurumu();

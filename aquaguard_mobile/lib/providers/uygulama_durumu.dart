@@ -20,6 +20,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../models/aktivite_kaydi.dart';
+import '../models/bakim_gorevi.dart';
 import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
 import '../models/enerji_durumu.dart';
@@ -47,6 +48,7 @@ class UygulamaDurumu extends ChangeNotifier {
   bool _pinKilitliSuAn = false;
   int _basarisizPinDenemesi = 0;
   DateTime? _pinKilitBitisZamani;
+  List<BakimGorevi> _bakimGorevleri = [];
 
   List<Tarla> _tarlalar = [];
   final Map<int, SensorOkuma> _sonOkumalar = {};
@@ -100,6 +102,15 @@ class UygulamaDurumu extends ChangeNotifier {
   Duration? get pinKilidiKalanSure => pinGirisiKilitliMi
       ? _pinKilitBitisZamani!.difference(DateTime.now())
       : null;
+
+  List<BakimGorevi> get bakimGorevleri => List.unmodifiable(_bakimGorevleri);
+
+  /// Gecikmis VEYA yaklasan (bkz. BakimGorevi.durumu) en az bir gorev var mi
+  /// -- Genel Bakış'taki uyari kartinin gosterilip gosterilmeyecegine karar
+  /// verir.
+  bool get bakimUyarisiVarMi => _bakimGorevleri.any(
+    (g) => g.durumu() != BakimDurumu.normal,
+  );
 
   /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
   /// varsayilan "Zon N" bicimini doner -- tum ekranlar zon basligini
@@ -233,6 +244,13 @@ class UygulamaDurumu extends ChangeNotifier {
     _onboardingGoruldu = await _depolama.onboardingGorulduMu();
     _pinKorumasiAktif = await _depolama.pinKorumasiAcikMi();
     _pinKilitliSuAn = _pinKorumasiAktif;
+    final kayitliBakimGorevleri = await _depolama.bakimGorevleriGetir();
+    if (kayitliBakimGorevleri == null) {
+      _bakimGorevleri = varsayilanBakimGorevleri();
+      await _depolama.bakimGorevleriniKaydet(_bakimGorevleri);
+    } else {
+      _bakimGorevleri = kayitliBakimGorevleri;
+    }
     _sulamasiDurdurulanZonlar
       ..clear()
       ..addAll(await _depolama.sulamaKapaliZonlariGetir());
@@ -432,6 +450,17 @@ class UygulamaDurumu extends ChangeNotifier {
   /// gerek kalmadan oturum kilidini acar.
   void pinKilidiniBiyometrikIleAc() {
     _pinKilitliSuAn = false;
+    notifyListeners();
+  }
+
+  /// [gorevId] ile eslesen bakim gorevini "bugun yapildi" olarak isaretler
+  /// -- sonraki tarihi periyoduna gore ileri atar.
+  Future<void> bakimGoreviTamamlandiIsaretle(String gorevId) async {
+    _bakimGorevleri = [
+      for (final g in _bakimGorevleri)
+        if (g.id == gorevId) g.tamamlandiOlarakIsaretle() else g,
+    ];
+    await _depolama.bakimGorevleriniKaydet(_bakimGorevleri);
     notifyListeners();
   }
 

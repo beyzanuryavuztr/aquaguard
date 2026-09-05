@@ -11,10 +11,12 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../config/kalibrasyon_sabitleri.dart';
 import '../config/sensor_imzalari.dart';
+import '../models/bakim_gorevi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/mqtt_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -293,6 +295,18 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
             const SizedBox(height: 24),
             _BolumBasligi(baslik: 'Eşik Değerleri'),
             _EsikDegerleriKarti(),
+            const SizedBox(height: 24),
+            _BolumBasligi(baslik: 'Bakım Takvimi'),
+            Card(
+              child: Column(
+                children: [
+                  for (var i = 0; i < durum.bakimGorevleri.length; i++) ...[
+                    if (i > 0) const Divider(height: 1),
+                    _BakimGoreviSatiri(gorev: durum.bakimGorevleri[i]),
+                  ],
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             _BolumBasligi(baslik: 'Güvenlik'),
             Card(
@@ -657,4 +671,47 @@ Future<void> _pinBelirleDialoguGoster(BuildContext context) async {
       ],
     ),
   );
+}
+
+class _BakimGoreviSatiri extends StatelessWidget {
+  final BakimGorevi gorev;
+  const _BakimGoreviSatiri({required this.gorev});
+
+  @override
+  Widget build(BuildContext context) {
+    final durumu = gorev.durumu();
+    final renk = switch (durumu) {
+      BakimDurumu.gecikti => Theme.of(context).colorScheme.error,
+      BakimDurumu.yaklasiyor => const Color(0xFFFFB300),
+      BakimDurumu.normal => Theme.of(context).colorScheme.onSurfaceVariant,
+    };
+    final kalanGun = gorev.kalanGun();
+    final durumMetni = switch (durumu) {
+      BakimDurumu.gecikti => '${-kalanGun} gün gecikti',
+      BakimDurumu.yaklasiyor => '$kalanGun gün kaldı',
+      BakimDurumu.normal =>
+        'Sıradaki: ${DateFormat('dd.MM.yyyy').format(gorev.sonrakiTarih)}',
+    };
+
+    return ListTile(
+      leading: Icon(
+        durumu == BakimDurumu.gecikti
+            ? Icons.error_outline
+            : Icons.build_outlined,
+        color: renk,
+      ),
+      title: Text(gorev.baslik),
+      subtitle: Text(
+        '${gorev.aciklama}\n$durumMetni',
+        style: TextStyle(color: renk),
+      ),
+      isThreeLine: true,
+      trailing: TextButton(
+        onPressed: () => context
+            .read<UygulamaDurumu>()
+            .bakimGoreviTamamlandiIsaretle(gorev.id),
+        child: const Text('Yapıldı'),
+      ),
+    );
+  }
 }

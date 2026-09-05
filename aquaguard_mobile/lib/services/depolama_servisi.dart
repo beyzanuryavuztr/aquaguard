@@ -24,6 +24,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/ayarlar_sabitleri.dart';
 import '../models/aktivite_kaydi.dart';
+import '../models/bakim_gorevi.dart';
 import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
 import '../models/sensor_okuma.dart';
@@ -43,6 +44,7 @@ class DepolamaServisi {
   static const _tarlaNotlariAnahtari = 'aquaguard_tarla_notlari';
   static const _zonTakmaAdlariAnahtari = 'aquaguard_zon_takma_adlari';
   static const _pinKorumasiAnahtari = 'aquaguard_pin_korumasi_acik';
+  static const _bakimGorevleriAnahtari = 'aquaguard_bakim_gorevleri';
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>
@@ -246,6 +248,27 @@ class DepolamaServisi {
   Future<void> pinKorumasiniKaydet(bool acik) async {
     final tercihler = await _tercihler;
     await tercihler.setBool(_pinKorumasiAnahtari, acik);
+  }
+
+  /// Kayitli bakim gorevi YOKSA (ilk kurulum) null doner -- cagiran taraf
+  /// (UygulamaDurumu.baslat()) bu durumda varsayilanBakimGorevleri()'ni
+  /// seed'ler, tarla gecmisi seed'lemesiyle AYNI desen.
+  Future<List<BakimGorevi>?> bakimGorevleriGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_bakimGorevleriAnahtari);
+    if (ham == null) return null;
+    final liste = jsonDecode(ham) as List<dynamic>;
+    return liste
+        .map((e) => BakimGorevi.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> bakimGorevleriniKaydet(List<BakimGorevi> gorevler) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(
+      _bakimGorevleriAnahtari,
+      jsonEncode(gorevler.map((g) => g.toJson()).toList()),
+    );
   }
 
   // ==========================================================================
