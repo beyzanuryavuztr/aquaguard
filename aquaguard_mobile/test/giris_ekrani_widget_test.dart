@@ -53,7 +53,8 @@ void main() {
       expect(find.text('SDI Tıkanma Yönetim Merkezi'), findsOneWidget);
       expect(find.text('Demo Modu'), findsOneWidget);
       expect(find.text('1 çiftlik, 4 zon izleniyor'), findsOneWidget);
-      expect(find.text('Arge-T HydroLab • TEKNOFEST 2026'), findsOneWidget);
+      // Yarışma/takım markalaması BİLEREK yok (kullanıcının kesin talebi).
+      expect(find.text('Arge-T HydroLab • TEKNOFEST 2026'), findsNothing);
       expect(find.text('v1.0.0'), findsOneWidget);
       expect(find.text('Devam Et'), findsOneWidget);
 

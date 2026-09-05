@@ -1,8 +1,8 @@
 // AquaGuard - HakkindaEkrani Widget Testleri (Oncelik 5)
 //
-// Sayfanin tasma/istisna olmadan cizildigini, takim/danisman/universite
-// bilgilerinin gorundugunu ve Ayarlar'daki "Hakkında" satirinin gercekten
-// bu ekrana gectigini dogrular.
+// Sayfanin tasma/istisna olmadan cizildigini, yarisma/takim bilgisi
+// ICERMEDIGINI (kullanicinin kesin talebi) ve Ayarlar'daki "Hakkında"
+// satirinin gercekten bu ekrana gectigini dogrular.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,19 +29,20 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('AquaGuard'), findsOneWidget);
-    expect(find.text('Proje'), findsOneWidget);
-    expect(find.text('Takım'), findsOneWidget);
-    expect(find.text('Arge-T HydroLab (Takım No: 993372)'), findsOneWidget);
-    expect(find.text('Üyeler'), findsOneWidget);
-    expect(find.text('Danışman'), findsOneWidget);
-    expect(find.text('Dr. Öğr. Üyesi Tuğçem Partal'), findsOneWidget);
-    expect(find.text('Üniversite'), findsOneWidget);
-    expect(find.text('Recep Tayyip Erdoğan Üniversitesi'), findsOneWidget);
+    expect(find.text('Uygulama Hakkında'), findsOneWidget);
     expect(find.text('Lisanslar'), findsOneWidget);
     expect(
       find.text('Doğru Teşhis, Doğru Tedavi, Sürdürülebilir Sulama'),
       findsOneWidget,
     );
+
+    // Yarışma/takım/üniversite bilgisi BİLEREK yok.
+    expect(find.text('Takım'), findsNothing);
+    expect(find.text('Arge-T HydroLab (Takım No: 993372)'), findsNothing);
+    expect(find.text('Üyeler'), findsNothing);
+    expect(find.text('Danışman'), findsNothing);
+    expect(find.text('Üniversite'), findsNothing);
+    expect(find.textContaining('TEKNOFEST'), findsNothing);
   });
 
   testWidgets('Lisanslar satirina dokununca lisans sayfasi acilir', (

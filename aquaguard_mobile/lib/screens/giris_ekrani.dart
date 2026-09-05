@@ -3,9 +3,12 @@
 ///
 /// Amac:
 ///   Uygulama SOĞUK BAŞLADIĞINDA (yalnızca bir kez) gösterilen marka +
-///   mod seçim ekranı. Damla+kalkan logosu, başlık/alt başlık ve takım
-///   etiketi KADEMELİ (staggered) bir fade-in + yukarı kayma animasyonuyla
-///   sırayla belirir -- "profesyonel bir ürün açılıyor" hissi verir.
+///   mod seçim ekranı. Damla+kalkan logosu, başlık ve alt başlık KADEMELİ
+///   (staggered) bir fade-in + yukarı kayma animasyonuyla sırayla belirir
+///   -- "profesyonel bir ürün açılıyor" hissi verir.
+///
+///   BİLEREK yarışma/takım markalaması YOKTUR (kullanıcının kesin talebi
+///   -- piyasaya çıkacak ürün, yarışma kimliğinden ayrı tutulur).
 ///
 ///   DÜRÜSTLÜK NOTU: bu GERÇEK bir kimlik doğrulama/backend ekranı
 ///   DEĞİLDİR -- uygulama tamamen yerel/çevrimdışı-öncelikli çalışır
@@ -170,11 +173,7 @@ class _AnimasyonluMarkaBasligi extends StatelessWidget {
     );
     final altBaslikAnim = CurvedAnimation(
       parent: animasyon,
-      curve: const Interval(0.50, 0.90, curve: Curves.easeOut),
-    );
-    final takimAnim = CurvedAnimation(
-      parent: animasyon,
-      curve: const Interval(0.68, 1.0, curve: Curves.easeOut),
+      curve: const Interval(0.50, 1.0, curve: Curves.easeOut),
     );
 
     return AnimatedBuilder(
@@ -199,18 +198,6 @@ class _AnimasyonluMarkaBasligi extends StatelessWidget {
               Text(
                 'SDI Tıkanma Yönetim Merkezi',
                 style: TextStyle(color: onSurfaceVariant),
-              ),
-            ),
-            const SizedBox(height: 10),
-            _kademeli(
-              takimAnim,
-              Text(
-                'Arge-T HydroLab • TEKNOFEST 2026',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: onSurfaceVariant.withValues(alpha: 0.7),
-                  letterSpacing: 0.3,
-                ),
               ),
             ),
           ],

@@ -2,11 +2,13 @@
 /// ================================
 ///
 /// Amac:
-///   Uygulamanın kimliğini (sürüm, proje, takım, danışman, üniversite),
-///   kullandığı açık kaynak kütüphaneleri (Flutter'ın standart
-///   `showLicensePage`'i ile) ve tek cümlelik mottosunu gösteren, Ayarlar
-///   ekranının en altındaki "Hakkında" bağlantısından açılan sade bir
-///   bilgi ekranı.
+///   Uygulamanın kimliğini (sürüm, kısa açıklama), kullandığı açık kaynak
+///   kütüphaneleri (Flutter'ın standart `showLicensePage`'i ile) ve tek
+///   cümlelik mottosunu gösteren, Ayarlar ekranının en altındaki
+///   "Hakkında" bağlantısından açılan sade bir bilgi ekranı.
+///
+///   BİLEREK yarışma/takım/üniversite bilgisi YOKTUR (kullanıcının kesin
+///   talebi -- piyasaya çıkacak ürün, yarışma kimliğinden ayrı tutulur).
 ///
 /// Tarih:  2026-09-05
 library;
@@ -49,34 +51,13 @@ class HakkindaEkrani extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             _BilgiKarti(
-              baslik: 'Proje',
+              baslik: 'Uygulama Hakkında',
               satirlar: const [
-                'TEKNOFEST 2026 Tarım Teknolojileri Yarışması',
-                'Kategori 3.3 — Toprak Altı Sulama Sistemleri',
+                'Toprak altı damla sulama (SDI) sistemlerinde emitör '
+                    'tıkanmalarını (kimyasal, biyolojik, fiziksel) otonom '
+                    'olarak teşhis eden ve tedavi eden akıllı izleme ve '
+                    'kontrol uygulaması.',
               ],
-            ),
-            const SizedBox(height: 16),
-            _BilgiKarti(
-              baslik: 'Takım',
-              satirlar: const ['Arge-T HydroLab (Takım No: 993372)'],
-            ),
-            const SizedBox(height: 16),
-            _BilgiKarti(
-              baslik: 'Üyeler',
-              satirlar: const [
-                'Beyzanur Yavuz — Yazılım',
-                'Enver [Soyad] — Donanım',
-              ],
-            ),
-            const SizedBox(height: 16),
-            _BilgiKarti(
-              baslik: 'Danışman',
-              satirlar: const ['Dr. Öğr. Üyesi Tuğçem Partal'],
-            ),
-            const SizedBox(height: 16),
-            _BilgiKarti(
-              baslik: 'Üniversite',
-              satirlar: const ['Recep Tayyip Erdoğan Üniversitesi'],
             ),
             const SizedBox(height: 16),
             Card(
