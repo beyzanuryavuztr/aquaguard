@@ -2,7 +2,7 @@
 /// ===============================================
 ///
 /// Amac:
-///   Uygulamanin 3 kalici sekmesini (Genel Bakış, İstatistikler, Ayarlar)
+///   Uygulamanin 3 kalici sekmesini (Genel Bakış, Tedavi Geçmişi, Ayarlar)
 ///   birbirine baglar. IndexedStack kullanilir ki sekmeler arasi gecişte
 ///   her ekranin durumu (scroll pozisyonu, form girdileri vb.) KORUNSUN --
 ///   her sekme degisiminde sifirdan olusturulmasin.
@@ -33,7 +33,7 @@ import '../providers/uygulama_durumu.dart';
 import '../widgets/duyarli_icerik.dart';
 import 'ayarlar_ekrani.dart';
 import 'genel_bakis_ekrani.dart';
-import 'istatistikler_ekrani.dart';
+import 'tedavi_gecmisi_ekrani.dart';
 
 class _SekmeTanimi {
   final Widget ekran;
@@ -67,10 +67,10 @@ class _AnaKabukState extends State<AnaKabuk> {
       etiket: 'Genel Bakış',
     ),
     _SekmeTanimi(
-      ekran: IstatistiklerEkrani(),
+      ekran: TedaviGecmisiEkrani(),
       ikon: Icons.bar_chart_outlined,
       seciliIkon: Icons.bar_chart,
-      etiket: 'İstatistikler',
+      etiket: 'Tedavi Geçmişi',
     ),
     _SekmeTanimi(
       ekran: AyarlarEkrani(),

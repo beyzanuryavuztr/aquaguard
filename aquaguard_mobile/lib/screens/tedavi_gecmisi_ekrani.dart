@@ -1,36 +1,70 @@
-/// AquaGuard - Istatistikler Ekrani
-/// ====================================
+/// AquaGuard - Tedavi Geçmişi Ekranı (Ekran 3)
+/// =================================================
 ///
 /// Amac:
-///   Sistemin biriktirdigi veriden turetilmis analitik gorunum: hangi
-///   tikanma turu ne siklikta goruluyor, kac tedavi tetiklendi ve
-///   AquaGuard'in projelendirilen ekonomik/operasyonel etkisi nedir.
+///   Önceki İstatistikler ekranının analitik içeriğini (tıkanma türü
+///   dağılımı, tedavi sayıları, brief-tabanlı "Projelendirilen Etki"
+///   kartı) YENİ bir "Ortalama Başarı Oranı" kartı ve zon/tür/tarih
+///   filtrelenebilir bir tıkanma-tespiti günlüğüyle birleştirir.
 ///
-///   ONEMLI: "Etki ve Tasarruf" karti CANLI VERIDEN degil, PROJE_BRIEF.md
-///   SS7'deki DOGRULANMIS literatur/hesaplama degerlerinden gelir (bu
-///   acikca belirtilir) -- demo modundaki rastgele senaryolarla
-///   KARISTIRILMAMALIDIR.
+///   NOT: `screens/aktivite_gecmisi_ekrani.dart` ve
+///   `screens/gecmis_loglar_ekrani.dart` BAŞKA ekranlardır, silinmedi --
+///   ilki Genel Bakış'ın "Son Aktiviteler" özetinin TAM listesi (durum/
+///   tedavi GEÇİŞLERİ, tüm sistem), ikincisi TEK BİR çiftliğin HAM sensör
+///   okuma loglarını gösterir (Zon Dashboard'dan erişilir). Bu ekran ise
+///   TÜM sistem genelinde ANALİZ + filtrelenebilir tespit günlüğüdür.
 ///
-/// Tarih:  2026-09-01
-/// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
+/// Tarih:  2026-09-05
 library;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/sensor_okuma.dart';
+import '../models/tedavi_basari_analizi.dart';
+import '../models/tikanma_olayi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/disa_aktarma_factory.dart';
 import '../services/disa_aktarma_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
+import '../widgets/tikanma_turu_ikonu.dart';
 
-class IstatistiklerEkrani extends StatelessWidget {
-  const IstatistiklerEkrani({super.key});
+enum _TarihAraligi { tumu, saat24, gun7, gun30 }
+
+extension on _TarihAraligi {
+  Duration? get pencere => switch (this) {
+    _TarihAraligi.tumu => null,
+    _TarihAraligi.saat24 => const Duration(hours: 24),
+    _TarihAraligi.gun7 => const Duration(days: 7),
+    _TarihAraligi.gun30 => const Duration(days: 30),
+  };
+
+  String get etiket => switch (this) {
+    _TarihAraligi.tumu => 'Tümü',
+    _TarihAraligi.saat24 => 'Son 24s',
+    _TarihAraligi.gun7 => 'Son 7g',
+    _TarihAraligi.gun30 => 'Son 30g',
+  };
+}
+
+class TedaviGecmisiEkrani extends StatefulWidget {
+  const TedaviGecmisiEkrani({super.key});
+
+  @override
+  State<TedaviGecmisiEkrani> createState() => _TedaviGecmisiEkraniState();
+}
+
+class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
+  int? _seciliZon; // null = tumu
+  TikanmaTuru? _seciliTur; // null = tumu
+  _TarihAraligi _seciliDonem = _TarihAraligi.tumu;
 
   @override
   Widget build(BuildContext context) {
     final durum = context.watch<UygulamaDurumu>();
+    final tumZonlar = durum.tumZonNumaralari;
     final tumOkumalar = durum.tumOkumalarBirlesik;
 
     final turSayaclari = <TikanmaTuru, int>{
@@ -46,9 +80,29 @@ class IstatistiklerEkrani extends StatelessWidget {
     }
     final toplamTespit = turSayaclari.values.fold(0, (a, b) => a + b);
 
+    final basariAnalizi = TedaviBasariAnalizi.birlestir(
+      tumZonlar.map((z) => tedaviBasarisiniHesapla(durum.gecmis(z))),
+    );
+
+    final tumOlaylar = <TikanmaOlayi>[
+      for (final z in tumZonlar)
+        ...tikanmaOlaylariniBul(durum.gecmis(z).reversed.toList()),
+    ]..sort((a, b) => b.zaman.compareTo(a.zaman));
+
+    final simdi = DateTime.now();
+    final pencere = _seciliDonem.pencere;
+    final filtreliOlaylar = tumOlaylar.where((o) {
+      if (_seciliZon != null && o.zone != _seciliZon) return false;
+      if (_seciliTur != null && o.tur != _seciliTur) return false;
+      if (pencere != null && simdi.difference(o.zaman) > pencere) {
+        return false;
+      }
+      return true;
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('İstatistikler'),
+        title: const Text('Tedavi Geçmişi'),
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
@@ -174,7 +228,63 @@ class IstatistiklerEkrani extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
+            _BasariOraniKarti(analiz: basariAnalizi),
+            const SizedBox(height: 24),
             const _EtkiVeTasarrufKarti(),
+            const SizedBox(height: 24),
+            Text(
+              'Tespit Günlüğü',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            _FiltreSatiri(
+              baslik: 'Zon',
+              secili: _seciliZon,
+              secenekler: tumZonlar,
+              etiketUret: (z) => z == null ? 'Tümü' : 'Zon $z',
+              onSecim: (z) => setState(() => _seciliZon = z),
+            ),
+            const SizedBox(height: 8),
+            _FiltreSatiri(
+              baslik: 'Tür',
+              secili: _seciliTur,
+              secenekler: const [
+                TikanmaTuru.kimyasal,
+                TikanmaTuru.biyolojik,
+                TikanmaTuru.fiziksel,
+              ],
+              etiketUret: (t) => t == null ? 'Tümü' : turEtiketi(t),
+              onSecim: (t) => setState(() => _seciliTur = t),
+            ),
+            const SizedBox(height: 8),
+            _FiltreSatiri(
+              baslik: 'Dönem',
+              secili: _seciliDonem,
+              secenekler: _TarihAraligi.values
+                  .where((d) => d != _TarihAraligi.tumu)
+                  .toList(),
+              varsayilanDeger: _TarihAraligi.tumu,
+              etiketUret: (d) => (d ?? _TarihAraligi.tumu).etiket,
+              onSecim: (d) =>
+                  setState(() => _seciliDonem = d ?? _TarihAraligi.tumu),
+            ),
+            const SizedBox(height: 12),
+            if (filtreliOlaylar.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  tumOlaylar.isEmpty
+                      ? 'Henüz tıkanma tespiti kaydedilmedi.'
+                      : 'Seçilen filtrelere uyan kayıt yok.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else
+              ...filtreliOlaylar
+                  .take(100)
+                  .map((olay) => _OlaySatiri(olay: olay)),
           ],
         ),
       ),
@@ -205,6 +315,135 @@ class IstatistiklerEkrani extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.bold,
         color: Colors.white,
+      ),
+    );
+  }
+}
+
+class _BasariOraniKarti extends StatelessWidget {
+  final TedaviBasariAnalizi analiz;
+  const _BasariOraniKarti({required this.analiz});
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    final yuzde = (analiz.basariOrani * 100).toStringAsFixed(0);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.verified_outlined, color: Theme.of(context).colorScheme.primary, size: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ortalama Başarı Oranı',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    analiz.tamamlananSayisi == 0
+                        ? 'Henüz tamamlanmış tedavi yok.'
+                        : '${analiz.tamamlananSayisi} tamamlanmış tedaviden ${analiz.basariliSayisi} tanesi debiyi referans değere döndürdü.',
+                    style: TextStyle(fontSize: 12, color: onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              analiz.tamamlananSayisi == 0 ? '—' : '%$yuzde',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FiltreSatiri<T> extends StatelessWidget {
+  final String baslik;
+  final T? secili;
+  final List<T> secenekler;
+  final T? varsayilanDeger;
+  final String Function(T?) etiketUret;
+  final ValueChanged<T?> onSecim;
+
+  const _FiltreSatiri({
+    required this.baslik,
+    required this.secili,
+    required this.secenekler,
+    required this.etiketUret,
+    required this.onSecim,
+    this.varsayilanDeger,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tumSecenekler = <T?>[varsayilanDeger, ...secenekler];
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 52,
+          child: Text(
+            baslik,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final secenek in tumSecenekler)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(etiketUret(secenek)),
+                      selected: secili == secenek,
+                      onSelected: (_) => onSecim(secenek),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OlaySatiri extends StatelessWidget {
+  final TikanmaOlayi olay;
+  const _OlaySatiri({required this.olay});
+
+  @override
+  Widget build(BuildContext context) {
+    final bilgi = tikanmaTuruBilgisiGetir(olay.tur);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: bilgi.renk.withValues(alpha: 0.15),
+        child: TikanmaTuruIkonu(tur: olay.tur, boyut: 20),
+      ),
+      title: Text(
+        'Zon ${olay.zone} — ${turEtiketi(olay.tur)} tıkanma tespit edildi',
+      ),
+      subtitle: Text(
+        'Güven %${olay.guven.toStringAsFixed(0)} • '
+        '${DateFormat('dd.MM.yyyy HH:mm:ss').format(olay.zaman)}',
       ),
     );
   }
