@@ -150,8 +150,16 @@ class _AnaKabukState extends State<AnaKabuk> {
                     const SizedBox(height: 4),
                     Text(
                       'AquaGuard',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      // SABIT acik renk: NavigationRail'in arka plani
+                      // (anaRenk, koyu lacivert) HER IKI temada da ayni
+                      // kalir (bkz. config/tema.dart) -- buradaki metin
+                      // Theme.of(context)'in genel (aciktemada KOYU) metin
+                      // rengini DEGIL, rayin kendi sabit acik rengini
+                      // kullanmali (aksi halde acik temada gorunmez olur).
+                      style: const TextStyle(
+                        color: Color(0xFFE6ECF1),
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
                   ],

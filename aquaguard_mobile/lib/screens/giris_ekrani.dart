@@ -133,11 +133,14 @@ class _GirisEkraniState extends State<GirisEkrani>
                       child: Center(
                         child: Text(
                           aquaGuardSurumMetni,
-                          style: TextStyle(
+                          // SABIT acik renk: bu ekranin arka plani her
+                          // temada AYNI koyu gradyan (marka acilis ekrani,
+                          // tema secimine gore degismez) -- Theme.of(context)
+                          // acik temada KOYU metin rengi dondurur, bu da
+                          // gradyanin uzerinde gorunmez olurdu.
+                          style: const TextStyle(
                             fontSize: 11,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            color: Color(0x999AACBC),
                           ),
                         ),
                       ),
@@ -159,10 +162,15 @@ class _AnimasyonluMarkaBasligi extends StatelessWidget {
   final AnimationController animasyon;
   const _AnimasyonluMarkaBasligi({required this.animasyon});
 
+  // SABIT acik renkler: bu baslik/alt baslik, ekranin her temada AYNI kalan
+  // koyu gradyan arka planinin UZERINDE durur (bkz. GirisEkrani.build) --
+  // Theme.of(context) DEGIL, sabit acik renkler kullanilmali (aksi halde
+  // acik temada gorunmez olur).
+  static const _baslikRengi = Color(0xFFE6ECF1);
+  static const _altBaslikRengi = Color(0xFF9AACBC);
+
   @override
   Widget build(BuildContext context) {
-    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
-
     final logoAnim = CurvedAnimation(
       parent: animasyon,
       curve: const Interval(0.0, 0.55, curve: Curves.easeOutCubic),
@@ -187,17 +195,19 @@ class _AnimasyonluMarkaBasligi extends StatelessWidget {
               baslikAnim,
               Text(
                 'AquaGuard',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                style: TextStyle(
+                  fontSize: 34,
                   fontWeight: FontWeight.bold,
+                  color: _baslikRengi,
                 ),
               ),
             ),
             const SizedBox(height: 4),
             _kademeli(
               altBaslikAnim,
-              Text(
+              const Text(
                 'SDI Tıkanma Yönetim Merkezi',
-                style: TextStyle(color: onSurfaceVariant),
+                style: TextStyle(color: _altBaslikRengi),
               ),
             ),
           ],

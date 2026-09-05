@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import '../config/kalibrasyon_sabitleri.dart';
 import '../config/sensor_imzalari.dart';
 import '../models/bakim_gorevi.dart';
+import '../models/tema_modu.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/mqtt_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -65,6 +66,38 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _BolumBasligi(baslik: 'Görünüm'),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tema',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<TemaModu>(
+                      segments: TemaModu.values
+                          .map(
+                            (t) => ButtonSegment(
+                              value: t,
+                              label: Text(t.etiket),
+                            ),
+                          )
+                          .toList(),
+                      selected: {durum.temaModu},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (secim) => context
+                          .read<UygulamaDurumu>()
+                          .temaModuAyarla(secim.first),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             _BolumBasligi(baslik: 'Veri Kaynağı'),
             Card(
               child: Padding(

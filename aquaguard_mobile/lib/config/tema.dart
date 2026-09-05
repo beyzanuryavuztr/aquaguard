@@ -8,11 +8,19 @@
 ///   bu degerleri kullanir, kendi renk/boyut sabitlerini uydurmaz.
 ///
 ///   TASARIM KARARI (2026-09-03 -- "SDI Tıkanma Yonetim Merkezi" yenilemesi):
-///   Onceki turun acik/beyaz-kart temasi terk edildi. Bu surum SADECE koyu
-///   temayi kullanir (ThemeMode.system'a birakilmaz -- bkz. main.dart) --
-///   hem "tarla gunesinde ekran okunabilirligi" (kullanicinin acik talebi)
-///   hem de teknik/profesyonel bir "kontrol merkezi" hissi icin. Renk paleti
-///   kullanicinin verdigi kesin hex degerleriyle birebir uygulanmistir:
+///   Onceki turun acik/beyaz-kart temasi terk edilip SADECE koyu tema
+///   sunulmustu (hem "tarla gunesinde ekran okunabilirligi" hem de teknik/
+///   profesyonel bir "kontrol merkezi" hissi icin). PIYASA-HAZIRLIK TURU
+///   ONCELIK 14 (2026-09-05): operatorun kendi tercihine gore Koyu/Açık/
+///   Sistem secebilmesi icin `acikTema()` eklendi (bkz. main.dart +
+///   Ayarlar'daki tema secici) -- koyu tema hala VARSAYILAN, acik tema
+///   opsiyonel bir alternatif. Marka rengi (turkuvaz vurgu) VE app bar/
+///   navigasyon rayinin koyu lacivert (`anaRenk`) arka plani HER IKI temada
+///   da AYNI kalir (bilincli karar: marka kimligi tema secimine gore
+///   degismemeli, sadece govde/kart yuzeyleri acilir/koyulasir).
+///
+///   Renk paleti kullanicinin verdigi kesin hex degerleriyle birebir
+///   uygulanmistir:
 ///     - Ana (marka): #0D2137 (koyu lacivert/petrol) -- ETKILESIMLI (buton/
 ///       secili durum) renk DEGIL, derin marka/yuzey rengi olarak kullanilir
 ///       (nav rail, app bar arka planlari, gradyanlar).
@@ -89,7 +97,57 @@ class AquaGuardTema {
       inversePrimary: Color(0xFF00695C),
     );
 
-    final tabanTema = ThemeData(brightness: Brightness.dark);
+    return _bilesenTemasiOlustur(renkSemasi, Brightness.dark);
+  }
+
+  static ThemeData acikTema() {
+    const renkSemasi = ColorScheme(
+      brightness: Brightness.light,
+      primary: vurguRenk,
+      onPrimary: Colors.white,
+      primaryContainer: Color(0xFFB2F5EA),
+      onPrimaryContainer: Color(0xFF00443B),
+      secondary: basariRenk,
+      onSecondary: Colors.white,
+      secondaryContainer: Color(0xFFC8F5CC),
+      onSecondaryContainer: Color(0xFF1E4D24),
+      tertiary: uyariRenk,
+      onTertiary: Colors.white,
+      tertiaryContainer: Color(0xFFFFE4A8),
+      onTertiaryContainer: Color(0xFF3D2900),
+      error: tehlikeRenk,
+      onError: Colors.white,
+      errorContainer: Color(0xFFFFDAD6),
+      onErrorContainer: Color(0xFF601410),
+      surface: Color(0xFFF6F8FA),
+      onSurface: Color(0xFF1A2332),
+      surfaceContainerLowest: Colors.white,
+      surfaceContainerLow: Color(0xFFF0F3F6),
+      surfaceContainer: Colors.white,
+      surfaceContainerHigh: Color(0xFFE8ECF1),
+      surfaceContainerHighest: Color(0xFFDEE4EA),
+      onSurfaceVariant: Color(0xFF5C6B7A),
+      outline: Color(0xFFC5CDD6),
+      outlineVariant: Color(0xFFDDE3E9),
+      shadow: Colors.black,
+      scrim: Colors.black,
+      inverseSurface: anaRenk,
+      onInverseSurface: Color(0xFFE6ECF1),
+      inversePrimary: Color(0xFF7BFFE9),
+    );
+
+    return _bilesenTemasiOlustur(renkSemasi, Brightness.light);
+  }
+
+  /// Koyu ve acik tema TAMAMEN AYNI bilesen (AppBar/Card/buton/...) stilini
+  /// paylasir -- SADECE ColorScheme farklidir. Bu, iki temanin zamanla
+  /// birbirinden SESSIZCE sapmasini onler (bkz. proje geneli "tek kaynak"
+  /// ilkesi).
+  static ThemeData _bilesenTemasiOlustur(
+    ColorScheme renkSemasi,
+    Brightness parlaklik,
+  ) {
+    final tabanTema = ThemeData(brightness: parlaklik);
     final metinTemasi = _tipografi(tabanTema.textTheme, renkSemasi.onSurface);
 
     return ThemeData(
@@ -100,14 +158,14 @@ class AquaGuardTema {
 
       appBarTheme: AppBarTheme(
         backgroundColor: anaRenk,
-        foregroundColor: renkSemasi.onSurface,
+        foregroundColor: const Color(0xFFE6ECF1),
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          color: renkSemasi.onSurface,
+          color: const Color(0xFFE6ECF1),
         ),
       ),
 
@@ -200,15 +258,13 @@ class AquaGuardTema {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: anaRenk,
         selectedIconTheme: IconThemeData(color: renkSemasi.primary),
-        unselectedIconTheme: IconThemeData(
-          color: renkSemasi.onSurfaceVariant,
-        ),
+        unselectedIconTheme: const IconThemeData(color: Color(0xFF9AACBC)),
         selectedLabelTextStyle: GoogleFonts.inter(
           color: renkSemasi.primary,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelTextStyle: GoogleFonts.inter(
-          color: renkSemasi.onSurfaceVariant,
+          color: const Color(0xFF9AACBC),
         ),
         indicatorColor: renkSemasi.primaryContainer,
       ),
@@ -219,13 +275,13 @@ class AquaGuardTema {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final secili = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: secili ? renkSemasi.primary : renkSemasi.onSurfaceVariant,
+            color: secili ? renkSemasi.primary : const Color(0xFF9AACBC),
           );
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final secili = states.contains(WidgetState.selected);
           return GoogleFonts.inter(
-            color: secili ? renkSemasi.primary : renkSemasi.onSurfaceVariant,
+            color: secili ? renkSemasi.primary : const Color(0xFF9AACBC),
             fontWeight: secili ? FontWeight.w600 : FontWeight.w400,
             fontSize: 12,
           );

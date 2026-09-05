@@ -103,9 +103,17 @@ class _PinKilitEkraniState extends State<PinKilitEkrani> {
               children: [
                 const AquaGuardLogosu(boyut: 64),
                 const SizedBox(height: 16),
-                Text(
+                // SABIT acik renkler: bu ekranin arka plani her temada AYNI
+                // koyu renk (arkaPlanRenk, tema secimine gore degismez) --
+                // Theme.of(context) acik temada KOYU metin dondurur, bu da
+                // arka planin uzerinde gorunmez olurdu.
+                const Text(
                   'Kilit Açık Değil',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFE6ECF1),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -115,7 +123,7 @@ class _PinKilitEkraniState extends State<PinKilitEkrani> {
                   style: TextStyle(
                     color: kilitli
                         ? AquaGuardTema.tehlikeRenk
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                        : const Color(0xFF9AACBC),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -252,11 +260,14 @@ class _TusButonu extends StatelessWidget {
           child: Center(
             child: Text(
               etiket,
+              // SABIT acik renkler -- bkz. yukaridaki "Kilit Açık Değil"
+              // basligindaki ayni not (ekran arka plani tema secimine
+              // gore degismez).
               style: TextStyle(
                 fontSize: 22,
                 color: devreDisi
-                    ? Theme.of(context).colorScheme.onSurfaceVariant
-                    : Theme.of(context).colorScheme.onSurface,
+                    ? const Color(0xFF9AACBC)
+                    : const Color(0xFFE6ECF1),
               ),
             ),
           ),

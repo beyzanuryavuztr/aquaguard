@@ -30,6 +30,7 @@ import '../models/demo_hizi.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
+import '../models/tema_modu.dart';
 
 class DepolamaServisi {
   static const _tarlalarAnahtari = 'aquaguard_tarlalar';
@@ -45,6 +46,7 @@ class DepolamaServisi {
   static const _zonTakmaAdlariAnahtari = 'aquaguard_zon_takma_adlari';
   static const _pinKorumasiAnahtari = 'aquaguard_pin_korumasi_acik';
   static const _bakimGorevleriAnahtari = 'aquaguard_bakim_gorevleri';
+  static const _temaModuAnahtari = 'aquaguard_tema_modu';
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>
@@ -269,6 +271,16 @@ class DepolamaServisi {
       _bakimGorevleriAnahtari,
       jsonEncode(gorevler.map((g) => g.toJson()).toList()),
     );
+  }
+
+  Future<TemaModu> temaModuGetir() async {
+    final tercihler = await _tercihler;
+    return TemaModuX.isimdenAyristir(tercihler.getString(_temaModuAnahtari));
+  }
+
+  Future<void> temaModuKaydet(TemaModu modu) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(_temaModuAnahtari, modu.name);
   }
 
   // ==========================================================================

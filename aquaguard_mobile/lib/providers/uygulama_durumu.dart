@@ -27,6 +27,7 @@ import '../models/enerji_durumu.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
+import '../models/tema_modu.dart';
 import '../services/bildirim_servisi.dart';
 import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
@@ -49,6 +50,7 @@ class UygulamaDurumu extends ChangeNotifier {
   int _basarisizPinDenemesi = 0;
   DateTime? _pinKilitBitisZamani;
   List<BakimGorevi> _bakimGorevleri = [];
+  TemaModu _temaModu = TemaModu.koyu;
 
   List<Tarla> _tarlalar = [];
   final Map<int, SensorOkuma> _sonOkumalar = {};
@@ -111,6 +113,8 @@ class UygulamaDurumu extends ChangeNotifier {
   bool get bakimUyarisiVarMi => _bakimGorevleri.any(
     (g) => g.durumu() != BakimDurumu.normal,
   );
+
+  TemaModu get temaModu => _temaModu;
 
   /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
   /// varsayilan "Zon N" bicimini doner -- tum ekranlar zon basligini
@@ -244,6 +248,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _onboardingGoruldu = await _depolama.onboardingGorulduMu();
     _pinKorumasiAktif = await _depolama.pinKorumasiAcikMi();
     _pinKilitliSuAn = _pinKorumasiAktif;
+    _temaModu = await _depolama.temaModuGetir();
     final kayitliBakimGorevleri = await _depolama.bakimGorevleriGetir();
     if (kayitliBakimGorevleri == null) {
       _bakimGorevleri = varsayilanBakimGorevleri();
@@ -455,6 +460,12 @@ class UygulamaDurumu extends ChangeNotifier {
 
   /// [gorevId] ile eslesen bakim gorevini "bugun yapildi" olarak isaretler
   /// -- sonraki tarihi periyoduna gore ileri atar.
+  Future<void> temaModuAyarla(TemaModu modu) async {
+    _temaModu = modu;
+    await _depolama.temaModuKaydet(modu);
+    notifyListeners();
+  }
+
   Future<void> bakimGoreviTamamlandiIsaretle(String gorevId) async {
     _bakimGorevleri = [
       for (final g in _bakimGorevleri)
