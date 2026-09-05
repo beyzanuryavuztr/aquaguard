@@ -266,7 +266,25 @@ def iki_katmanli_teshis(ornek: dict, model: RandomForestClassifier) -> dict:
         sonuc["nihai_tur"] = rf_tahmin
         sonuc["kaynak"] = "RF (Katman 1 belirsizdi, Katman 2 cozdu)"
         sonuc["operator_bilgilendir"] = True
-        sonuc["not"] = "Katman 1 guven esiginin altinda kaldi, nihai karar RF'e devredildi."
+        if rf_tahmin == "normal":
+            # ACIMASIZ DENETIM NOTU (2026-09-06): Katman 1 zaten en az bir
+            # hidrolik esigi (debi/basinc/turbidite) asmisti (aksi halde
+            # durum "belirsiz" degil dogrudan "normal" olurdu) -- RF'in
+            # nihai kararinin "normal" olmasi bu tetiklemeyi GECERSIZ KILMAZ,
+            # sadece RF'in bunu "gercek bir tikanma turune" baglayamadigi
+            # anlamina gelir. Notu bunu ACIKCA belirtecek sekilde ozellestir
+            # (aksi halde nihai_tur="normal" tek basina okunursa, Katman 1'in
+            # zaten bir anomali tespit ettigi bilgisi kaybolur/gizlenir).
+            sonuc["not"] = (
+                "Katman 1 bir hidrolik esigi asti (belirsiz) ama Katman 2 (RF) "
+                "bunu tur olarak siniflandiramadi ve 'normal' egilimi gosterdi -- "
+                "bu, anomalinin GECERSIZ oldugu anlamina GELMEZ, sadece RF'in "
+                "kesin bir tur atayamadigi anlamina gelir. Operator kural "
+                "katmanindaki ham tetikleyicileri (kural_katmani alani) "
+                "incelemelidir."
+            )
+        else:
+            sonuc["not"] = "Katman 1 guven esiginin altinda kaldi, nihai karar RF'e devredildi."
 
     else:  # "tespit_edildi"
         sonuc["nihai_tur"] = kural["tur"]

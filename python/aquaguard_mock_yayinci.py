@@ -292,6 +292,13 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
         except (json.JSONDecodeError, UnicodeDecodeError):
             print("[Komut] JSON ayristirilamadi, mesaj yoksayildi.")
             return
+        # GECERLI JSON ama sozluk DEGILSE (ör. bir sayi, dizi veya null --
+        # "5", "[1,2]", "null" hepsi gecerli JSON'dur) _komut_isle() icindeki
+        # mesaj_json.get(...) cagrisi AttributeError firlatir ve MQTT agi
+        # thread'ini durdurabilirdi -- acimasiz denetimde bulundu (2026-09-06).
+        if not isinstance(mesaj_json, dict):
+            print(f"[Komut] Beklenmeyen komut govdesi (sozluk degil): {mesaj_json!r}, yoksayildi.")
+            return
         _komut_isle(mesaj_json, calisma_durumu)
 
     istemci.on_connect = _baglaninca
