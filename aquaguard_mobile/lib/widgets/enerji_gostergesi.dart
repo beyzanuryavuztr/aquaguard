@@ -21,26 +21,17 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../models/enerji_durumu.dart';
 import 'durum_renkleri.dart';
 
 class EnerjiGostergesi extends StatelessWidget {
   const EnerjiGostergesi({super.key});
 
-  static int get _pilYuzdesi {
-    final gun = DateTime.now().difference(DateTime(2026, 1, 1)).inDays;
-    return 78 + (gun % 5) * 4; // 78..94 arasinda, gune gore sabit
-  }
-
-  static bool get _gsmGucluMu {
-    final gun = DateTime.now().difference(DateTime(2026, 1, 1)).inDays;
-    return gun % 7 != 0; // cogunlukla guclu, haftada bir gun orta
-  }
-
   @override
   Widget build(BuildContext context) {
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
-    final pil = _pilYuzdesi;
-    final gsmGuclu = _gsmGucluMu;
+    final pil = EnerjiDurumu.pilYuzdesiHesapla();
+    final gsmGuclu = EnerjiDurumu.gsmGucluMu();
     final pilRenk = pil >= 50
         ? DurumRenkleri.normal
         : pil >= 20

@@ -8,7 +8,7 @@
 ///     - MQTT baglanti ayarlari (broker adresi/portu)
 ///     - Her zon icin SON BILINEN OKUMA (GSM/internet kesilirse gosterilir)
 ///     - Her zon icin GECMIS KAYITLAR (sinirli sayida, en yeni once)
-///     - Bildirim tercihi
+///     - Bildirim tercihleri (4 kategori) ve zon takma adlari
 ///
 ///   SharedPreferences basit anahtar-deger deposu oldugu icin, karmasik
 ///   veriler (Tarla listesi, SensorOkuma gecmisi) JSON metne cevrilip
@@ -24,6 +24,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/ayarlar_sabitleri.dart';
 import '../models/aktivite_kaydi.dart';
+import '../models/bildirim_tercihleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -32,11 +33,12 @@ class DepolamaServisi {
   static const _tarlalarAnahtari = 'aquaguard_tarlalar';
   static const _mqttHostAnahtari = 'aquaguard_mqtt_host';
   static const _mqttPortAnahtari = 'aquaguard_mqtt_port';
-  static const _bildirimlerAnahtari = 'aquaguard_bildirimler_acik';
+  static const _bildirimTercihleriAnahtari = 'aquaguard_bildirim_tercihleri';
   static const _demoModuAnahtari = 'aquaguard_demo_modu_acik';
   static const _aktiviteGecmisiAnahtari = 'aquaguard_aktivite_gecmisi';
   static const _sulamaKapaliZonlarAnahtari = 'aquaguard_sulama_kapali_zonlar';
   static const _tarlaNotlariAnahtari = 'aquaguard_tarla_notlari';
+  static const _zonTakmaAdlariAnahtari = 'aquaguard_zon_takma_adlari';
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>
@@ -165,17 +167,22 @@ class DepolamaServisi {
   }
 
   // ==========================================================================
-  // BILDIRIM TERCIHI
+  // BILDIRIM TERCIHLERI (4 ayrı kategori -- bkz. models/bildirim_tercihleri.dart)
   // ==========================================================================
 
-  Future<bool> bildirimlerAcikMi() async {
+  Future<BildirimTercihleri> bildirimTercihleriniGetir() async {
     final tercihler = await _tercihler;
-    return tercihler.getBool(_bildirimlerAnahtari) ?? true;
+    final ham = tercihler.getString(_bildirimTercihleriAnahtari);
+    if (ham == null) return const BildirimTercihleri();
+    return BildirimTercihleri.fromJson(jsonDecode(ham) as Map<String, dynamic>);
   }
 
-  Future<void> bildirimleriAyarla(bool acik) async {
+  Future<void> bildirimTercihleriniKaydet(BildirimTercihleri tercih) async {
     final tercihler = await _tercihler;
-    await tercihler.setBool(_bildirimlerAnahtari, acik);
+    await tercihler.setString(
+      _bildirimTercihleriAnahtari,
+      jsonEncode(tercih.toJson()),
+    );
   }
 
   // ==========================================================================
@@ -256,5 +263,23 @@ class DepolamaServisi {
       _tarlaNotlariAnahtari,
       jsonEncode(notlar.map((n) => n.toJson()).toList()),
     );
+  }
+
+  // ==========================================================================
+  // ZON TAKMA ADLARI (operatorun her zona verdigi kisisel isim, opsiyonel)
+  // ==========================================================================
+
+  Future<Map<int, String>> zonTakmaAdlariGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_zonTakmaAdlariAnahtari);
+    if (ham == null) return {};
+    final harita = jsonDecode(ham) as Map<String, dynamic>;
+    return harita.map((k, v) => MapEntry(int.parse(k), v as String));
+  }
+
+  Future<void> zonTakmaAdlariniKaydet(Map<int, String> takmaAdlar) async {
+    final tercihler = await _tercihler;
+    final harita = takmaAdlar.map((k, v) => MapEntry(k.toString(), v));
+    await tercihler.setString(_zonTakmaAdlariAnahtari, jsonEncode(harita));
   }
 }

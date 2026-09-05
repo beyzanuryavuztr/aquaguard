@@ -65,7 +65,9 @@ class _AktifTedaviEkraniState extends State<AktifTedaviEkrani> {
     final okuma = durum.sonOkuma(widget.zonNumarasi);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Zon ${widget.zonNumarasi} - Aktif Tedavi')),
+      appBar: AppBar(
+        title: Text('${durum.zonAdiGetir(widget.zonNumarasi)} - Aktif Tedavi'),
+      ),
       body: okuma == null
           ? const Center(child: Text('Veri bulunamadı'))
           : DuyarliIcerik(

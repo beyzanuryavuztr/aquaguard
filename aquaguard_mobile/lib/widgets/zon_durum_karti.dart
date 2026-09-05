@@ -26,6 +26,9 @@ class ZonDurumKarti extends StatelessWidget {
   final bool sulamaDurdurulduMu;
   final VoidCallback onTap;
 
+  /// Zonun gosterilecek adi (opsiyonel takma ad). Verilmezse "Zon N".
+  final String? zonAdi;
+
   const ZonDurumKarti({
     super.key,
     required this.zonNumarasi,
@@ -33,6 +36,7 @@ class ZonDurumKarti extends StatelessWidget {
     required this.cevrimici,
     this.sulamaDurdurulduMu = false,
     required this.onTap,
+    this.zonAdi,
   });
 
   @override
@@ -82,7 +86,7 @@ class ZonDurumKarti extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  'Zon $zonNumarasi',
+                                  zonAdi ?? 'Zon $zonNumarasi',
                                   style: Theme.of(context).textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.bold),
                                 ),

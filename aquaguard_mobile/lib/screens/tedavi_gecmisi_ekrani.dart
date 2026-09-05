@@ -241,7 +241,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
               baslik: 'Zon',
               secili: _seciliZon,
               secenekler: tumZonlar,
-              etiketUret: (z) => z == null ? 'Tümü' : 'Zon $z',
+              etiketUret: (z) => z == null ? 'Tümü' : durum.zonAdiGetir(z),
               onSecim: (z) => setState(() => _seciliZon = z),
             ),
             const SizedBox(height: 8),
@@ -432,6 +432,7 @@ class _OlaySatiri extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bilgi = tikanmaTuruBilgisiGetir(olay.tur);
+    final zonAdi = context.read<UygulamaDurumu>().zonAdiGetir(olay.zone);
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
@@ -439,7 +440,7 @@ class _OlaySatiri extends StatelessWidget {
         child: TikanmaTuruIkonu(tur: olay.tur, boyut: 20),
       ),
       title: Text(
-        'Zon ${olay.zone} — ${turEtiketi(olay.tur)} tıkanma tespit edildi',
+        '$zonAdi — ${turEtiketi(olay.tur)} tıkanma tespit edildi',
       ),
       subtitle: Text(
         'Güven %${olay.guven.toStringAsFixed(0)} • '

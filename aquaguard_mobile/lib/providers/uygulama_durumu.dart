@@ -20,6 +20,8 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../models/aktivite_kaydi.dart';
+import '../models/bildirim_tercihleri.dart';
+import '../models/enerji_durumu.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -43,7 +45,7 @@ class UygulamaDurumu extends ChangeNotifier {
   String _mqttHost = '';
   int _mqttPort = 0;
   MqttBaglantiDurumu _baglantiDurumu = MqttBaglantiDurumu.baglaniyor;
-  bool _bildirimlerAcik = true;
+  BildirimTercihleri _bildirimTercihleri = const BildirimTercihleri();
   bool _hazir = false;
 
   final List<String> _bildirimKuyrugu = [];
@@ -56,6 +58,8 @@ class UygulamaDurumu extends ChangeNotifier {
   // uygulama kapanip acilsa bile bu bilgi kaybolmamali.
   final Set<int> _sulamasiDurdurulanZonlar = {};
   final List<TarlaNotu> _tarlaNotlari = [];
+  // Operatorun her zona verdigi opsiyonel takma ad (bos ise "Zon N" gosterilir).
+  final Map<int, String> _zonTakmaAdlari = {};
 
   // ============================================================================
   // DISARIYA ACIK (READ-ONLY) DURUM
@@ -66,8 +70,13 @@ class UygulamaDurumu extends ChangeNotifier {
   String get mqttHost => _mqttHost;
   int get mqttPort => _mqttPort;
   MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
-  bool get bildirimlerAcik => _bildirimlerAcik;
+  BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
   bool get demoModuAktif => _demoModuAktif;
+
+  /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
+  /// varsayilan "Zon N" bicimini doner -- tum ekranlar zon basligini
+  /// GOSTERIRKEN bu fonksiyonu kullanmalidir (tek kaynak).
+  String zonAdiGetir(int zone) => _zonTakmaAdlari[zone] ?? 'Zon $zone';
 
   /// Ilgili zonda su an suren tedavinin (varsa) BASLANGIC zamani. Bu bilgi
   /// cihazdan gelmez; ilk kez "tedavi_aktif != yok" gorduğumuz an istemci
@@ -189,7 +198,7 @@ class UygulamaDurumu extends ChangeNotifier {
     final ayarlar = await _depolama.mqttAyarlariniGetir();
     _mqttHost = ayarlar.host;
     _mqttPort = ayarlar.port;
-    _bildirimlerAcik = await _depolama.bildirimlerAcikMi();
+    _bildirimTercihleri = await _depolama.bildirimTercihleriniGetir();
     _demoModuAktif = await _depolama.demoModuAcikMi();
     _sulamasiDurdurulanZonlar
       ..clear()
@@ -197,6 +206,9 @@ class UygulamaDurumu extends ChangeNotifier {
     _tarlaNotlari
       ..clear()
       ..addAll(await _depolama.tarlaNotlariGetir());
+    _zonTakmaAdlari
+      ..clear()
+      ..addAll(await _depolama.zonTakmaAdlariGetir());
 
     // Cevrimdisi mod: baglanmadan ONCE son bilinen degerleri yukle,
     // boylece ekran hicbir zaman bomben acilmiyor.
@@ -249,6 +261,8 @@ class UygulamaDurumu extends ChangeNotifier {
     if (yeniUretilenVarMi) {
       unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
     }
+
+    _dusukPilKontroluYap();
 
     _hazir = true;
     notifyListeners();
@@ -367,7 +381,53 @@ class UygulamaDurumu extends ChangeNotifier {
       _aktiviteGecmisi.insert(0, kayit);
       if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
       unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-      if (_bildirimlerAcik) _bildirimKuyrugu.add(kayit.mesaj);
+      if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit.mesaj);
+    }
+  }
+
+  /// Bir aktivite turunun BILDIRIM kuyruguna eklenip eklenmeyecegini,
+  /// operatorun 4 kategorili tercihine (bkz. models/bildirim_tercihleri.dart)
+  /// gore belirler. "belirsiz" tespit kategorisiyle, "normale donus" tedavi
+  /// tamamlanma kategorisiyle GRUPLANIR (brief'te ayri bir kategori olarak
+  /// istenmedi); operatorun kendi eylemlerini (manuelMudahale) onaylayan
+  /// bildirimler HER ZAMAN gosterilir -- bu bir "uyari" degil, dogrudan
+  /// istenen bir eylemin ANINDA geri bildirimidir.
+  bool _bildirimKategoriAcikMi(AktiviteTuru tur) {
+    switch (tur) {
+      case AktiviteTuru.tespit:
+      case AktiviteTuru.belirsiz:
+        return _bildirimTercihleri.tespit;
+      case AktiviteTuru.tedaviBaslangic:
+        return _bildirimTercihleri.tedaviBaslangic;
+      case AktiviteTuru.tedaviBitis:
+      case AktiviteTuru.normaleDonus:
+        return _bildirimTercihleri.tedaviTamamlanma;
+      case AktiviteTuru.dusukPil:
+        return _bildirimTercihleri.dusukPil;
+      case AktiviteTuru.manuelMudahale:
+        return true;
+    }
+  }
+
+  /// SIMULE pil seviyesini (bkz. models/enerji_durumu.dart) kontrol eder;
+  /// esigin altindaysa VE operator bu kategoriyi actiysa, uygulama her
+  /// SOGUK basladiginda bir bildirim kuyruklar. Gercek donanim bu telemetriyi
+  /// yayinlamaya basladiginda, bu kontrol MQTT/simulasyon veri akisina
+  /// (_veriGeldiginde) tasinmalidir.
+  void _dusukPilKontroluYap() {
+    final pil = EnerjiDurumu.pilYuzdesiHesapla();
+    if (pil >= EnerjiDurumu.dusukPilEsigi) return;
+    final kayit = AktiviteKaydi(
+      zaman: DateTime.now(),
+      zone: 0,
+      mesaj: 'Pil seviyesi düşük: %$pil',
+      tur: AktiviteTuru.dusukPil,
+    );
+    _aktiviteGecmisi.insert(0, kayit);
+    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
+    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+    if (_bildirimKategoriAcikMi(AktiviteTuru.dusukPil)) {
+      _bildirimKuyrugu.add(kayit.mesaj);
     }
   }
 
@@ -472,9 +532,9 @@ class UygulamaDurumu extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> bildirimleriDegistir(bool acik) async {
-    _bildirimlerAcik = acik;
-    await _depolama.bildirimleriAyarla(acik);
+  Future<void> bildirimTercihleriniGuncelle(BildirimTercihleri yeni) async {
+    _bildirimTercihleri = yeni;
+    await _depolama.bildirimTercihleriniKaydet(yeni);
     notifyListeners();
   }
 
@@ -551,7 +611,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _aktiviteGecmisi.insert(0, kayit);
     if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
     unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    if (_bildirimlerAcik) _bildirimKuyrugu.add(kayit.mesaj);
+    if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit.mesaj);
     notifyListeners();
   }
 
@@ -674,7 +734,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _aktiviteGecmisi.insert(0, kayit);
     if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
     unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    if (_bildirimlerAcik) _bildirimKuyrugu.add(kayit.mesaj);
+    if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit.mesaj);
     notifyListeners();
   }
 
@@ -701,6 +761,23 @@ class UygulamaDurumu extends ChangeNotifier {
   Future<void> notSil(String notId) async {
     _tarlaNotlari.removeWhere((n) => n.id == notId);
     await _depolama.tarlaNotlariniKaydet(_tarlaNotlari);
+    notifyListeners();
+  }
+
+  // ============================================================================
+  // ZON TAKMA ADLARI
+  // ============================================================================
+
+  /// Zona bir takma ad verir; [ad] bos/null ise takma adi KALDIRIR (varsayilan
+  /// "Zon N" bicimine doner).
+  Future<void> zonTakmaAdiAyarla(int zone, String? ad) async {
+    final temiz = ad?.trim();
+    if (temiz == null || temiz.isEmpty) {
+      _zonTakmaAdlari.remove(zone);
+    } else {
+      _zonTakmaAdlari[zone] = temiz;
+    }
+    await _depolama.zonTakmaAdlariniKaydet(_zonTakmaAdlari);
     notifyListeners();
   }
 

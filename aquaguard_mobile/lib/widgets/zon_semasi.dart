@@ -35,6 +35,10 @@ class ZonSemasi extends StatelessWidget {
   final bool Function(int zon) cevrimiciMi;
   final ValueChanged<int> onZonSecildi;
 
+  /// Zonun gosterilecek adini doner (opsiyonel takma ad -- bkz.
+  /// UygulamaDurumu.zonAdiGetir). Verilmezse "Zon N" varsayilanina duser.
+  final String Function(int zon)? adGetir;
+
   static const double dugumGenislik = 108;
   static const double hatUstBosluk = 40;
 
@@ -44,6 +48,7 @@ class ZonSemasi extends StatelessWidget {
     required this.okumaGetir,
     required this.cevrimiciMi,
     required this.onZonSecildi,
+    this.adGetir,
   });
 
   @override
@@ -89,6 +94,7 @@ class ZonSemasi extends StatelessWidget {
                       width: dugumGenislik,
                       child: _ZonDugumu(
                         zonNumarasi: zon,
+                        zonAdi: adGetir?.call(zon) ?? 'Zon $zon',
                         okuma: okumaGetir(zon),
                         cevrimici: cevrimiciMi(zon),
                         onTap: () => onZonSecildi(zon),
@@ -150,12 +156,14 @@ class _AnaHatRessami extends CustomPainter {
 
 class _ZonDugumu extends StatelessWidget {
   final int zonNumarasi;
+  final String zonAdi;
   final SensorOkuma? okuma;
   final bool cevrimici;
   final VoidCallback onTap;
 
   const _ZonDugumu({
     required this.zonNumarasi,
+    required this.zonAdi,
     required this.okuma,
     required this.cevrimici,
     required this.onTap,
@@ -188,8 +196,11 @@ class _ZonDugumu extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Zon $zonNumarasi',
+              zonAdi,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             if (gosterilecekOkuma != null) ...[

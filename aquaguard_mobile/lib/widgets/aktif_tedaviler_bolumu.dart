@@ -24,6 +24,7 @@ class AktifTedavilerBolumu extends StatefulWidget {
   final SensorOkuma? Function(int zon) okumaGetir;
   final DateTime? Function(int zon) baslangicGetir;
   final ValueChanged<int> onZonSecildi;
+  final String Function(int zon)? adGetir;
 
   const AktifTedavilerBolumu({
     super.key,
@@ -31,6 +32,7 @@ class AktifTedavilerBolumu extends StatefulWidget {
     required this.okumaGetir,
     required this.baslangicGetir,
     required this.onZonSecildi,
+    this.adGetir,
   });
 
   @override
@@ -69,7 +71,7 @@ class _AktifTedavilerBolumuState extends State<AktifTedavilerBolumu> {
       children: [
         for (final zon in aktifZonlar)
           _AktifTedaviSatiri(
-            zonNumarasi: zon,
+            zonAdi: widget.adGetir?.call(zon) ?? 'Zon $zon',
             okuma: widget.okumaGetir(zon)!,
             baslangic: widget.baslangicGetir(zon),
             onTap: () => widget.onZonSecildi(zon),
@@ -80,13 +82,13 @@ class _AktifTedavilerBolumuState extends State<AktifTedavilerBolumu> {
 }
 
 class _AktifTedaviSatiri extends StatelessWidget {
-  final int zonNumarasi;
+  final String zonAdi;
   final SensorOkuma okuma;
   final DateTime? baslangic;
   final VoidCallback onTap;
 
   const _AktifTedaviSatiri({
-    required this.zonNumarasi,
+    required this.zonAdi,
     required this.okuma,
     required this.baslangic,
     required this.onTap,
@@ -129,7 +131,7 @@ class _AktifTedaviSatiri extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Zon $zonNumarasi — ${tedaviEtiketi(okuma.tedaviAktif)}',
+                        '$zonAdi — ${tedaviEtiketi(okuma.tedaviAktif)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,

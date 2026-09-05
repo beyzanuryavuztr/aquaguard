@@ -51,7 +51,7 @@ class TikanmaDetayEkrani extends StatelessWidget {
     final oncesiSonrasi = tedaviOncesiSonrasiBul(gecmisEnYeniOnce);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Zon $zonNumarasi Detayı')),
+      appBar: AppBar(title: Text('${durum.zonAdiGetir(zonNumarasi)} Detayı')),
       body: okuma == null
           ? const Center(child: Text('Bu zon için henüz veri alınmadı'))
           : DuyarliIcerik(

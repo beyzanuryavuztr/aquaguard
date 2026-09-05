@@ -192,6 +192,7 @@ class GenelBakisEkrani extends StatelessWidget {
                         zonlar: tumZonlar,
                         okumaGetir: durum.sonOkuma,
                         cevrimiciMi: durum.zonCevrimiciMi,
+                        adGetir: durum.zonAdiGetir,
                         onZonSecildi: (zon) => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => TikanmaDetayEkrani(zonNumarasi: zon),
@@ -226,6 +227,7 @@ class GenelBakisEkrani extends StatelessWidget {
                       ...tumZonlar.map(
                         (zon) => ZonDurumKarti(
                           zonNumarasi: zon,
+                          zonAdi: durum.zonAdiGetir(zon),
                           okuma: durum.sonOkuma(zon),
                           cevrimici: durum.zonCevrimiciMi(zon),
                           sulamaDurdurulduMu: durum.sulamasiDurduruldu(zon),
@@ -252,6 +254,7 @@ class GenelBakisEkrani extends StatelessWidget {
                         zonlar: tumZonlar,
                         okumaGetir: durum.sonOkuma,
                         baslangicGetir: durum.tedaviBaslangicZamani,
+                        adGetir: durum.zonAdiGetir,
                         onZonSecildi: (zon) => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => TikanmaDetayEkrani(zonNumarasi: zon),
