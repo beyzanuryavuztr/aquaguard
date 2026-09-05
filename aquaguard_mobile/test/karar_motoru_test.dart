@@ -65,6 +65,85 @@ void main() {
     });
   });
 
+  group('Tetikleyici kombinasyonlari', () {
+    test(
+      'Tek tetikleyici (sadece debi dususu, kimya normale yakin) -- '
+      'kimya en yakin oldugu turu (fiziksel) secer',
+      () {
+        final ornek = {
+          'ph': 7.00,
+          'ec': 1.15,
+          'orp': 375.0,
+          'turbidite': 3.0,
+          'debi': referansDebi - debiDususEsigi - 0.1, // SADECE bu esigi asiyor
+          'delta_basinc': 0.10,
+        };
+        final sonuc = KararMotoru.teshisEt(ornek);
+        expect(sonuc.durum, TeshisDurumu.tespitEdildi);
+        // 'normal' ve 'fiziksel' siniflari ph/ec'de AYNI, orp'de yakin --
+        // tek fizisel tetikleyici (dusuk debi) ile birlikte en yakin
+        // kimya profili 'fiziksel'e cikar.
+        expect(sonuc.tur, TikanmaTuru.fiziksel);
+      },
+    );
+
+    test(
+      'Tum tetikleyiciler ayni anda tetiklense bile TUR SADECE ph/ec/orp '
+      'kimyasina gore belirlenir (debi/basinc/turbidite sadece VAR/YOK bilgisi verir)',
+      () {
+        final ornek = {
+          'ph': 8.30,
+          'ec': 2.75,
+          'orp': 310.0, // kimyasal imzasinin tam ortalamasi
+          'turbidite': 40.0, // esigin cok uzerinde
+          'debi': 1.0, // esigin cok altinda
+          'delta_basinc': 0.8, // esigin cok uzerinde
+        };
+        final sonuc = KararMotoru.teshisEt(ornek);
+        expect(sonuc.durum, TeshisDurumu.tespitEdildi);
+        expect(sonuc.tur, TikanmaTuru.kimyasal);
+        expect(sonuc.guven, greaterThan(99));
+      },
+    );
+  });
+
+  group('Guven esigi siniri (%50 -- belirsiz/tespit ayrimi)', () {
+    // Asagidaki degerler, kimyasal<->fiziksel kimyasi arasinda dogrusal
+    // interpolasyonla TARANARAK bulunmus GERCEK sinir noktalaridir (bkz.
+    // gelistirme notlari) -- guvenEsigi=50.0'in HEMEN iki yaninda.
+    test('guven %50nin hemen USTUNDEYSE tespit edildi sayilir', () {
+      final ornek = {
+        'ph': 8.30 * 0.4 + 7.00 * 0.6,
+        'ec': 2.75 * 0.4 + 1.15 * 0.6,
+        'orp': 310.0 * 0.4 + 350.0 * 0.6,
+        'turbidite': 15.0,
+        'debi': 4.0,
+        'delta_basinc': 0.1,
+      };
+      final sonuc = KararMotoru.teshisEt(ornek);
+      expect(sonuc.guven, greaterThanOrEqualTo(guvenEsigi));
+      expect(sonuc.durum, TeshisDurumu.tespitEdildi);
+    });
+
+    test(
+      'guven %50nin HEMEN ALTINDAYSA (esik asilmis olsa bile) belirsiz sayilir',
+      () {
+        const t = 0.601;
+        final ornek = {
+          'ph': 8.30 * (1 - t) + 7.00 * t,
+          'ec': 2.75 * (1 - t) + 1.15 * t,
+          'orp': 310.0 * (1 - t) + 350.0 * t,
+          'turbidite': 15.0, // esik asildi (tikanmaVar=true)
+          'debi': 4.0,
+          'delta_basinc': 0.1,
+        };
+        final sonuc = KararMotoru.teshisEt(ornek);
+        expect(sonuc.guven, lessThan(guvenEsigi));
+        expect(sonuc.durum, TeshisDurumu.belirsiz);
+      },
+    );
+  });
+
   group('Aciklanabilirlik (uc turun guven dokumu)', () {
     test('guven alanlari toplami yaklasik %100 olmali (softmax ozelligi)', () {
       final sonuc = KararMotoru.teshisEt(_sinifinTamOrtalamasi('biyolojik'));
