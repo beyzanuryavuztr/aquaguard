@@ -21,8 +21,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../config/sensor_imzalari.dart';
 import '../models/sensor_okuma.dart';
+import '../models/sensor_tanimi.dart';
 import '../models/tedavi_karsilastirmasi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/aciklanabilirlik_paneli.dart';
@@ -412,91 +412,6 @@ class _TedaviBanner extends StatelessWidget {
   }
 }
 
-class _SensorTanimi {
-  final String baslik;
-  final String birim;
-  final Color renk;
-  final IconData ikon;
-  final double Function(SensorOkuma) secici;
-  final List<EsikCizgisi> esikler;
-
-  const _SensorTanimi({
-    required this.baslik,
-    required this.birim,
-    required this.renk,
-    required this.ikon,
-    required this.secici,
-    this.esikler = const [],
-  });
-}
-
-final _sensorTanimlari = <_SensorTanimi>[
-  _SensorTanimi(
-    baslik: 'pH',
-    birim: '',
-    renk: const Color(0xFF6D4C41),
-    ikon: Icons.science,
-    secici: (o) => o.ph,
-  ),
-  _SensorTanimi(
-    baslik: 'EC',
-    birim: 'mS/cm',
-    renk: const Color(0xFF00838F),
-    ikon: Icons.bolt,
-    secici: (o) => o.ec,
-  ),
-  _SensorTanimi(
-    baslik: 'ORP',
-    birim: 'mV',
-    renk: const Color(0xFF6A1B9A),
-    ikon: Icons.swap_vert,
-    secici: (o) => o.orp,
-  ),
-  _SensorTanimi(
-    baslik: 'Türbidite',
-    birim: 'NTU',
-    renk: const Color(0xFFEF6C00),
-    ikon: Icons.blur_on,
-    secici: (o) => o.turbidite,
-    esikler: [
-      EsikCizgisi(
-        deger: turbiditeEsigi,
-        etiket: 'Eşik ${turbiditeEsigi.toStringAsFixed(0)} NTU',
-        renk: DurumRenkleri.tespitEdildi,
-      ),
-    ],
-  ),
-  _SensorTanimi(
-    baslik: 'Debi',
-    birim: 'LPM',
-    renk: const Color(0xFF1565C0),
-    ikon: Icons.water,
-    secici: (o) => o.debi,
-    esikler: [
-      EsikCizgisi(
-        deger: referansDebi - debiDususEsigi,
-        etiket:
-            'Alt sınır ${(referansDebi - debiDususEsigi).toStringAsFixed(1)} LPM',
-        renk: DurumRenkleri.tespitEdildi,
-      ),
-    ],
-  ),
-  _SensorTanimi(
-    baslik: 'ΔBasınç',
-    birim: 'bar',
-    renk: const Color(0xFFC62828),
-    ikon: Icons.speed,
-    secici: (o) => o.deltaBasinc,
-    esikler: [
-      EsikCizgisi(
-        deger: basincArtisEsigi,
-        etiket: 'Üst sınır ${basincArtisEsigi.toStringAsFixed(2)} bar',
-        renk: DurumRenkleri.tespitEdildi,
-      ),
-    ],
-  ),
-];
-
 class _SensorAnaliziBolumu extends StatefulWidget {
   final List<SensorOkuma> gecmisEnYeniOnce;
   const _SensorAnaliziBolumu({required this.gecmisEnYeniOnce});
@@ -515,7 +430,7 @@ class _SensorAnaliziBolumuState extends State<_SensorAnaliziBolumu> {
     final guncelOkuma = widget.gecmisEnYeniOnce.isNotEmpty
         ? widget.gecmisEnYeniOnce.first
         : null;
-    final tanim = _sensorTanimlari[_secilenIndeks];
+    final tanim = sensorTanimlari[_secilenIndeks];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -528,15 +443,15 @@ class _SensorAnaliziBolumuState extends State<_SensorAnaliziBolumu> {
           crossAxisSpacing: 8,
           childAspectRatio: 1.1,
           children: [
-            for (var i = 0; i < _sensorTanimlari.length; i++)
+            for (var i = 0; i < sensorTanimlari.length; i++)
               SensorKarti(
-                ikon: _sensorTanimlari[i].ikon,
-                baslik: _sensorTanimlari[i].baslik,
-                birim: _sensorTanimlari[i].birim,
+                ikon: sensorTanimlari[i].ikon,
+                baslik: sensorTanimlari[i].baslik,
+                birim: sensorTanimlari[i].birim,
                 deger: guncelOkuma != null
-                    ? _sensorTanimlari[i].secici(guncelOkuma)
+                    ? sensorTanimlari[i].secici(guncelOkuma)
                     : 0,
-                renk: _sensorTanimlari[i].renk,
+                renk: sensorTanimlari[i].renk,
                 secili: i == _secilenIndeks,
                 onTap: () => setState(() => _secilenIndeks = i),
               ),

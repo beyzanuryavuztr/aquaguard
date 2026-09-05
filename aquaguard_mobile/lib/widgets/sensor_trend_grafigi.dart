@@ -27,7 +27,7 @@ import '../models/sensor_okuma.dart';
 
 enum TrendDonemi { saat24, gun7, gun30 }
 
-extension on TrendDonemi {
+extension TrendDonemiX on TrendDonemi {
   Duration get pencere => switch (this) {
     TrendDonemi.saat24 => const Duration(hours: 24),
     TrendDonemi.gun7 => const Duration(days: 7),
@@ -64,6 +64,13 @@ class SensorTrendGrafigi extends StatefulWidget {
   final double Function(SensorOkuma) secici;
   final List<EsikCizgisi> esikler;
 
+  /// Verilirse dönem DIŞARIDAN kontrol edilir (kendi SegmentedButton'ını
+  /// GÖSTERMEZ) -- Trend Analizi ekranında 6 grafiğin TEK bir paylaşılan
+  /// dönem seçiciye bağlı olması için (Zon Detay'daki tek-grafik kullanımı
+  /// bunu vermez, kendi iç durumunu yönetmeye devam eder -- geriye dönük
+  /// uyumlu).
+  final TrendDonemi? donem;
+
   const SensorTrendGrafigi({
     super.key,
     required this.baslik,
@@ -72,6 +79,7 @@ class SensorTrendGrafigi extends StatefulWidget {
     required this.gecmisEnYeniOnce,
     required this.secici,
     this.esikler = const [],
+    this.donem,
   });
 
   @override
@@ -79,13 +87,16 @@ class SensorTrendGrafigi extends StatefulWidget {
 }
 
 class _SensorTrendGrafigiState extends State<SensorTrendGrafigi> {
-  TrendDonemi _donem = TrendDonemi.saat24;
+  TrendDonemi _icDonem = TrendDonemi.saat24;
+
+  bool get _disaridanKontrol => widget.donem != null;
+  TrendDonemi get _etkinDonem => widget.donem ?? _icDonem;
 
   @override
   Widget build(BuildContext context) {
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
     final simdi = DateTime.now();
-    final sinir = simdi.subtract(_donem.pencere);
+    final sinir = simdi.subtract(_etkinDonem.pencere);
     final kronolojik = widget.gecmisEnYeniOnce
         .where((o) => o.zaman.isAfter(sinir))
         .toList()
@@ -110,17 +121,19 @@ class _SensorTrendGrafigiState extends State<SensorTrendGrafigi> {
                     ),
                   ),
                 ),
-                SegmentedButton<TrendDonemi>(
-                  segments: TrendDonemi.values
-                      .map(
-                        (d) => ButtonSegment(value: d, label: Text(d.etiket)),
-                      )
-                      .toList(),
-                  selected: {_donem},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (secim) =>
-                      setState(() => _donem = secim.first),
-                ),
+                if (!_disaridanKontrol)
+                  SegmentedButton<TrendDonemi>(
+                    segments: TrendDonemi.values
+                        .map(
+                          (d) =>
+                              ButtonSegment(value: d, label: Text(d.etiket)),
+                        )
+                        .toList(),
+                    selected: {_icDonem},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (secim) =>
+                        setState(() => _icDonem = secim.first),
+                  ),
               ],
             ),
             const SizedBox(height: 16),

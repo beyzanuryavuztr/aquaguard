@@ -36,6 +36,7 @@ import '../widgets/duyarli_icerik.dart';
 import 'ayarlar_ekrani.dart';
 import 'genel_bakis_ekrani.dart';
 import 'tedavi_gecmisi_ekrani.dart';
+import 'trend_analizi_ekrani.dart';
 
 class _SekmeTanimi {
   final Widget ekran;
@@ -73,6 +74,12 @@ class _AnaKabukState extends State<AnaKabuk> {
       ikon: Icons.bar_chart_outlined,
       seciliIkon: Icons.bar_chart,
       etiket: 'Tedavi Geçmişi',
+    ),
+    _SekmeTanimi(
+      ekran: TrendAnaliziEkrani(),
+      ikon: Icons.show_chart_outlined,
+      seciliIkon: Icons.show_chart,
+      etiket: 'Trend Analizi',
     ),
     _SekmeTanimi(
       ekran: AyarlarEkrani(),
