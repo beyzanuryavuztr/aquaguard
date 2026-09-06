@@ -116,7 +116,7 @@ class _AktifTedaviSatiri extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: DurumRenkleri.tedaviAktif.withValues(alpha: 0.15),
+                    color: DurumRenkleri.tedaviAktif.rozetTonu,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -143,8 +143,7 @@ class _AktifTedaviSatiri extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: ilerleme.oran.clamp(0.0, 1.0),
                           minHeight: 6,
-                          backgroundColor: DurumRenkleri.tedaviAktif
-                              .withValues(alpha: 0.15),
+                          backgroundColor: DurumRenkleri.tedaviAktif.rozetTonu,
                           color: DurumRenkleri.tedaviAktif,
                         ),
                       ),

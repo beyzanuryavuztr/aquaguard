@@ -19,9 +19,9 @@ library;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tedavi_basari_analizi.dart';
 import '../models/tikanma_olayi.dart';
@@ -29,6 +29,7 @@ import '../providers/uygulama_durumu.dart';
 import '../services/disa_aktarma_factory.dart';
 import '../services/disa_aktarma_servisi.dart';
 import '../services/rapor_pdf_servisi.dart';
+import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/tikanma_turu_ikonu.dart';
 
@@ -467,7 +468,7 @@ class _OlaySatiri extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor: bilgi.renk.withValues(alpha: 0.15),
+        backgroundColor: bilgi.renk.rozetTonu,
         child: TikanmaTuruIkonu(tur: olay.tur, boyut: 20),
       ),
       title: Text(
@@ -475,7 +476,7 @@ class _OlaySatiri extends StatelessWidget {
       ),
       subtitle: Text(
         'Güven %${olay.guven.toStringAsFixed(0)} • '
-        '${DateFormat('dd.MM.yyyy HH:mm:ss').format(olay.zaman)}',
+        '${TarihBicimleri.tamZamanli.format(olay.zaman)}',
       ),
     );
   }

@@ -22,6 +22,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tedavi_basari_analizi.dart';
 import '../models/tikanma_olayi.dart';
@@ -34,7 +35,7 @@ final _renkSoluk = PdfColor.fromInt(0xFF6B7280);
 class RaporPdfServisi {
   RaporPdfServisi._();
 
-  static final DateFormat _uzunTarih = DateFormat('dd.MM.yyyy HH:mm');
+  static final DateFormat _uzunTarih = TarihBicimleri.tamZamanliSaniyesiz;
 
   /// PDF belgesini oluşturur ve bytes olarak döner (kaydetme/paylaşma
   /// çağıran tarafın sorumluluğunda -- bu fonksiyon saf bir üretici).
@@ -222,7 +223,7 @@ class RaporPdfServisi {
     String Function(int zone) zonAdiGetir,
   ) {
     final basliklar = ['Zaman', 'Zon', 'Tür', 'Güven'];
-    final satirZamani = DateFormat('dd.MM.yyyy HH:mm:ss');
+    final satirZamani = TarihBicimleri.tamZamanli;
     return pw.TableHelper.fromTextArray(
       headers: basliklar,
       data: [
@@ -253,7 +254,7 @@ class RaporPdfServisi {
   }
 
   static String dosyaAdiUret() {
-    final zamanDamgasi = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final zamanDamgasi = TarihBicimleri.dosyaAdi.format(DateTime.now());
     return 'aquaguard_tedavi_raporu_$zamanDamgasi.pdf';
   }
 

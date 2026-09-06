@@ -119,3 +119,24 @@ class DurumRenkleri {
     return durumEtiketi(okuma.durum);
   }
 }
+
+/// KOD TEMIZLIGI (2026-09-06): projede 15+ yerde tekrarlanan iki
+/// `renk.withValues(alpha: ...)` kalibi -- bir durum/marka rengini rozet,
+/// simge dairesi veya ilerleme cubugu ARKA PLANI olarak, kendi renginden
+/// belirgin sekilde daha soluk gostermek icin kullanilir. Iki ayri deger
+/// (0.15 ve 0.12) BILEREK farkli tutulur (biri rozet/simge dairesi icin
+/// biraz daha belirgin, digeri ilerleme cubugu/grafik izi icin biraz daha
+/// soluk) -- bu extension, sayiyi TEK bir yerde tanimlayip anlamli isimler
+/// vererek her cagri yerinde "neden 0.15" sorusuna gerek birakmiyor.
+extension RenkTonuX on Color {
+  /// Rozet/simge dairesi arka plani (CircleAvatar, BoxDecoration) icin
+  /// standart hafif ton -- bir durum renginin kendi simgesiyle
+  /// CAKISMAYACAK kadar soluk ama yine de ayirt edilebilir bir arka plan
+  /// olusturur.
+  Color get rozetTonu => withValues(alpha: 0.15);
+
+  /// Ilerleme cubugu/grafik izi ARKA PLANI (LinearProgressIndicator,
+  /// CircularProgressIndicator, fl_chart alan dolgusu) icin rozetTonu'ndan
+  /// biraz daha soluk standart ton.
+  Color get izTonu => withValues(alpha: 0.12);
+}

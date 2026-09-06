@@ -13,9 +13,9 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../models/aktivite_kaydi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/acil_durdurma_fab.dart';
@@ -420,11 +420,11 @@ class _AktiviteSatiri extends StatelessWidget {
     final renk = kayit.renkGetir(context);
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: renk.withValues(alpha: 0.15),
+        backgroundColor: renk.rozetTonu,
         child: Icon(kayit.ikon, color: renk, size: 20),
       ),
       title: Text(kayit.mesaj, style: const TextStyle(fontSize: 13)),
-      subtitle: Text(DateFormat('dd.MM HH:mm:ss').format(kayit.zaman)),
+      subtitle: Text(TarihBicimleri.kompaktZamanli.format(kayit.zaman)),
     );
   }
 }

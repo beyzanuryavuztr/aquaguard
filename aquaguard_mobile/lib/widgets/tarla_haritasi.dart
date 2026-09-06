@@ -185,7 +185,7 @@ class _ZonKarosu extends StatelessWidget {
           width: 92,
           height: 92,
           decoration: BoxDecoration(
-            color: renk.withValues(alpha: 0.12),
+            color: renk.izTonu,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: renk.withValues(alpha: 0.4)),
           ),

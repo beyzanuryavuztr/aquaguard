@@ -116,7 +116,7 @@ class _KanalGostergesi extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: aktifMi
-                      ? DurumRenkleri.tedaviAktif.withValues(alpha: 0.15)
+                      ? DurumRenkleri.tedaviAktif.rozetTonu
                       : Theme.of(context).colorScheme.surfaceContainerHigh,
                   shape: BoxShape.circle,
                 ),

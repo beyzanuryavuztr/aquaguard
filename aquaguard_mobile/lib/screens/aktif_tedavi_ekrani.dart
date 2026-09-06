@@ -135,7 +135,7 @@ class _TedaviIlerlemeGorunumu extends StatelessWidget {
           child: LinearProgressIndicator(
             value: ilerleme.clamp(0.0, 1.0),
             minHeight: 14,
-            backgroundColor: DurumRenkleri.tedaviAktif.withValues(alpha: 0.15),
+            backgroundColor: DurumRenkleri.tedaviAktif.rozetTonu,
             color: DurumRenkleri.tedaviAktif,
           ),
         ),

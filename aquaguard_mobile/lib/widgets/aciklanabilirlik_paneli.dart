@@ -17,6 +17,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../models/sensor_okuma.dart';
+import 'durum_renkleri.dart';
 
 class AciklanabilirlikPaneli extends StatelessWidget {
   final SensorOkuma okuma;
@@ -132,7 +133,7 @@ class _GuvenCubugu extends StatelessWidget {
             builder: (context, deger, _) => LinearProgressIndicator(
               value: deger,
               minHeight: 8,
-              backgroundColor: renk.withValues(alpha: 0.12),
+              backgroundColor: renk.izTonu,
               color: kazananMi ? renk : renk.withValues(alpha: 0.5),
             ),
           ),

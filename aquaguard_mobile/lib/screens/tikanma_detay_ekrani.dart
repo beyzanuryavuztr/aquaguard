@@ -18,9 +18,9 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/sensor_tanimi.dart';
 import '../models/tedavi_karsilastirmasi.dart';
@@ -111,7 +111,7 @@ class _CevrimdisiBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: DurumRenkleri.cevrimdisi.withValues(alpha: 0.12),
+        color: DurumRenkleri.cevrimdisi.izTonu,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -120,7 +120,7 @@ class _CevrimdisiBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Çevrimdışı — gösterilen veri ${DateFormat('dd.MM.yyyy HH:mm:ss').format(okuma.zaman)} '
+              'Çevrimdışı — gösterilen veri ${TarihBicimleri.tamZamanli.format(okuma.zaman)} '
               'tarihine ait son bilinen durumdur.',
             ),
           ),
@@ -179,7 +179,7 @@ class _DurumOzetKarti extends StatelessWidget {
             _bilgiSatiri(
               context,
               'Son Güncelleme',
-              DateFormat('dd.MM.yyyy HH:mm:ss').format(okuma.zaman),
+              TarihBicimleri.tamZamanli.format(okuma.zaman),
             ),
           ],
         ),
@@ -305,7 +305,7 @@ class _OncesiSonrasiKarti extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '${DateFormat('dd.MM HH:mm').format(oncesiSonrasi.tedaviBaslangicZamani)} tarihli tedavi öncesi/sonrası debi',
+              '${TarihBicimleri.kompaktZamanliSaniyesiz.format(oncesiSonrasi.tedaviBaslangicZamani)} tarihli tedavi öncesi/sonrası debi',
               style: TextStyle(fontSize: 11, color: onSurfaceVariant),
             ),
             const SizedBox(height: 14),

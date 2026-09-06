@@ -12,9 +12,9 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -95,7 +95,7 @@ class _TarlaNotlariEkraniState extends State<TarlaNotlariEkrani> {
                           leading: const Icon(Icons.sticky_note_2_outlined),
                           title: Text(not.metin),
                           subtitle: Text(
-                            DateFormat('dd.MM.yyyy HH:mm').format(not.zaman),
+                            TarihBicimleri.tamZamanliSaniyesiz.format(not.zaman),
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline),

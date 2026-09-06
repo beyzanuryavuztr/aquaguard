@@ -18,6 +18,7 @@ library;
 
 import 'package:intl/intl.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
 
 class DisaAktarmaServisi {
@@ -29,7 +30,7 @@ class DisaAktarmaServisi {
   /// bunu eklemelidir.
   static const String utf8Bom = '\uFEFF';
 
-  static final DateFormat _zamanBicimi = DateFormat('yyyy-MM-dd HH:mm:ss');
+  static final DateFormat _zamanBicimi = TarihBicimleri.isoBenzeri;
 
   /// Bir alanı CSV icin guvenli hale getirir: virgul, tirnak veya satir
   /// sonu iceriyorsa cift tirnak icine alir (RFC 4180).
@@ -85,7 +86,7 @@ class DisaAktarmaServisi {
   }
 
   static String dosyaAdiUret(String etiket) {
-    final zamanDamgasi = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final zamanDamgasi = TarihBicimleri.dosyaAdi.format(DateTime.now());
     final guvenliEtiket = etiket
         .replaceAll(RegExp(r'[^\w\s-]'), '')
         .replaceAll(' ', '_');

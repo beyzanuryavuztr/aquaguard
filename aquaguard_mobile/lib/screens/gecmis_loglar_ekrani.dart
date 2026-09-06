@@ -12,9 +12,9 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
@@ -138,7 +138,7 @@ class _GecmisSatiri extends StatelessWidget {
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: renk.withValues(alpha: 0.15),
+        backgroundColor: renk.rozetTonu,
         child: Icon(
           DurumRenkleri.ikonGetir(okuma: okuma, cevrimici: true),
           color: renk,
@@ -154,7 +154,7 @@ class _GecmisSatiri extends StatelessWidget {
       ),
       isThreeLine: true,
       trailing: Text(
-        DateFormat('dd.MM HH:mm:ss').format(okuma.zaman),
+        TarihBicimleri.kompaktZamanli.format(okuma.zaman),
         style: TextStyle(
           fontSize: 12,
           color: Theme.of(context).colorScheme.onSurfaceVariant,

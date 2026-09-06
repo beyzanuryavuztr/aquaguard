@@ -11,10 +11,11 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../providers/uygulama_durumu.dart';
+import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 
 class AktiviteGecmisiEkrani extends StatelessWidget {
@@ -37,12 +38,12 @@ class AktiviteGecmisiEkrani extends StatelessWidget {
                   final renk = kayit.renkGetir(context);
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: renk.withValues(alpha: 0.15),
+                      backgroundColor: renk.rozetTonu,
                       child: Icon(kayit.ikon, color: renk, size: 20),
                     ),
                     title: Text(kayit.mesaj),
                     subtitle: Text(
-                      'Zon ${kayit.zone} — ${DateFormat('dd.MM.yyyy HH:mm:ss').format(kayit.zaman)}',
+                      'Zon ${kayit.zone} — ${TarihBicimleri.tamZamanli.format(kayit.zaman)}',
                     ),
                   );
                 },

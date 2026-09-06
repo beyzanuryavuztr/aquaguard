@@ -14,8 +14,8 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
+import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
 import 'durum_renkleri.dart';
 
@@ -73,7 +73,7 @@ class ZonDurumKarti extends StatelessWidget {
                         width: 52,
                         height: 52,
                         decoration: BoxDecoration(
-                          color: renk.withValues(alpha: 0.15),
+                          color: renk.rozetTonu,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(ikon, color: renk, size: 26),
@@ -114,7 +114,7 @@ class ZonDurumKarti extends StatelessWidget {
                             if (okuma != null) ...[
                               const SizedBox(height: 6),
                               Text(
-                                'Son güncelleme: ${DateFormat('HH:mm:ss').format(okuma!.zaman)}',
+                                'Son güncelleme: ${TarihBicimleri.sadeceSaat.format(okuma!.zaman)}',
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
@@ -179,7 +179,7 @@ class _GuvenRozeti extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: renk.withValues(alpha: 0.15),
+        color: renk.rozetTonu,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

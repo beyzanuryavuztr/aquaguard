@@ -21,6 +21,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../providers/uygulama_durumu.dart';
+import 'durum_renkleri.dart';
 
 class SistemSagligiGostergesi extends StatelessWidget {
   final ZonDurumOzeti ozet;
@@ -78,7 +79,7 @@ class SistemSagligiGostergesi extends StatelessWidget {
                       builder: (context, deger, _) => CircularProgressIndicator(
                         value: deger,
                         strokeWidth: 10,
-                        backgroundColor: renk.withValues(alpha: 0.12),
+                        backgroundColor: renk.izTonu,
                         color: renk,
                         strokeCap: StrokeCap.round,
                       ),

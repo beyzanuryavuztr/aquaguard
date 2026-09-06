@@ -11,11 +11,11 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../config/kalibrasyon_sabitleri.dart';
 import '../config/sensor_imzalari.dart';
+import '../config/tarih_bicimleri.dart';
 import '../models/bakim_gorevi.dart';
 import '../models/tema_modu.dart';
 import '../providers/uygulama_durumu.dart';
@@ -723,7 +723,7 @@ class _BakimGoreviSatiri extends StatelessWidget {
       BakimDurumu.gecikti => '${-kalanGun} gün gecikti',
       BakimDurumu.yaklasiyor => '$kalanGun gün kaldı',
       BakimDurumu.normal =>
-        'Sıradaki: ${DateFormat('dd.MM.yyyy').format(gorev.sonrakiTarih)}',
+        'Sıradaki: ${TarihBicimleri.sadeceTarih.format(gorev.sonrakiTarih)}',
     };
 
     return ListTile(

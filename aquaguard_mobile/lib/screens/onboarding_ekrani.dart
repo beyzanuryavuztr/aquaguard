@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 import '../models/sensor_okuma.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/aquaguard_logosu.dart';
+import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/tikanma_turu_ikonu.dart';
 import 'giris_ekrani.dart';
@@ -291,7 +292,7 @@ class _MiniRozet extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: vurgulu
-            ? renk.withValues(alpha: 0.12)
+            ? renk.izTonu
             : Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(20),
         border: vurgulu ? Border.all(color: renk) : null,

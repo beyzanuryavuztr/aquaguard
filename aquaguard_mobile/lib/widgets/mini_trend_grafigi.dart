@@ -14,6 +14,8 @@ library;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import 'durum_renkleri.dart';
+
 class MiniTrendGrafigi extends StatelessWidget {
   final String baslik;
   final String birim;
@@ -86,7 +88,7 @@ class MiniTrendGrafigi extends StatelessWidget {
                             dotData: const FlDotData(show: false),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: renk.withValues(alpha: 0.12),
+                              color: renk.izTonu,
                             ),
                           ),
                         ],
