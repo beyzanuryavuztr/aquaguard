@@ -691,20 +691,45 @@ class UygulamaDurumu extends ChangeNotifier {
 
   /// "Belirsiz" durumda operatorun, sistemin secemedigi tedaviyi MANUEL
   /// olarak baslatmasini saglar.
-  Future<void> manuelTedaviBaslat(int zone, TedaviTuru tedavi) async {
+  ///
+  /// MUTEX KILIDI (ACIMASIZ DENETIM, 2026-09-06): zon zaten bir tedavi/
+  /// durulama surdurmekteyse istek REDDEDILIR (bkz.
+  /// SimulasyonServisi.manuelTedaviBaslat -- firmware/treatment.h'deki
+  /// GERCEK guvenlik kuralinin demo karsiligi). Gercek MQTT modunda bu
+  /// kontrol CIHAZ tarafinda da yapilir (mqtt_handler.h), ama burada da
+  /// ONCEDEN kontrol edilir ki operator anlamsiz bir komut gonderip
+  /// sonucunu (sessizce reddedilecegini) beklemek zorunda kalmasin.
+  /// Donen `bool`, cagiran arayuze (bkz. widgets/manuel_mudahale_paneli.dart)
+  /// reddedilme durumunda bir geri bildirim gosterme firsati verir.
+  Future<bool> manuelTedaviBaslat(int zone, TedaviTuru tedavi) async {
     final tur = tedaviyeKarsilikGelenTur(tedavi);
+    final guncelOkuma = _sonOkumalar[zone];
+    final zatenMesgulMu =
+        guncelOkuma != null &&
+        (guncelOkuma.tedaviAktif != TedaviTuru.yok ||
+            guncelOkuma.durulamaAktif);
+
+    bool basarili;
     if (_demoModuAktif) {
-      _simulasyon?.manuelTedaviBaslat(zone, tur);
+      basarili = _simulasyon?.manuelTedaviBaslat(zone, tur) ?? false;
+    } else if (zatenMesgulMu) {
+      basarili = false;
     } else {
       _mqtt?.komutGonder(zone, {
         'komut': 'tedavi_baslat',
         'tedavi_turu': tedavi.name,
       });
+      basarili = true;
     }
+
     _manuelMudahaleKaydet(
       zone,
-      'Zon $zone: Operatör "${tedaviEtiketi(tedavi)}" tedavisini manuel olarak başlattı',
+      basarili
+          ? 'Zon $zone: Operatör "${tedaviEtiketi(tedavi)}" tedavisini manuel olarak başlattı'
+          : 'Zon $zone: "${tedaviEtiketi(tedavi)}" tedavisi REDDEDİLDİ '
+                '(mutex kilidi — zon zaten bir tedavi/durulama sürdürüyor)',
     );
+    return basarili;
   }
 
   /// Su an suren bir tedaviyi operatorun ERKEN sonlandirmasini saglar
@@ -909,16 +934,36 @@ class UygulamaDurumu extends ChangeNotifier {
         aciklama = 'Fiziksel Tıkanma (Zon 3)';
         break;
       case DemoSenaryosu.mutexKilidi:
-        // Iki FARKLI zonu AYNI ANDA iki farkli tedaviyle tetikler -- her
-        // zonun kendi tedavi kanali kilidini BAGIMSIZ gosterdigini kanitlar
-        // (bkz. widgets/mutex_kilit_gostergesi.dart).
+        // ACIMASIZ DENETIM DUZELTMESI (2026-09-06): ONCEKI surum iki FARKLI
+        // zonu es zamanli tetikliyordu -- bu, HICBIR SEYI kilitlemiyordu
+        // (her zonun kendi bagimsiz durumu var, iki farkli zonun ayni anda
+        // farkli tedaviler gormesinde mutex acisindan sasirtici bir sey
+        // yoktur). GERCEK mutex kilidi TEK bir zonda, AYNI ANDA IKINCI bir
+        // tedavi denendiginde REDDEDILMESIDIR (bkz. firmware/treatment.h).
+        // Bu senaryo artik TAM OLARAK bunu gosterir: Zon 2'de once klor
+        // enjeksiyonu baslatilir, ardindan AYNI zonda asit dozlama denenir
+        // ve SimulasyonServisi.manuelTedaviBaslat() tarafindan REDDEDILIR --
+        // hem aktivite gunlugunde hem MutexKilitGostergesi widget'inda
+        // (Klor aktif, Asit/Yikama kilitli) gorunur.
         if (mevcutZonlar.contains(2)) {
-          _simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.kimyasal);
+          _simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.biyolojik);
+          final reddedildiMi =
+              !_simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.kimyasal);
+          if (reddedildiMi) {
+            final redKaydi = AktiviteKaydi(
+              zaman: DateTime.now(),
+              zone: 2,
+              mesaj:
+                  'Zon 2: Asit dozlama REDDEDİLDİ (mutex kilidi — '
+                  'klor enjeksiyonu sürüyor)',
+              tur: AktiviteTuru.manuelMudahale,
+            );
+            _aktiviteGecmisi.insert(0, redKaydi);
+            if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
+            unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+          }
         }
-        if (mevcutZonlar.contains(4)) {
-          _simulasyon!.manuelTedaviBaslat(4, TikanmaTuru.biyolojik);
-        }
-        aciklama = 'Mutex Kilit Gösterimi (Zon 2 + Zon 4)';
+        aciklama = 'Mutex Kilit Gösterimi (Zon 2: Klor sürüyor, Asit reddedildi)';
         break;
     }
 

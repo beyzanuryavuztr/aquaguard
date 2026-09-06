@@ -48,19 +48,40 @@ void main() {
     durum.dispose();
   });
 
-  test('mutex kilidi senaryosu, iki zonu birden hedefleyen aciklamayla kayit ekler', () async {
-    final durum = UygulamaDurumu();
-    await durum.baslat();
+  test(
+    'mutex kilidi senaryosu ARTIK gercekten mutex'
+    "'i test eder: Zon 2'de klor baslar, ayni zonda asit REDDEDILIR "
+    '(acimasiz denetim, 2026-09-06 -- eski surum iki FARKLI zonu es zamanli '
+    'tetikleyip hicbir seyi kilitlemiyordu)',
+    () async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
 
-    await durum.demoSenaryosuTetikle(DemoSenaryosu.mutexKilidi);
+      await durum.demoSenaryosuTetikle(DemoSenaryosu.mutexKilidi);
 
-    expect(
-      durum.aktiviteGecmisi.first.mesaj,
-      'Demo senaryosu tetiklendi: Mutex Kilit Gösterimi (Zon 2 + Zon 4)',
-    );
+      // En yeni kayit (ilk) konsolide "senaryo tetiklendi" ozetidir, ondan
+      // onceki (index 1) mutex red detayidir (bkz. demoSenaryosuTetikle
+      // uygulamasi -- red kaydi ONCE, konsolide ozet SONRA eklenir, ikisi de
+      // insert(0,...) kullandigi icin ozet en basa gecer).
+      expect(
+        durum.aktiviteGecmisi.first.mesaj,
+        'Demo senaryosu tetiklendi: Mutex Kilit Gösterimi (Zon 2: Klor sürüyor, Asit reddedildi)',
+      );
 
-    durum.dispose();
-  });
+      expect(durum.aktiviteGecmisi[1].mesaj, contains('REDDEDİLDİ'));
+      expect(durum.aktiviteGecmisi[1].mesaj, contains('mutex kilidi'));
+      expect(durum.aktiviteGecmisi[1].zone, 2);
+
+      // Bir sonraki zamanlayici tikinde Zon 2'nin GERCEKTEN klor
+      // enjeksiyonuyla tedavi gordugunu (reddedilen asit DEGIL) dogrula.
+      await Future<void>.delayed(const Duration(milliseconds: 3500));
+      final okuma = durum.sonOkuma(2);
+      expect(okuma, isNotNull);
+      expect(okuma!.tedaviAktif, TedaviTuru.klorEnjeksiyon);
+
+      durum.dispose();
+    },
+  );
 
   test('Demo Modu kapaliyken sessizce hicbir sey yapmaz', () async {
     final durum = UygulamaDurumu();

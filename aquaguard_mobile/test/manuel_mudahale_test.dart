@@ -86,6 +86,62 @@ void main() {
       expect(() => servis.manuelNormaleDondur(999), returnsNormally);
       servis.durdur();
     });
+
+    group('MUTEX KILIDI (acimasiz denetim, 2026-09-06)', () {
+      // ONCEDEN manuelTedaviBaslat() ayni zonda suren bir tedavinin uzerine
+      // SESSIZCE ikinci bir tedaviyle gecebiliyordu -- bu, firmware/
+      // treatment.h'deki GERCEK guvenlik kuralini (asit ve klor ASLA ayni
+      // anda calisamaz) demo tarafinda hic test etmiyordu. Asagidaki testler
+      // artik SimulasyonServisi'nin de ayni kurali uyguladigini dogrular.
+
+      test('ayni zonda suren bir tedavi varken YENI bir tedavi REDDEDILIR', () {
+        final servis = SimulasyonServisi(zonlar: [1], veriUretildiginde: (_) {});
+
+        final ilkBasarili = servis.manuelTedaviBaslat(1, TikanmaTuru.biyolojik);
+        final ikinciBasarili = servis.manuelTedaviBaslat(1, TikanmaTuru.kimyasal);
+
+        expect(ilkBasarili, isTrue);
+        expect(ikinciBasarili, isFalse);
+        expect(servis.zonMesgulMu(1), isTrue);
+
+        servis.durdur();
+      });
+
+      test('mesgul olmayan bir zonda tedavi basariyla baslar', () {
+        final servis = SimulasyonServisi(zonlar: [1], veriUretildiginde: (_) {});
+
+        expect(servis.zonMesgulMu(1), isFalse);
+        expect(servis.manuelTedaviBaslat(1, TikanmaTuru.fiziksel), isTrue);
+
+        servis.durdur();
+      });
+
+      test('FARKLI zonlar birbirinden BAGIMSIZDIR -- bir zonun kilidi digerini etkilemez', () {
+        final servis = SimulasyonServisi(
+          zonlar: [1, 2],
+          veriUretildiginde: (_) {},
+        );
+
+        expect(servis.manuelTedaviBaslat(1, TikanmaTuru.biyolojik), isTrue);
+        // Zon 2 hala bos -- Zon 1'in kilidi Zon 2'yi etkilememeli.
+        expect(servis.manuelTedaviBaslat(2, TikanmaTuru.kimyasal), isTrue);
+
+        servis.durdur();
+      });
+
+      test('manuelNormaleDondur mesguliyet kilidini acar, ardindan yeni tedavi kabul edilir', () {
+        final servis = SimulasyonServisi(zonlar: [1], veriUretildiginde: (_) {});
+        servis.manuelTedaviBaslat(1, TikanmaTuru.biyolojik);
+        expect(servis.zonMesgulMu(1), isTrue);
+
+        servis.manuelNormaleDondur(1);
+
+        expect(servis.zonMesgulMu(1), isFalse);
+        expect(servis.manuelTedaviBaslat(1, TikanmaTuru.kimyasal), isTrue);
+
+        servis.durdur();
+      });
+    });
   });
 
   group('UygulamaDurumu operator mudahalesi (entegrasyon)', () {
@@ -126,5 +182,30 @@ void main() {
 
       durum.dispose();
     });
+
+    test(
+      'manuelTedaviBaslat: ayni zonda IKINCI cagri REDDEDILIR, false doner ve gecmise yansir '
+      '(acimasiz denetim, 2026-09-06 -- mutex kilidi artik gercekten test ediliyor)',
+      () async {
+        final durum = UygulamaDurumu();
+        await durum.baslat();
+
+        final ilkBasarili = await durum.manuelTedaviBaslat(
+          1,
+          TedaviTuru.klorEnjeksiyon,
+        );
+        final ikinciBasarili = await durum.manuelTedaviBaslat(
+          1,
+          TedaviTuru.asitDozlama,
+        );
+
+        expect(ilkBasarili, isTrue);
+        expect(ikinciBasarili, isFalse);
+        expect(durum.aktiviteGecmisi.first.mesaj, contains('REDDEDİLDİ'));
+        expect(durum.aktiviteGecmisi.first.mesaj, contains('mutex'));
+
+        durum.dispose();
+      },
+    );
   });
 }

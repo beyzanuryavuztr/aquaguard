@@ -110,10 +110,12 @@ class _DurdurKarti extends StatelessWidget {
                     '${tedaviEtiketi(okuma.tedaviAktif)} işlemini erken durdurmak '
                     'istediğinize emin misiniz? Sistem zorunlu durulama adımına geçecektir.',
                 onayEtiketi: 'Durdur',
-                onOnay: () =>
-                    context.read<UygulamaDurumu>().manuelTedaviDurdur(
-                      zonNumarasi,
-                    ),
+                onOnay: () async {
+                  await context.read<UygulamaDurumu>().manuelTedaviDurdur(
+                    zonNumarasi,
+                  );
+                  return true;
+                },
               ),
             ),
           ],
@@ -187,9 +189,12 @@ class _SecimKarti extends StatelessWidget {
                     'işaretleyip herhangi bir tedavi uygulamadan normal izlemeye '
                     'dönmek istediğinize emin misiniz?',
                 onayEtiketi: 'Normale Döndür',
-                onOnay: () => context.read<UygulamaDurumu>().manuelNormaleDondur(
-                  zonNumarasi,
-                ),
+                onOnay: () async {
+                  await context.read<UygulamaDurumu>().manuelNormaleDondur(
+                    zonNumarasi,
+                  );
+                  return true;
+                },
               ),
             ),
           ],
@@ -199,12 +204,17 @@ class _SecimKarti extends StatelessWidget {
   }
 }
 
+/// [onOnay] artik bir `Future<bool>` doner -- ACIMASIZ DENETIM (2026-09-06):
+/// onceden `VoidCallback` idi ve SONUCU HIC beklemeden/kontrol etmeden HER
+/// ZAMAN "$baslik uygulandı" gosteriyordu. Bu, manuelTedaviBaslat() mutex
+/// kilidi nedeniyle reddedebildigi icin YANLIŞ bir "basarili" mesaji
+/// gosterebilirdi (operator, tedavinin aslinda BASLAMADIGINI bilmezdi).
 void _onayDiyaloguGoster(
   BuildContext context, {
   required String baslik,
   required String icerik,
   required String onayEtiketi,
-  required VoidCallback onOnay,
+  required Future<bool> Function() onOnay,
 }) {
   showDialog<void>(
     context: context,
@@ -217,11 +227,19 @@ void _onayDiyaloguGoster(
           child: const Text('Vazgeç'),
         ),
         FilledButton(
-          onPressed: () {
-            onOnay();
-            Navigator.of(dialogContext).pop();
+          onPressed: () async {
+            final basarili = await onOnay();
+            if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('$baslik uygulandı')),
+              SnackBar(
+                content: Text(
+                  basarili
+                      ? '$baslik uygulandı'
+                      : '$baslik REDDEDİLDİ (mutex kilidi — zon zaten '
+                            'bir tedavi/durulama sürdürüyor)',
+                ),
+              ),
             );
           },
           child: Text(onayEtiketi),

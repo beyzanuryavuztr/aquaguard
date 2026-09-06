@@ -192,6 +192,17 @@ class SimulasyonServisi {
 
   final Map<int, Iterator<SimAdim>> _iteratorlar = {};
   final Map<int, math.Random> _rnglar = {};
+  // MUTEX KILIDI (ACIMASIZ DENETIM, 2026-09-06): firmware/treatment.h'deki
+  // GERCEK guvenlik kuralinin ("_aktifTedavi != TEDAVI_YOK || _durulamaAktif"
+  // iken YENI tedavi reddedilir) demo tarafindaki birebir karsiligi. Daha
+  // once manuelTedaviBaslat() bu kontrolu HIC yapmiyordu -- ayni zonda suren
+  // bir tedavinin uzerine YENI bir tedavi cagrisi SESSIZCE eskisini iptal
+  // edip yerine geciyordu, bu da "Mutex Kilidi" demo senaryosunun aslinda
+  // hicbir seyi kilitlemedigi (iki FARKLI zonu es zamanli tetikleyip trivial
+  // bir sonuc gosterdigi) bir tasarim eksikligine yol aciyordu. Bu harita,
+  // _birAdimUret()'te HER adimda guncellenerek otonom donguyle de senkron
+  // kalir (tedavi/durulama bitip normale donduğunde otomatik false olur).
+  final Map<int, bool> _zonMesgulMu = {};
   // OPERATOR MUDAHALESI: sulamasi manuel durdurulmus zonlar -- bkz.
   // sulamayiDuraklat()/sulamayiDevamEttir(). Bu zonlar icin _birAdimUret()
   // yeni veri uretmez (vana kapaliyken sensor okumasinin "ilerlemesi"
@@ -208,6 +219,7 @@ class SimulasyonServisi {
     _iteratorlar.clear();
     _rnglar.clear();
     _sulamasiDurdurulanZonlar.clear();
+    _zonMesgulMu.clear();
     for (final zon in zonlar) {
       final rng = math.Random(tohumRng.nextInt(0x7FFFFFFF));
       _rnglar[zon] = rng;
@@ -225,6 +237,7 @@ class SimulasyonServisi {
     _iteratorlar.clear();
     _rnglar.clear();
     _sulamasiDurdurulanZonlar.clear();
+    _zonMesgulMu.clear();
   }
 
   /// Jüri sunumu icin veri uretim HIZINI degistirir -- baslat()'in aksine
@@ -253,32 +266,50 @@ class SimulasyonServisi {
       if (_sulamasiDurdurulanZonlar.contains(zon)) continue;
       final iterator = _iteratorlar[zon];
       if (iterator == null || !iterator.moveNext()) continue;
-      veriUretildiginde(
-        simAdimindanOkumaUret(iterator.current, zon, DateTime.now()),
-      );
+      final adim = iterator.current;
+      // Mutex durumunu otonom donguyle senkron tut: tedavi/durulama dogal
+      // olarak bitip normale donduğunde de kilit KENDILIGINDEN acilir.
+      _zonMesgulMu[zon] = adim.tedaviAktif != TedaviTuru.yok || adim.durulamaAktif;
+      veriUretildiginde(simAdimindanOkumaUret(adim, zon, DateTime.now()));
     }
   }
+
+  /// Zon su an bir tedavi VEYA zorunlu durulama surdugu icin YENI bir tedavi
+  /// KABUL ETMEZ mi? (bkz. manuelTedaviBaslat -- firmware/treatment.h'deki
+  /// "_aktifTedavi != TEDAVI_YOK || _durulamaAktif" kuralinin birebir demo
+  /// karsiligi).
+  bool zonMesgulMu(int zone) => _zonMesgulMu[zone] ?? false;
 
   /// OPERATOR MUDAHALESI: Ilgili zonun akisini, secilen tikanma turune karsi
   /// bir tedavi+iyilesme dongusuyle DEGISTIRIR (otonom kotulesme adimlarini
   /// atlayarak), ardindan normal otonom donguye geri doner. "Belirsiz"
   /// durumda sistem turu kendisi secemedigi icin operatorun devreye girmesini
-  /// saglar. Etkisi bir sonraki zamanlayici tikinda gorunur.
-  void manuelTedaviBaslat(int zone, TikanmaTuru tur) {
-    if (!zonlar.contains(zone)) return;
+  /// saglar.
+  ///
+  /// MUTEX KILIDI: zon zaten mesgulse (bir tedavi veya zorunlu durulama
+  /// suruyorsa) istek REDDEDILIR ve false donulur -- tipki gercek firmware'in
+  /// tedaviBaslat()'inin yaptigi gibi. Basariliysa etki ANINDA (bir sonraki
+  /// zamanlayici tikini beklemeden) _zonMesgulMu'ye yansitilir; boylece ayni
+  /// zona hemen ardindan gelecek ikinci bir cagri da dogru sekilde reddedilir.
+  bool manuelTedaviBaslat(int zone, TikanmaTuru tur) {
+    if (!zonlar.contains(zone)) return false;
+    if (zonMesgulMu(zone)) return false;
     final rng = _rnglar[zone] ?? math.Random();
     _rnglar[zone] = rng;
     _iteratorlar[zone] = tedaviVeIyilesmeAdimlariUret(
       _turAdi(tur),
       rng,
     ).followedBy(senaryoAdimlariUret(rng)).iterator;
+    _zonMesgulMu[zone] = true;
+    return true;
   }
 
   /// OPERATOR MUDAHALESI: Su an suren bir tedaviyi ERKEN sonlandirir. Guvenlik
   /// geregi dogrudan "normal"e atlamaz -- once zorunlu durulama+iyilesme
   /// adimlarindan gecer (bkz. firmware/treatment.h ayni kural), sonra normal
   /// otonom donguye doner. [guncelTur], durulama gorselinin hangi tikanma
-  /// turunden iyilesecegini gostermesi icin gerekir.
+  /// turunden iyilesecegini gostermesi icin gerekir. Mutex kilidi durulama
+  /// boyunca ACIK kalir (_birAdimUret durulama adimlarinda da mesgul isaretler).
   void manuelTedaviDurdur(int zone, TikanmaTuru guncelTur) {
     if (!zonlar.contains(zone)) return;
     final rng = _rnglar[zone] ?? math.Random();
@@ -287,16 +318,18 @@ class SimulasyonServisi {
       _turAdi(guncelTur),
       rng,
     ).followedBy(senaryoAdimlariUret(rng)).iterator;
+    _zonMesgulMu[zone] = true;
   }
 
   /// OPERATOR MUDAHALESI: "Yanlis alarm" -- hicbir tedaviye gerek olmadan
   /// dogrudan normal izlemeye doner (durulama gerekmez, cunku hicbir aktuator
-  /// hic calismadi).
+  /// hic calismadi). Mutex kilidini de ACAR (zon zaten mesgul degildi).
   void manuelNormaleDondur(int zone) {
     if (!zonlar.contains(zone)) return;
     final rng = _rnglar[zone] ?? math.Random();
     _rnglar[zone] = rng;
     _iteratorlar[zone] = senaryoAdimlariUret(rng).iterator;
+    _zonMesgulMu[zone] = false;
   }
 }
 
