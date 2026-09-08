@@ -59,6 +59,47 @@ void main() {
       expect(baytlar.length, greaterThan(500));
     });
 
+    test(
+      'su tuketimi verilince belge icerigi buyur (satirin eklendigini dolayli dogrular)',
+      () async {
+        // PDF metni glif indeksleriyle kodlandigi icin bayt dizisinde
+        // dogrudan Turkce metin aramak guvenilir degil (mevcut testlerdeki
+        // magic-bytes/uzunluk kontrolu deseniyle ayni sinirlama) -- ek bir
+        // satir eklendiginde belge boyutunun buyumesi, dolayli ama gecerli
+        // bir kontrol.
+        final ortakParametreler = (
+          turSayaclari: const <TikanmaTuru, int>{},
+          tedaviSayaclari: const <TedaviTuru, int>{},
+          basariAnalizi: const TedaviBasariAnalizi(
+            tamamlananSayisi: 0,
+            basariliSayisi: 0,
+          ),
+          olaylar: const <TikanmaOlayi>[],
+          zonAdiGetir: (int z) => 'Zon $z',
+        );
+
+        final belgeSusuz = await RaporPdfServisi.olustur(
+          turSayaclari: ortakParametreler.turSayaclari,
+          tedaviSayaclari: ortakParametreler.tedaviSayaclari,
+          basariAnalizi: ortakParametreler.basariAnalizi,
+          olaylar: ortakParametreler.olaylar,
+          zonAdiGetir: ortakParametreler.zonAdiGetir,
+        );
+        final belgeSulu = await RaporPdfServisi.olustur(
+          turSayaclari: ortakParametreler.turSayaclari,
+          tedaviSayaclari: ortakParametreler.tedaviSayaclari,
+          basariAnalizi: ortakParametreler.basariAnalizi,
+          olaylar: ortakParametreler.olaylar,
+          zonAdiGetir: ortakParametreler.zonAdiGetir,
+          toplamSuTuketimiLitre: 12345.6,
+        );
+
+        final baytlarSusuz = await belgeSusuz.save();
+        final baytlarSulu = await belgeSulu.save();
+        expect(baytlarSulu.length, greaterThan(baytlarSusuz.length));
+      },
+    );
+
     test('dosyaAdiUret .pdf uzantili, aquaguard on ekli bir ad doner', () {
       final ad = RaporPdfServisi.dosyaAdiUret();
       expect(ad, startsWith('aquaguard_tedavi_raporu_'));

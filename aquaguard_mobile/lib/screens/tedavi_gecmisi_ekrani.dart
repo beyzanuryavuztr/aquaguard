@@ -19,10 +19,12 @@ library;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
+import '../models/su_tuketimi.dart';
 import '../models/tedavi_basari_analizi.dart';
 import '../models/tikanma_olayi.dart';
 import '../providers/uygulama_durumu.dart';
@@ -86,6 +88,29 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
       tumZonlar.map((z) => tedaviBasarisiniHesapla(durum.gecmis(z))),
     );
 
+    final simdiSuHesabiIcin = DateTime.now();
+    final suPenceresi = _seciliDonem.pencere;
+    final zonSuTuketimleri = <int, double>{
+      for (final z in tumZonlar)
+        if (_seciliZon == null || _seciliZon == z)
+          z: suTuketimiHesaplaLitre(
+            suPenceresi == null
+                ? durum.gecmis(z)
+                : durum
+                      .gecmis(z)
+                      .where(
+                        (o) =>
+                            simdiSuHesabiIcin.difference(o.zaman) <=
+                            suPenceresi,
+                      )
+                      .toList(),
+          ),
+    };
+    final toplamSuTuketimiLitre = zonSuTuketimleri.values.fold(
+      0.0,
+      (a, b) => a + b,
+    );
+
     final tumOlaylar = <TikanmaOlayi>[
       for (final z in tumZonlar)
         ...tikanmaOlaylariniBul(durum.gecmis(z).reversed.toList()),
@@ -116,6 +141,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
               basariAnalizi: basariAnalizi,
               olaylar: filtreliOlaylar,
               zonAdiGetir: durum.zonAdiGetir,
+              toplamSuTuketimiLitre: toplamSuTuketimiLitre,
             ),
           ),
           IconButton(
@@ -282,6 +308,12 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
               onSecim: (d) =>
                   setState(() => _seciliDonem = d ?? _TarihAraligi.tumu),
             ),
+            const SizedBox(height: 16),
+            _SuTuketimiKarti(
+              toplamLitre: toplamSuTuketimiLitre,
+              zonDagilimi: zonSuTuketimleri,
+              zonAdiGetir: durum.zonAdiGetir,
+            ),
             const SizedBox(height: 12),
             if (filtreliOlaylar.isEmpty)
               Padding(
@@ -312,6 +344,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
     required TedaviBasariAnalizi basariAnalizi,
     required List<TikanmaOlayi> olaylar,
     required String Function(int) zonAdiGetir,
+    required double toplamSuTuketimiLitre,
   }) async {
     final belge = await RaporPdfServisi.olustur(
       turSayaclari: turSayaclari,
@@ -319,6 +352,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
       basariAnalizi: basariAnalizi,
       olaylar: olaylar,
       zonAdiGetir: zonAdiGetir,
+      toplamSuTuketimiLitre: toplamSuTuketimiLitre,
     );
     await RaporPdfServisi.onizlemeyiAc(belge);
   }
@@ -394,6 +428,90 @@ class _BasariOraniKarti extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Yukaridaki Zon/Donem filtrelerine gore hesaplanan (bkz.
+/// models/su_tuketimi.dart) su tuketimi ozeti -- filtreler degistikce
+/// bu kart da otomatik guncellenir (ayri bir "yenile" gerekmez).
+class _SuTuketimiKarti extends StatelessWidget {
+  final double toplamLitre;
+  final Map<int, double> zonDagilimi;
+  final String Function(int) zonAdiGetir;
+
+  const _SuTuketimiKarti({
+    required this.toplamLitre,
+    required this.zonDagilimi,
+    required this.zonAdiGetir,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    final bicim = NumberFormat('#,##0', 'tr_TR');
+    final coklu = zonDagilimi.length > 1;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.water_drop_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 32,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Su Tüketimi',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Seçili filtrelere göre tahmini tüketim',
+                        style: TextStyle(fontSize: 12, color: onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${bicim.format(toplamLitre)} L',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            if (coklu) ...[
+              const Divider(height: 20),
+              for (final entry in zonDagilimi.entries)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        zonAdiGetir(entry.key),
+                        style: TextStyle(color: onSurfaceVariant),
+                      ),
+                      Text('${bicim.format(entry.value)} L'),
+                    ],
+                  ),
+                ),
+            ],
           ],
         ),
       ),

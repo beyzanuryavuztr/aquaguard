@@ -45,6 +45,7 @@ class RaporPdfServisi {
     required TedaviBasariAnalizi basariAnalizi,
     required List<TikanmaOlayi> olaylar,
     required String Function(int zone) zonAdiGetir,
+    double toplamSuTuketimiLitre = 0,
   }) async {
     final belge = pw.Document();
     final toplamTespit = turSayaclari.values.fold(0, (a, b) => a + b);
@@ -127,6 +128,21 @@ class RaporPdfServisi {
                       '(${basariAnalizi.tamamlananSayisi} tamamlanmış tedaviden '
                       '${basariAnalizi.basariliSayisi} tanesi debiyi referans '
                       'değere döndürdü)',
+            style: pw.TextStyle(fontSize: 11, color: _renkMetin),
+          ),
+          pw.SizedBox(height: 18),
+          pw.Text(
+            'Su Tüketimi',
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              color: _renkAna,
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            '${NumberFormat('#,##0', 'tr_TR').format(toplamSuTuketimiLitre)} L '
+            '(seçili filtrelere göre tahmini toplam tüketim)',
             style: pw.TextStyle(fontSize: 11, color: _renkMetin),
           ),
           pw.SizedBox(height: 22),
