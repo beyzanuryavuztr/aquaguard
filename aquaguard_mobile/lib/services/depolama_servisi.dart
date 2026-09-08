@@ -41,6 +41,9 @@ class DepolamaServisi {
   static const _demoHiziAnahtari = 'aquaguard_demo_hizi';
   static const _onboardingGorulduAnahtari = 'aquaguard_onboarding_goruldu';
   static const _aktiviteGecmisiAnahtari = 'aquaguard_aktivite_gecmisi';
+  static const _bildirimGecmisiAnahtari = 'aquaguard_bildirim_gecmisi';
+  static const _okunmusBildirimIdleriAnahtari =
+      'aquaguard_okunmus_bildirim_idleri';
   static const _sulamaKapaliZonlarAnahtari = 'aquaguard_sulama_kapali_zonlar';
   static const _tarlaNotlariAnahtari = 'aquaguard_tarla_notlari';
   static const _zonTakmaAdlariAnahtari = 'aquaguard_zon_takma_adlari';
@@ -302,6 +305,45 @@ class DepolamaServisi {
     await tercihler.setString(
       _aktiviteGecmisiAnahtari,
       jsonEncode(gecmis.map((k) => k.toJson()).toList()),
+    );
+  }
+
+  // ==========================================================================
+  // BILDIRIM GECMISI (aktivite gecmisinin ALT KUMESI -- sadece operatorun
+  // 4 kategorili tercihini GECMIS/gercekten bildirime donusmus kayitlar;
+  // bkz. UygulamaDurumu._aktiviteKaydiEkle)
+  // ==========================================================================
+
+  Future<List<AktiviteKaydi>> bildirimGecmisiGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_bildirimGecmisiAnahtari);
+    if (ham == null) return [];
+    final liste = jsonDecode(ham) as List<dynamic>;
+    return liste
+        .map((e) => AktiviteKaydi.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> bildirimGecmisiniKaydet(List<AktiviteKaydi> gecmis) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(
+      _bildirimGecmisiAnahtari,
+      jsonEncode(gecmis.map((k) => k.toJson()).toList()),
+    );
+  }
+
+  Future<Set<int>> okunmusBildirimIdleriGetir() async {
+    final tercihler = await _tercihler;
+    final liste = tercihler.getStringList(_okunmusBildirimIdleriAnahtari);
+    if (liste == null) return {};
+    return liste.map(int.parse).toSet();
+  }
+
+  Future<void> okunmusBildirimIdleriniKaydet(Set<int> idler) async {
+    final tercihler = await _tercihler;
+    await tercihler.setStringList(
+      _okunmusBildirimIdleriAnahtari,
+      idler.map((id) => id.toString()).toList(),
     );
   }
 

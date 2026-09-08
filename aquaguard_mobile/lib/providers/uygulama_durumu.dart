@@ -66,6 +66,17 @@ class UygulamaDurumu extends ChangeNotifier {
   final List<AktiviteKaydi> _bildirimKuyrugu = [];
   final Map<int, DateTime> _tedaviBaslangicZamanlari = {};
   final List<AktiviteKaydi> _aktiviteGecmisi = [];
+  // BILDIRIM GECMISI: _aktiviteGecmisi'nin (TUM olaylar) aksine, sadece
+  // gercekten bir bildirime DONUSMUS (operatorun 4 kategorili tercihini
+  // GECEN) kayitlarin kalici listesi -- Bildirim Gecmisi ekraninin ve
+  // rozetin (badge) kaynagi. Ikisi de _aktiviteKaydiEkle() icinde AYNI
+  // anda beslenir, ayri ayri elle kopyalanmaz.
+  final List<AktiviteKaydi> _bildirimGecmisi = [];
+  // Okundu olarak isaretlenmis bildirim ID'leri (bkz.
+  // models/aktivite_kaydi.dart -> bildirimIdGetir()). bildirimGecmisi'nden
+  // dusen (200 sinirini asan) eski kayitlarin ID'si buradan da temizlenir --
+  // aksi halde bu kume sonsuza dek buyurdu.
+  final Set<int> _okunmusBildirimIdleri = {};
   // OPERATOR MUDAHALESI: sulamasi manuel durdurulmus zonlar -- ana vana
   // acik/kapali durumu, teshis akisindan BAGIMSIZ bir operator kontrolu
   // (bkz. sulamayiDurdur/sulamayiBaslat). Yeniden acilista kaybolmamasi
@@ -86,6 +97,13 @@ class UygulamaDurumu extends ChangeNotifier {
   int get mqttPort => _mqttPort;
   MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
   BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
+  List<AktiviteKaydi> get bildirimGecmisi =>
+      List.unmodifiable(_bildirimGecmisi);
+  int get okunmamisBildirimSayisi =>
+      _bildirimGecmisi.where((k) => !bildirimOkunmusMu(k)).length;
+
+  bool bildirimOkunmusMu(AktiviteKaydi kayit) =>
+      _okunmusBildirimIdleri.contains(bildirimIdGetir(kayit));
   bool get demoModuAktif => _demoModuAktif;
   DemoHizi get demoHizi => _demoHizi;
   bool get onboardingGoruldu => _onboardingGoruldu;
@@ -185,6 +203,20 @@ class UygulamaDurumu extends ChangeNotifier {
     final kopya = List<AktiviteKaydi>.from(_bildirimKuyrugu);
     _bildirimKuyrugu.clear();
     return kopya;
+  }
+
+  /// Bildirim Gecmisi ekrani acildiginda cagrilir -- suan bildirimGecmisi'nde
+  /// olan TUM kayitlari okunmus isaretler (rozet sifirlanir). Okunmus ID
+  /// kumesi, GUNCEL bildirimGecmisi ID'leriyle KESISTIRILEREK kaydedilir --
+  /// aksi halde 200 sinirindan dusen eski kayitlarin ID'si kumede sonsuza
+  /// dek birikirdi.
+  Future<void> bildirimleriOkunduIsaretle() async {
+    final guncelIdler = _bildirimGecmisi.map(bildirimIdGetir).toSet();
+    _okunmusBildirimIdleri
+      ..addAll(guncelIdler)
+      ..retainAll(guncelIdler);
+    await _depolama.okunmusBildirimIdleriniKaydet(_okunmusBildirimIdleri);
+    notifyListeners();
   }
 
   /// Tum tarlalardaki tum zon numaralarinin tekil (benzersiz) listesi.
@@ -317,6 +349,9 @@ class UygulamaDurumu extends ChangeNotifier {
     if (yeniUretilenVarMi) {
       unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
     }
+
+    _bildirimGecmisi.addAll(await _depolama.bildirimGecmisiGetir());
+    _okunmusBildirimIdleri.addAll(await _depolama.okunmusBildirimIdleriGetir());
 
     _dusukPilKontroluYap();
 
@@ -517,10 +552,28 @@ class UygulamaDurumu extends ChangeNotifier {
     // fonksiyonunda (bkz. models/aktivite_kaydi.dart). GecmisVeriUreticisi
     // de (gecmise donuk toplu veri uretirken) AYNI fonksiyonu kullanir.
     for (final kayit in gecisAktiviteleriniUret(onceki, yeni)) {
-      _aktiviteGecmisi.insert(0, kayit);
-      if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
-      unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-      if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit);
+      _aktiviteKaydiEkle(kayit);
+    }
+  }
+
+  /// TEK giris noktasi: bir AktiviteKaydi'ni kalici aktivite gecmisine
+  /// ekler VE (bildirimDegerlendir true ise VE kategori acik ise) hem
+  /// aninda gosterilecek bildirim kuyruguna, hem de kalici Bildirim
+  /// Gecmisi'ne ekler. ACIMASIZ DENETIM NOTU (2026-09-08): bu blok daha
+  /// once 5 farkli yerde elle kopyalanmisti (bkz.
+  /// [[feedback-schema-single-source-of-truth]]) -- Bildirim Gecmisi
+  /// ozelligini DOGRU yerden beslemek icin tek bir yardimciya cikarildi,
+  /// tum eski cagri yerleri buraya yonlendirildi.
+  void _aktiviteKaydiEkle(AktiviteKaydi kayit, {bool bildirimDegerlendir = true}) {
+    _aktiviteGecmisi.insert(0, kayit);
+    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
+    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+
+    if (bildirimDegerlendir && _bildirimKategoriAcikMi(kayit.tur)) {
+      _bildirimKuyrugu.add(kayit);
+      _bildirimGecmisi.insert(0, kayit);
+      if (_bildirimGecmisi.length > 200) _bildirimGecmisi.removeLast();
+      unawaited(_depolama.bildirimGecmisiniKaydet(_bildirimGecmisi));
     }
   }
 
@@ -562,12 +615,7 @@ class UygulamaDurumu extends ChangeNotifier {
       mesaj: 'Pil seviyesi düşük: %$pil',
       tur: AktiviteTuru.dusukPil,
     );
-    _aktiviteGecmisi.insert(0, kayit);
-    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
-    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    if (_bildirimKategoriAcikMi(AktiviteTuru.dusukPil)) {
-      _bildirimKuyrugu.add(kayit);
-    }
+    _aktiviteKaydiEkle(kayit);
   }
 
   void _zonDurumuDegistiginde(int zone, bool cevrimici) {
@@ -772,10 +820,7 @@ class UygulamaDurumu extends ChangeNotifier {
       mesaj: mesaj,
       tur: AktiviteTuru.manuelMudahale,
     );
-    _aktiviteGecmisi.insert(0, kayit);
-    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
-    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit);
+    _aktiviteKaydiEkle(kayit);
     notifyListeners();
   }
 
@@ -858,10 +903,7 @@ class UygulamaDurumu extends ChangeNotifier {
           '${vanasiYeniKapatilanlar.length} zonun ana vanası kapatıldı',
       tur: AktiviteTuru.manuelMudahale,
     );
-    _aktiviteGecmisi.insert(0, kayit);
-    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
-    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    _bildirimKuyrugu.add(kayit);
+    _aktiviteKaydiEkle(kayit);
     notifyListeners();
 
     return vanasiYeniKapatilanlar;
@@ -958,9 +1000,11 @@ class UygulamaDurumu extends ChangeNotifier {
                   'klor enjeksiyonu sürüyor)',
               tur: AktiviteTuru.manuelMudahale,
             );
-            _aktiviteGecmisi.insert(0, redKaydi);
-            if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
-            unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+            // bildirimDegerlendir: false -- bu sadece demo icin bir DETAY
+            // logu, ayrica bir bildirim/rozet tetiklemesi ISTENMIYOR
+            // (davranis oncekiyle ayni: bu kayit hicbir zaman
+            // _bildirimKuyrugu'na girmiyordu).
+            _aktiviteKaydiEkle(redKaydi, bildirimDegerlendir: false);
           }
         }
         aciklama = 'Mutex Kilit Gösterimi (Zon 2: Klor sürüyor, Asit reddedildi)';
@@ -973,10 +1017,7 @@ class UygulamaDurumu extends ChangeNotifier {
       mesaj: 'Demo senaryosu tetiklendi: $aciklama',
       tur: AktiviteTuru.manuelMudahale,
     );
-    _aktiviteGecmisi.insert(0, kayit);
-    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
-    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    if (_bildirimKategoriAcikMi(kayit.tur)) _bildirimKuyrugu.add(kayit);
+    _aktiviteKaydiEkle(kayit);
     notifyListeners();
   }
 

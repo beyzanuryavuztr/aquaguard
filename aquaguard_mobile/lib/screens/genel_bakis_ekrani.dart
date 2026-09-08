@@ -31,6 +31,7 @@ import '../widgets/zon_durum_karti.dart';
 import '../widgets/zon_semasi.dart';
 import 'aktivite_gecmisi_ekrani.dart';
 import 'ayarlar_ekrani.dart';
+import 'bildirim_gecmisi_ekrani.dart';
 import 'tarla_secim_ekrani.dart';
 import 'tikanma_detay_ekrani.dart';
 
@@ -58,6 +59,17 @@ class GenelBakisEkrani extends StatelessWidget {
           ],
         ),
         actions: [
+          Badge(
+            label: Text('${durum.okunmamisBildirimSayisi}'),
+            isLabelVisible: durum.okunmamisBildirimSayisi > 0,
+            child: IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              tooltip: 'Bildirim Geçmişi',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BildirimGecmisiEkrani()),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.grass_outlined),
             tooltip: 'Çiftlikler',
