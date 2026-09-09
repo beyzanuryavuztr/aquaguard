@@ -17,6 +17,7 @@ import '../config/kalibrasyon_sabitleri.dart';
 import '../config/sensor_imzalari.dart';
 import '../config/tarih_bicimleri.dart';
 import '../models/bakim_gorevi.dart';
+import '../models/kullanici_profili.dart';
 import '../models/tema_modu.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/mqtt_servisi.dart';
@@ -34,12 +35,18 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
   final _hostController = TextEditingController();
   final _portController = TextEditingController();
   final _formAnahtari = GlobalKey<FormState>();
+  final _profilIsimController = TextEditingController();
+  final _profilIsletmeController = TextEditingController();
+  final _profilTelefonController = TextEditingController();
   bool _baslangicDegerleriYuklendi = false;
 
   @override
   void dispose() {
     _hostController.dispose();
     _portController.dispose();
+    _profilIsimController.dispose();
+    _profilIsletmeController.dispose();
+    _profilTelefonController.dispose();
     super.dispose();
   }
 
@@ -56,6 +63,9 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
     if (!_baslangicDegerleriYuklendi && durum.hazir) {
       _hostController.text = durum.mqttHost;
       _portController.text = durum.mqttPort.toString();
+      _profilIsimController.text = durum.kullaniciProfili.isim;
+      _profilIsletmeController.text = durum.kullaniciProfili.isletmeAdi;
+      _profilTelefonController.text = durum.kullaniciProfili.telefon;
       _baslangicDegerleriYuklendi = true;
     }
 
@@ -66,6 +76,68 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _BolumBasligi(baslik: 'Kullanıcı Profili'),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      // Bu SADECE yerel kisisellestirme -- bkz.
+                      // models/kullanici_profili.dart dosya basi notu:
+                      // gercek bir hesap/backend yok, hicbir yere
+                      // gonderilmez.
+                      'Sadece bu cihazda saklanır, PDF raporlarda "Hazırlayan" '
+                      'bilgisi olarak kullanılır.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _profilIsimController,
+                      decoration: const InputDecoration(labelText: 'İsim'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _profilIsletmeController,
+                      decoration: const InputDecoration(
+                        labelText: 'İşletme / Çiftlik Adı',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _profilTelefonController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Telefon'),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          context.read<UygulamaDurumu>().kullaniciProfiliniGuncelle(
+                            KullaniciProfili(
+                              isim: _profilIsimController.text.trim(),
+                              isletmeAdi: _profilIsletmeController.text.trim(),
+                              telefon: _profilTelefonController.text.trim(),
+                            ),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Profil kaydedildi')),
+                          );
+                        },
+                        icon: const Icon(Icons.save),
+                        label: const Text('Profili Kaydet'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             _BolumBasligi(baslik: 'Görünüm'),
             Card(
               child: Padding(

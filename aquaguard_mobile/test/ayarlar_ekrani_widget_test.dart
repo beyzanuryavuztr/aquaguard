@@ -47,6 +47,32 @@ void main() {
       expect(find.text('pH ofset'), findsOneWidget);
       expect(find.text('Eşik Değerleri'), findsOneWidget);
       expect(find.text('Referans debi'), findsOneWidget);
+      expect(find.text('Kullanıcı Profili'), findsOneWidget);
+      expect(find.text('İsim'), findsOneWidget);
+
+      durum.dispose();
+    },
+  );
+
+  testWidgets(
+    'kullanici profili doldurulup Profili Kaydet\'e dokununca UygulamaDurumu guncellenir',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
+
+      await pumpUzunYuzeyle(tester, durum);
+
+      await tester.enterText(find.widgetWithText(TextFormField, 'İsim'), 'Beyzanur');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'İşletme / Çiftlik Adı'),
+        'Ana Çiftlik',
+      );
+      await tester.tap(find.text('Profili Kaydet'));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(durum.kullaniciProfili.isim, 'Beyzanur');
+      expect(durum.kullaniciProfili.isletmeAdi, 'Ana Çiftlik');
 
       durum.dispose();
     },

@@ -24,6 +24,7 @@ import '../models/bakim_gorevi.dart';
 import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
 import '../models/enerji_durumu.dart';
+import '../models/kullanici_profili.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -51,6 +52,7 @@ class UygulamaDurumu extends ChangeNotifier {
   DateTime? _pinKilitBitisZamani;
   List<BakimGorevi> _bakimGorevleri = [];
   TemaModu _temaModu = TemaModu.koyu;
+  KullaniciProfili _kullaniciProfili = const KullaniciProfili();
 
   List<Tarla> _tarlalar = [];
   final Map<int, SensorOkuma> _sonOkumalar = {};
@@ -133,6 +135,7 @@ class UygulamaDurumu extends ChangeNotifier {
   );
 
   TemaModu get temaModu => _temaModu;
+  KullaniciProfili get kullaniciProfili => _kullaniciProfili;
 
   /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
   /// varsayilan "Zon N" bicimini doner -- tum ekranlar zon basligini
@@ -281,6 +284,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _pinKorumasiAktif = await _depolama.pinKorumasiAcikMi();
     _pinKilitliSuAn = _pinKorumasiAktif;
     _temaModu = await _depolama.temaModuGetir();
+    _kullaniciProfili = await _depolama.kullaniciProfiliGetir();
     final kayitliBakimGorevleri = await _depolama.bakimGorevleriGetir();
     if (kayitliBakimGorevleri == null) {
       _bakimGorevleri = varsayilanBakimGorevleri();
@@ -498,6 +502,12 @@ class UygulamaDurumu extends ChangeNotifier {
   Future<void> temaModuAyarla(TemaModu modu) async {
     _temaModu = modu;
     await _depolama.temaModuKaydet(modu);
+    notifyListeners();
+  }
+
+  Future<void> kullaniciProfiliniGuncelle(KullaniciProfili profil) async {
+    _kullaniciProfili = profil;
+    await _depolama.kullaniciProfiliniKaydet(profil);
     notifyListeners();
   }
 

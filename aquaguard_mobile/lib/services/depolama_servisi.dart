@@ -27,6 +27,7 @@ import '../models/aktivite_kaydi.dart';
 import '../models/bakim_gorevi.dart';
 import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
+import '../models/kullanici_profili.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -50,6 +51,7 @@ class DepolamaServisi {
   static const _pinKorumasiAnahtari = 'aquaguard_pin_korumasi_acik';
   static const _bakimGorevleriAnahtari = 'aquaguard_bakim_gorevleri';
   static const _temaModuAnahtari = 'aquaguard_tema_modu';
+  static const _kullaniciProfiliAnahtari = 'aquaguard_kullanici_profili';
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>
@@ -405,5 +407,25 @@ class DepolamaServisi {
     final tercihler = await _tercihler;
     final harita = takmaAdlar.map((k, v) => MapEntry(k.toString(), v));
     await tercihler.setString(_zonTakmaAdlariAnahtari, jsonEncode(harita));
+  }
+
+  // ==========================================================================
+  // KULLANICI PROFILI (operatorun yerel kisisel/isletme bilgisi -- bkz.
+  // models/kullanici_profili.dart)
+  // ==========================================================================
+
+  Future<KullaniciProfili> kullaniciProfiliGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_kullaniciProfiliAnahtari);
+    if (ham == null) return const KullaniciProfili();
+    return KullaniciProfili.fromJson(jsonDecode(ham) as Map<String, dynamic>);
+  }
+
+  Future<void> kullaniciProfiliniKaydet(KullaniciProfili profil) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(
+      _kullaniciProfiliAnahtari,
+      jsonEncode(profil.toJson()),
+    );
   }
 }

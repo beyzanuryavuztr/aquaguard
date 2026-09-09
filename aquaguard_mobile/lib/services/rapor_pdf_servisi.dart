@@ -23,6 +23,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../config/tarih_bicimleri.dart';
+import '../models/kullanici_profili.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tedavi_basari_analizi.dart';
 import '../models/tikanma_olayi.dart';
@@ -46,6 +47,7 @@ class RaporPdfServisi {
     required List<TikanmaOlayi> olaylar,
     required String Function(int zone) zonAdiGetir,
     double toplamSuTuketimiLitre = 0,
+    KullaniciProfili? profil,
   }) async {
     final belge = pw.Document();
     final toplamTespit = turSayaclari.values.fold(0, (a, b) => a + b);
@@ -54,7 +56,7 @@ class RaporPdfServisi {
     belge.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        header: (context) => _baslikOlustur(olusturmaZamani),
+        header: (context) => _baslikOlustur(olusturmaZamani, profil),
         footer: (context) => pw.Container(
           alignment: pw.Alignment.centerRight,
           margin: const pw.EdgeInsets.only(top: 8),
@@ -169,7 +171,17 @@ class RaporPdfServisi {
     return belge;
   }
 
-  static pw.Widget _baslikOlustur(String olusturmaZamani) {
+  static pw.Widget _baslikOlustur(
+    String olusturmaZamani,
+    KullaniciProfili? profil,
+  ) {
+    final hazirlayanParcalari = <String>[
+      if (profil != null && profil.isim.trim().isNotEmpty)
+        'Hazırlayan: ${profil.isim.trim()}',
+      if (profil != null && profil.isletmeAdi.trim().isNotEmpty)
+        'İşletme: ${profil.isletmeAdi.trim()}',
+    ];
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -199,6 +211,11 @@ class RaporPdfServisi {
           'Oluşturulma: $olusturmaZamani',
           style: pw.TextStyle(fontSize: 9, color: _renkSoluk),
         ),
+        if (hazirlayanParcalari.isNotEmpty)
+          pw.Text(
+            hazirlayanParcalari.join('  •  '),
+            style: pw.TextStyle(fontSize: 9, color: _renkSoluk),
+          ),
         pw.Divider(color: _renkVurgu, thickness: 1.2, height: 16),
       ],
     );

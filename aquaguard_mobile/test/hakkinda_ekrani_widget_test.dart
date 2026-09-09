@@ -70,8 +70,9 @@ void main() {
     // TUM icerigi kapsayacak kadar uzun yaparak kaydirmaya hic gerek birakmiyoruz.
     // Yukseklik 2600 -> 3800: yeni "Bakım Takvimi" karti (4 gorev satiri,
     // her biri isThreeLine) eklendi, Hakkında satiri artik daha asagida
-    // (bkz. Oncelik 12).
-    await tester.binding.setSurfaceSize(const Size(500, 3800));
+    // (bkz. Oncelik 12). 3800 -> 4300: yeni "Kullanıcı Profili" karti (3
+    // metin alani + kaydet butonu) en basa eklendi (Faz 3).
+    await tester.binding.setSurfaceSize(const Size(500, 4300));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final durum = UygulamaDurumu();

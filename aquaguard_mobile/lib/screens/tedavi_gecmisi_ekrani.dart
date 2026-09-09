@@ -23,6 +23,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../config/tarih_bicimleri.dart';
+import '../models/kullanici_profili.dart';
 import '../models/sensor_okuma.dart';
 import '../models/su_tuketimi.dart';
 import '../models/tedavi_basari_analizi.dart';
@@ -142,6 +143,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
               olaylar: filtreliOlaylar,
               zonAdiGetir: durum.zonAdiGetir,
               toplamSuTuketimiLitre: toplamSuTuketimiLitre,
+              profil: durum.kullaniciProfili,
             ),
           ),
           IconButton(
@@ -345,6 +347,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
     required List<TikanmaOlayi> olaylar,
     required String Function(int) zonAdiGetir,
     required double toplamSuTuketimiLitre,
+    required KullaniciProfili profil,
   }) async {
     final belge = await RaporPdfServisi.olustur(
       turSayaclari: turSayaclari,
@@ -353,6 +356,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
       olaylar: olaylar,
       zonAdiGetir: zonAdiGetir,
       toplamSuTuketimiLitre: toplamSuTuketimiLitre,
+      profil: profil,
     );
     await RaporPdfServisi.onizlemeyiAc(belge);
   }
