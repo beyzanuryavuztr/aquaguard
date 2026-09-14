@@ -237,6 +237,41 @@ bool tedaviMesgulMu() {
   return (_aktifTedavi != TEDAVI_YOK) || _durulamaAktif;
 }
 
+// ============================================================================
+// DURULAMA ZAMANLAYICISI SIFIRLAMA (ana vana ile etkilesim -- bkz. cagri
+// yerleri: mqtt_handler.h "sulama_durdur"/"sulama_baslat", aquaguard_main.ino
+// vana-kapali guvenlik yedegi)
+// ============================================================================
+//
+// ACIMASIZ DENETIM DUZELTMESI (2026-09-14): daha once ana vana durulama
+// SURERKEN kapatildiginda tedaviAcilDurdur() cagriliyordu -- bu fonksiyon
+// _durulamaAktif'i de KOSULSUZ false yapar, yani mutex ANINDA acilirdi.
+// Sonuc: operator vanayi kapatip aninda yeniden acarsa (veya baska bir
+// nedenle kisa sureli kapanirsa), YARIM KALMIS bir durulama "tamamlandi"
+// sayilip hat GERCEKTEN yikanmadan yeni bir tedaviye izin verilirdi --
+// dosyanin kendi basindaki "Bu sure dolmadan mutex acilmaz" guvencesini
+// (bkz. yukarida madde 2) bozan gercek bir guvenlik acigi.
+//
+// Fix: vana kapaliyken SADECE gercekten CALISAN bir pompa varsa
+// tedaviAcilDurdur() cagrilir (mutex sifirlanir -- bu gercek bir ariza/
+// beklenmeyen durumdur). SADECE durulama suruyorsa (pompa zaten kapali),
+// mutex ACIK birakilir ve bunun yerine bu fonksiyon cagrilarak durulama
+// zamanlayicisi "simdi"ye sifirlanir -- boylece:
+//   (a) vana kapaliyken CAGRILIRSA (periyodik, OKUMA_ARALIGI_MS=5sn'de bir --
+//       bkz. aquaguard_main.ino): sure hep "simdi"den sayildigi icin
+//       DURULAMA_SURESI_MS (45sn)'ye HICBIR ZAMAN ulasamaz, yani akissiz
+//       gecen sure durulama sayilmaz (5sn << 45sn, guvenli marj);
+//   (b) vana YENIDEN ACILDIGINDA (sulama_baslat, bir kez) cagrilirsa:
+//       durulama suresi flow GERCEKTEN geri geldigi andan itibaren
+//       SIFIRDAN baslar -- yarim kalmis ilerlemeye guvenilmez, en guvenli
+//       yaklasim TAM sureyi yeniden saymaktir.
+// _durulamaAktif false ise (durulama zaten yok/bitmis) hicbir etkisi yoktur.
+void durulamaZamanlayicisiniSifirla() {
+  if (_durulamaAktif) {
+    _durulamaBaslangicMs = millis();
+  }
+}
+
 // Bir tedavi turunun yapilandirilmis suresini disariya acar (loglama icin)
 unsigned long tedaviSuresiGetir(TedaviTuru tedavi) {
   return _tedaviSuresiGetir(tedavi);

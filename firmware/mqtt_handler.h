@@ -130,18 +130,28 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
     // degisiklik YOKTUR (yanlis alarmda zaten hicbir aktuator calismiyordu).
     Serial.println(F("[Komut] Operator: durumu yanlis alarm olarak isaretledi."));
   } else if (strcmp(komut, "sulama_durdur") == 0) {
-    // GUVENLIK: vana kapatilirken bir tedavi/durulama SURUYORSA, akis
-    // olmadan dozlamaya/durulamaya devam etmek tehlikelidir -- aninda VE
-    // TAM olarak durdur (tedaviAcilDurdur, durulamayi da atlar -- durulama
-    // zaten akis gerektirir, akissiz "guvenli" durulama diye bir sey yoktur).
-    if (tedaviMesgulMu()) {
+    // GUVENLIK: vana kapatilirken GERCEKTEN CALISAN bir pompa varsa, akis
+    // olmadan dozlamaya devam etmek tehlikelidir -- aninda VE TAM olarak
+    // durdur (tedaviAcilDurdur, mutex'i de sifirlar -- bu gercek bir
+    // ariza/beklenmeyen durumdur).
+    if (aktifTedaviGetir() != TEDAVI_YOK) {
       tedaviAcilDurdur();
-      Serial.println(F("[GUVENLIK] Ana vana kapatiliyor -- suren tedavi/durulama ANINDA durduruldu (akis yok)."));
+      Serial.println(F("[GUVENLIK] Ana vana kapatiliyor -- suren tedavi ANINDA durduruldu (akis yok)."));
+    } else if (durulamaAktifMi()) {
+      // SADECE zorunlu durulama suruyor (pompa zaten kapali) -- akissiz
+      // durulamaya devam EDILEMEZ ama mutex SIFIRLANMAZ (bkz.
+      // durulamaZamanlayicisiniSifirla() dosya-basi yorumu): aksi halde
+      // yarim kalmis bir durulama "tamamlandi" sayilip hat tam
+      // yikanmadan yeni tedaviye izin verilirdi.
+      Serial.println(F("[GUVENLIK] Ana vana kapatiliyor -- durulama akis kesildigi icin yarim kaldi (mutex ACIK kalmaya devam ediyor)."));
     }
     anaVanayiKapat();
     Serial.println(F("[Komut] Operator: ana vana MANUEL kapatildi, sulama durdu."));
   } else if (strcmp(komut, "sulama_baslat") == 0) {
     anaVanayiAc();
+    // Eger yarim kalmis bir durulama varsa, flow GERCEKTEN geri geldigi
+    // bu andan itibaren suresi SIFIRDAN baslar (bkz. treatment.h).
+    durulamaZamanlayicisiniSifirla();
     Serial.println(F("[Komut] Operator: ana vana yeniden acildi, sulama basladi."));
   } else {
     Serial.print(F("[Komut] Bilinmeyen komut: "));

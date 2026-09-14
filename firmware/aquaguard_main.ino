@@ -132,10 +132,18 @@ void islemDongusunuCalistir() {
     // GUVENLIK YEDEGI (birincil kontrol mqtt_handler.h'deki "sulama_durdur"
     // isleyicisindedir -- vana kapanma anini ORADA aninda yakalar): vana
     // baska bir yoldan kapanmis olabilecegi ihtimaline karsi, burada da
-    // suren bir tedavi/durulama varsa aninda durdur.
-    if (tedaviMesgulMu()) {
+    // GERCEKTEN CALISAN bir pompa varsa aninda durdur.
+    if (aktifTedaviGetir() != TEDAVI_YOK) {
       tedaviAcilDurdur();
-      Serial.println(F("[GUVENLIK] Ana vana kapali -- suren tedavi/durulama ANINDA durduruldu (akis yok)."));
+      Serial.println(F("[GUVENLIK] Ana vana kapali -- suren tedavi ANINDA durduruldu (akis yok)."));
+    } else if (durulamaAktifMi()) {
+      // Vana kapaliyken durulama suresi ILERLEMESIN (akissiz gecen sure
+      // durulama sayilmaz) -- bu blok periyodik olarak (OKUMA_ARALIGI_MS
+      // = 5sn'de bir) calistigi icin, her cagrida baslangic zamanini
+      // "simdi"ye oteleyerek sureyi fiilen DONDURMUS oluyoruz (5sn,
+      // DURULAMA_SURESI_MS=45sn'nin cok altinda -- guvenli marj). bkz.
+      // treatment.h -> durulamaZamanlayicisiniSifirla() yorumu.
+      durulamaZamanlayicisiniSifirla();
     }
     // Vana kapaliyken debi/basinc okumalari ANLAMSIZDIR (sifir akis fiziksel
     // tikanma gibi gorunur) -- son bilinen teshisi guvenli "veri yok"
