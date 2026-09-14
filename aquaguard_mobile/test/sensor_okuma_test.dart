@@ -135,4 +135,29 @@ void main() {
       expect(geriYuklenen.zaman, orijinal.zaman);
     });
   });
+
+  group('tedaviKoduGetir (MQTT komut wire-formatı)', () {
+    // ACIMASIZ DENETIM (2026-09-14): daha once outgoing MQTT komutu
+    // dogrudan `TedaviTuru.name` (camelCase) gonderiyordu -- firmware/
+    // Python mock snake_case bekler. Bu testler tedaviKoduGetir()'in
+    // tedaviAyristir() ile TAM UYUMLU (round-trip) oldugunu, yani MQTT'ye
+    // yazilan degerin firmware/mock tarafindan geri dogru ayristirilacagini
+    // dogrular -- iki fonksiyonun birbirinden BAGIMSIZ (elle, hatali)
+    // kopyalanmasını degil.
+    test('her TedaviTuru degeri firmware/Python\'un bekledigi snake_case kodu doner', () {
+      expect(tedaviKoduGetir(TedaviTuru.asitDozlama), 'asit_dozlama');
+      expect(tedaviKoduGetir(TedaviTuru.klorEnjeksiyon), 'klor_enjeksiyon');
+      expect(
+        tedaviKoduGetir(TedaviTuru.yuksekBasincliYikama),
+        'yuksek_basincli_yikama',
+      );
+      expect(tedaviKoduGetir(TedaviTuru.yok), 'yok');
+    });
+
+    test('tedaviAyristir(tedaviKoduGetir(x)) == x (tam round-trip)', () {
+      for (final tedavi in TedaviTuru.values) {
+        expect(tedaviAyristir(tedaviKoduGetir(tedavi)), tedavi);
+      }
+    });
+  });
 }

@@ -321,6 +321,19 @@ class UygulamaDurumu extends ChangeNotifier {
           kronolojikGecmis,
         );
         _aktiviteGecmisi.addAll(uretilenAktiviteler.reversed);
+        // ACIMASIZ DENETIM DUZELTMESI (2026-09-14): bu sentetik gecmis
+        // sadece aktiviteGecmisi'ne ekleniyordu -- Bildirim Gecmisi
+        // ekrani/rozeti GERCEKTEN ILK KURULUMDA bombos kalirdi, halbuki
+        // Aktivite Gecmisi ayni anda onlarca kayitla dolu gorunurdu (tutarsiz
+        // ilk-acilis deneyimi). Canli SnackBar/push bildirimi KASITLI OLARAK
+        // tetiklenmiyor (backdated veri icin bildirim firtinasi olmasin diye)
+        // ama kalici Bildirim Gecmisi listesine, kategori tercihine uyanlar
+        // ekleniyor -- boylece iki ekran birbiriyle tutarli.
+        _bildirimGecmisi.addAll(
+          uretilenAktiviteler.reversed.where(
+            (k) => _bildirimKategoriAcikMi(k.tur),
+          ),
+        );
 
         if (kronolojikGecmis.isNotEmpty) {
           final sonUretilen = kronolojikGecmis.last;
@@ -354,7 +367,15 @@ class UygulamaDurumu extends ChangeNotifier {
       unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
     }
 
+    final bildirimGecmisiYeniUretilenVarMi = _bildirimGecmisi.isNotEmpty;
     _bildirimGecmisi.addAll(await _depolama.bildirimGecmisiGetir());
+    _bildirimGecmisi.sort((a, b) => b.zaman.compareTo(a.zaman));
+    if (_bildirimGecmisi.length > 200) {
+      _bildirimGecmisi.removeRange(200, _bildirimGecmisi.length);
+    }
+    if (bildirimGecmisiYeniUretilenVarMi) {
+      unawaited(_depolama.bildirimGecmisiniKaydet(_bildirimGecmisi));
+    }
     _okunmusBildirimIdleri.addAll(await _depolama.okunmusBildirimIdleriGetir());
 
     _dusukPilKontroluYap();
@@ -775,7 +796,7 @@ class UygulamaDurumu extends ChangeNotifier {
     } else {
       _mqtt?.komutGonder(zone, {
         'komut': 'tedavi_baslat',
-        'tedavi_turu': tedavi.name,
+        'tedavi_turu': tedaviKoduGetir(tedavi),
       });
       basarili = true;
     }

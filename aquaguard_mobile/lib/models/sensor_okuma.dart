@@ -62,6 +62,31 @@ TedaviTuru tedaviAyristir(String? deger) {
   }
 }
 
+/// tedaviAyristir()'in TERSI -- MQTT'ye komut GONDERIRKEN kullanilir
+/// (bkz. UygulamaDurumu.manuelTedaviBaslat). ACIMASIZ DENETIM DUZELTMESI
+/// (2026-09-14): daha once dogrudan `tedavi.name` (Dart'in varsayilan
+/// camelCase kimligi, orn. "asitDozlama") MQTT komutuna yaziliyordu --
+/// firmware/mqtt_handler.h VE python/aquaguard_mock_yayinci.py ise snake_case
+/// bekler ("asit_dozlama"). Sonuc: gercek donanim/MQTT modunda operatorun
+/// "manuel tedavi baslat" eylemi cihaz tarafinda SESSIZCE reddediliyordu
+/// (firmware log'unda "Geçersiz/eksik tedavi_turu" hatasi), ama Dart tarafi
+/// yine de basarili=true donduruyordu -- operator tedavinin basladigini
+/// sanirdi. Bu SADECE gercek MQTT modunda gorulur, Demo Modu bu komut
+/// yolunu hic kullanmadigi icin (TikanmaTuru uzerinden dogrudan calisir)
+/// bu hata hicbir demo/test senaryosunda ortaya cikmamisti.
+String tedaviKoduGetir(TedaviTuru tedavi) {
+  switch (tedavi) {
+    case TedaviTuru.yok:
+      return 'yok';
+    case TedaviTuru.asitDozlama:
+      return 'asit_dozlama';
+    case TedaviTuru.klorEnjeksiyon:
+      return 'klor_enjeksiyon';
+    case TedaviTuru.yuksekBasincliYikama:
+      return 'yuksek_basincli_yikama';
+  }
+}
+
 String durumEtiketi(TeshisDurumu durum) {
   switch (durum) {
     case TeshisDurumu.normal:
