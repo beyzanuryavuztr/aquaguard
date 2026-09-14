@@ -193,6 +193,19 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict) -> None:
     rng = calisma_durumu["rng"]
 
     if komut == "tedavi_baslat":
+        # ACIMASIZ DENETIM DUZELTMESI (2026-09-14): bu isleyici daha once
+        # firmware/mqtt_handler.h'nin uyguladigi IKI guvenlik kontrolunu de
+        # (ana vana acik mi, mutex mesgul mu -- bkz. treatment.h) atliyordu,
+        # dosyanin kendi basindaki "AYNI davranis, mutex atlanmaz" iddiasiyla
+        # CELISEREK. Bu mock, Flutter'in manuel mudahale ozelligini gercek
+        # MQTT modunda test etmek icin kullanildiginda, firmware'in REDDEDECEGI
+        # bir komutu burada "basarili" gibi isleyip yanlis guven verirdi.
+        if not calisma_durumu["sulama_acik"]:
+            print("[Komut] Operatör: manuel tedavi REDDEDİLDİ (ana vana kapalı, akış yok).")
+            return
+        if calisma_durumu["tedavi_aktif"] != "yok" or calisma_durumu["durulama_aktif"]:
+            print("[Komut] Operatör: manuel tedavi REDDEDİLDİ (mutex meşgul -- başka bir tedavi/durulama sürüyor).")
+            return
         tedavi_turu = mesaj_json.get("tedavi_turu")
         hedef_tur = TUR_ESLEME_TERS.get(tedavi_turu)
         if hedef_tur is None:
@@ -276,6 +289,10 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
         "rng": rng,
         "guncel_tur": None,
         "sulama_acik": True,
+        # _komut_isle()'in "tedavi_baslat" mutex kontrolu icin -- ana
+        # dongude her adimda guncellenir (bkz. asagida).
+        "tedavi_aktif": "yok",
+        "durulama_aktif": False,
     }
 
     def _baglaninca(client, userdata, connect_flags, reason_code, properties):
@@ -305,7 +322,18 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
     istemci.on_message = _mesaj_geldiginde
 
     print(f"[MQTT] Baglaniliyor: {broker}:{port} ...")
-    istemci.connect(broker, port, keepalive=60)
+    # ACIMASIZ DENETIM DUZELTMESI (2026-09-14): connect() bloke edici bir
+    # cagridir ve TRY/FINALLY blogunun DISINDA calisiyordu -- DNS hatasi
+    # veya reddedilen baglanti gibi durumlarda ham bir Python traceback'iyle
+    # cokup finally'deki temizligi (ve daha onemlisi kullaniciya anlasilir
+    # bir hata mesaji vermeyi) atliyordu. firmware/mqtt_handler.h'nin
+    # kendi baglanti hatasini loglayip devam etmesiyle ayni ilke: gelistirme
+    # araci gurultusuz cokmemeli.
+    try:
+        istemci.connect(broker, port, keepalive=60)
+    except OSError as hata:
+        print(f"[MQTT] Baglanti kurulamadi ({broker}:{port}): {hata}")
+        return
     istemci.loop_start()
 
     print("=" * 78)
@@ -325,6 +353,8 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
                 continue
 
             ornek, faz, tedavi_aktif, durulama_aktif = next(calisma_durumu["uretec"])
+            calisma_durumu["tedavi_aktif"] = tedavi_aktif
+            calisma_durumu["durulama_aktif"] = durulama_aktif
             teshis = kural_tabanli_teshis(ornek)
             if teshis["tur"]:
                 calisma_durumu["guncel_tur"] = teshis["tur"]

@@ -106,10 +106,18 @@ class TestDurulamaVeIyilesmeAdimlariUret:
 
 class TestKomutIsle:
     def _durum(self, seed=42, guncel_tur=None):
+        # calistir()'in gercek baslangic sozlugu ile AYNI anahtarlar --
+        # aksi halde _komut_isle()'deki "tedavi_baslat" guvenlik
+        # kontrolleri (ana vana / mutex, bkz. 2026-09-14 duzeltmesi)
+        # eksik anahtar yuzunden KeyError firlatir. Varsayilan: "bos/
+        # hazir" durum (vana acik, hicbir tedavi/durulama surmuyor).
         return {
             "uretec": senaryo_adimlarini_uret(np.random.default_rng(seed)),
             "rng": np.random.default_rng(seed),
             "guncel_tur": guncel_tur,
+            "sulama_acik": True,
+            "tedavi_aktif": "yok",
+            "durulama_aktif": False,
         }
 
     def test_tedavi_baslat_gecerli_tur_ile_dogru_tedaviyi_baslatir(self):
@@ -132,6 +140,41 @@ class TestKomutIsle:
         eski_uretec = calisma_durumu["uretec"]
         _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "olmayan_tur"}, calisma_durumu)
         assert calisma_durumu["uretec"] is eski_uretec
+
+    # ACIMASIZ DENETIM DUZELTMESI (2026-09-14): asagidaki iki test,
+    # firmware/mqtt_handler.h'nin uyguladigi ayni iki guvenlik kontrolunun
+    # (ana vana acik mi, mutex mesgul mu) mock'ta da uygulandigini dogrular
+    # -- daha once mock bu kontrolleri hic yapmiyordu (bkz. dosya basi
+    # docstring'in "AYNI davranis, mutex atlanmaz" iddiasiyla celisiyordu).
+    def test_tedavi_baslat_ana_vana_kapaliyken_REDDEDILIR(self):
+        calisma_durumu = self._durum()
+        calisma_durumu["sulama_acik"] = False
+        eski_uretec = calisma_durumu["uretec"]
+        _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "klor_enjeksiyon"}, calisma_durumu)
+        assert calisma_durumu["uretec"] is eski_uretec
+
+    def test_tedavi_baslat_baska_tedavi_surerken_REDDEDILIR(self):
+        calisma_durumu = self._durum()
+        calisma_durumu["tedavi_aktif"] = "klor_enjeksiyon"
+        eski_uretec = calisma_durumu["uretec"]
+        _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "asit_dozlama"}, calisma_durumu)
+        assert calisma_durumu["uretec"] is eski_uretec
+
+    def test_tedavi_baslat_durulama_surerken_REDDEDILIR(self):
+        calisma_durumu = self._durum()
+        calisma_durumu["durulama_aktif"] = True
+        eski_uretec = calisma_durumu["uretec"]
+        _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "asit_dozlama"}, calisma_durumu)
+        assert calisma_durumu["uretec"] is eski_uretec
+
+    def test_tedavi_baslat_bos_durumda_KABUL_EDILIR(self):
+        # Negatif testlerin (yukarida) yanlisiskla HER ZAMAN reddediyor
+        # olmadigini dogrulayan pozitif kontrol -- vana acik VE mutex
+        # bosken komut normal sekilde kabul edilmeli.
+        calisma_durumu = self._durum()
+        _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "klor_enjeksiyon"}, calisma_durumu)
+        ilk_adim = next(calisma_durumu["uretec"])
+        assert ilk_adim[1] == "tedavi"
 
     def test_tedavi_durdur_durulamaya_gecer(self):
         calisma_durumu = self._durum(guncel_tur="kimyasal")
