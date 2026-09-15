@@ -32,6 +32,7 @@ import '../widgets/zon_semasi.dart';
 import 'aktivite_gecmisi_ekrani.dart';
 import 'ayarlar_ekrani.dart';
 import 'bildirim_gecmisi_ekrani.dart';
+import 'juri_sunum_ekrani.dart';
 import 'tarla_secim_ekrani.dart';
 import 'tikanma_detay_ekrani.dart';
 
@@ -70,6 +71,14 @@ class GenelBakisEkrani extends StatelessWidget {
               ),
             ),
           ),
+          if (durum.demoModuAktif)
+            IconButton(
+              icon: const Icon(Icons.co_present_outlined),
+              tooltip: 'Jüri Sunum Modu',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const JuriSunumEkrani()),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.grass_outlined),
             tooltip: 'Çiftlikler',
