@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import '../widgets/aquaguard_logosu.dart';
 import '../widgets/duyarli_icerik.dart';
 import 'giris_ekrani.dart' show aquaGuardSurumMetni;
+import 'model_performansi_ekrani.dart';
 
 class HakkindaEkrani extends StatelessWidget {
   const HakkindaEkrani({super.key});
@@ -58,6 +59,20 @@ class HakkindaEkrani extends StatelessWidget {
                     'olarak teşhis eden ve tedavi eden akıllı izleme ve '
                     'kontrol uygulaması.',
               ],
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.insights_outlined),
+                title: const Text('Model Performansı'),
+                subtitle: const Text('Karışıklık matrisi, doğruluk grafiği ve daha fazlası'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ModelPerformansiEkrani(),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             Card(

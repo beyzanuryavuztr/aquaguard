@@ -67,6 +67,13 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # python/aquaguard_karar_motoru.py egitim/dogrulama sirasinda uretilen
+  # gorseller (karisiklik matrisi, CV dogruluk grafigi vb.) -- bkz.
+  # screens/model_performansi_ekrani.dart. Bu dosyalar STATIKTIR, uygulama
+  # tarafindan uretilmez; model yeniden egitilirse elle guncellenmelidir.
+  assets:
+    - assets/model_gorselleri/
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
