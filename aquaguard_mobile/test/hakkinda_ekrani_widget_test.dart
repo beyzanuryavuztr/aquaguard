@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/screens/ayarlar_ekrani.dart';
 import 'package:aquaguard_mobile/screens/hakkinda_ekrani.dart';
+import 'package:aquaguard_mobile/screens/is_fizibilitesi_ekrani.dart';
 import 'package:aquaguard_mobile/screens/model_performansi_ekrani.dart';
 
 void main() {
@@ -32,6 +33,7 @@ void main() {
     expect(find.text('AquaGuard'), findsOneWidget);
     expect(find.text('Uygulama Hakkında'), findsOneWidget);
     expect(find.text('Model Performansı'), findsOneWidget);
+    expect(find.text('İş Fizibilitesi'), findsOneWidget);
     expect(find.text('Lisanslar'), findsOneWidget);
     expect(
       find.text('Doğru Teşhis, Doğru Tedavi, Sürdürülebilir Sulama'),
@@ -61,6 +63,22 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byType(ModelPerformansiEkrani), findsOneWidget);
+  });
+
+  testWidgets('İş Fizibilitesi satırına dokununca ekran açılır', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(500, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const MaterialApp(home: HakkindaEkrani()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('İş Fizibilitesi'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(IsFizibilitesiEkrani), findsOneWidget);
   });
 
   testWidgets('Lisanslar satirina dokununca lisans sayfasi acilir', (

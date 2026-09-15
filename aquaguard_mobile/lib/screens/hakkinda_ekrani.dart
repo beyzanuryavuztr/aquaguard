@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import '../widgets/aquaguard_logosu.dart';
 import '../widgets/duyarli_icerik.dart';
 import 'giris_ekrani.dart' show aquaGuardSurumMetni;
+import 'is_fizibilitesi_ekrani.dart';
 import 'model_performansi_ekrani.dart';
 
 class HakkindaEkrani extends StatelessWidget {
@@ -70,6 +71,20 @@ class HakkindaEkrani extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const ModelPerformansiEkrani(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.trending_up_outlined),
+                title: const Text('İş Fizibilitesi'),
+                subtitle: const Text('Maliyet, satış fiyatı ve rakip karşılaştırması'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const IsFizibilitesiEkrani(),
                   ),
                 ),
               ),
