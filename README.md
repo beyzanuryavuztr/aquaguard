@@ -80,7 +80,9 @@ pytest                                  # test paketini çalıştırır
 ### Firmware
 
 `firmware/aquaguard_main.ino` Deneyap Kart IDE ile derlenip yüklenir.
-Pin/kalibrasyon sabitleri `config.h` içindedir.
+Pin/kalibrasyon sabitleri `config.h` içindedir. Gerçek donanıma flaşlamadan
+önce [`firmware/DONANIM_KONTROL_LISTESI.md`](firmware/DONANIM_KONTROL_LISTESI.md)'ye
+bakın (pin doğrulaması, kalibrasyon adımları, ilk çalıştırma duman testi sırası).
 
 ## Durum
 
