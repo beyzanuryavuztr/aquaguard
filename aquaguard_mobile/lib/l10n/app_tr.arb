@@ -1,0 +1,17 @@
+{
+  "@@locale": "tr",
+  "gorunumBasligi": "Görünüm",
+  "@gorunumBasligi": {"description": "Ayarlar ekranı Görünüm bölümü başlığı"},
+  "temaEtiketi": "Tema",
+  "temaKoyu": "Koyu",
+  "temaAcik": "Açık",
+  "temaSistem": "Sistem",
+  "aksanRengiEtiketi": "Aksan Rengi",
+  "aksanTurkuvaz": "Turkuvaz",
+  "aksanToprak": "Toprak",
+  "sahaModuBaslik": "Saha Modu",
+  "sahaModuAciklama": "Parlak güneş altında okunabilirlik için daha kalın metin ve belirgin kenarlıklar.",
+  "dilBolumBasligi": "Dil",
+  "dilTurkce": "Türkçe",
+  "dilIngilizce": "İngilizce"
+}

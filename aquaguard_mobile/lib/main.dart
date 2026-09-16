@@ -18,10 +18,13 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'config/tema.dart';
+import 'l10n/app_localizations.dart';
 import 'models/tema_modu.dart';
+import 'models/uygulama_dili.dart';
 import 'providers/uygulama_durumu.dart';
 import 'screens/giris_ekrani.dart';
 import 'screens/onboarding_ekrani.dart';
@@ -56,6 +59,21 @@ class AquaGuardUygulamasi extends StatelessWidget {
           // de gecebilir (Oncelik 14) -- tek-tema garantisi kaldirildi, ama
           // varsayilan davranis degismedi.
           themeMode: durum.temaModu.flutterModu,
+          // i18n (kisitli kapsam -- bkz. lib/l10n/app_tr.arb dosya basi
+          // notu): SADECE Ayarlar'daki Görünüm bolumu bu locale'e tepki
+          // verir, uygulamanin geri kalani hala sabit Turkce metin
+          // kullanir. `locale` acikca UygulamaDurumu.uygulamaDili'nden
+          // gelir (sistem dilini OTOMATIK algilamaz) -- boylece Turkce
+          // bir cihazda operator YANLISLIKLA Ingilizce gormez, secim
+          // her zaman bilincli bir Ayarlar eylemidir.
+          locale: durum.uygulamaDili.locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
           home: const _BaslangicYonlendirici(),
         ),
       ),

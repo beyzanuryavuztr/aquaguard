@@ -6,10 +6,12 @@
 // UygulamaDurumu'nu guncelledigini dogrular.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:aquaguard_mobile/l10n/app_localizations.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/screens/ayarlar_ekrani.dart';
 
@@ -17,12 +19,24 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   Future<void> pumpUzunYuzeyle(WidgetTester tester, UygulamaDurumu durum) async {
-    await tester.binding.setSurfaceSize(const Size(500, 3600));
+    await tester.binding.setSurfaceSize(const Size(500, 3900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: durum,
-        child: const MaterialApp(home: AyarlarEkrani()),
+        // AyarlarEkrani'nin Görünüm bolumu AppLocalizations kullanir (i18n
+        // pilotu, bkz. lib/l10n/app_tr.arb) -- delegate'ler verilmezse
+        // "No AppLocalizations found" istisnasiyla cokerdi.
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AyarlarEkrani(),
+        ),
       ),
     );
     await tester.pump();

@@ -6,12 +6,30 @@
 // (Genel Bakış sekmesine) gecistigini dogrular.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:aquaguard_mobile/l10n/app_localizations.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/screens/giris_ekrani.dart';
+
+// "Devam Et" AnaKabuk'a gecer -- AnaKabuk'un IndexedStack'i TUM sekmeleri
+// (Ayarlar dahil) HEMEN insa eder, Ayarlar'in Görünüm bolumu ise
+// AppLocalizations kullanir (i18n pilotu) -- delegate'ler olmadan cokerdi.
+Widget _uygulamaSarici(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
+  );
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -24,7 +42,7 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: durum,
-        child: const MaterialApp(home: GirisEkrani()),
+        child: _uygulamaSarici(const GirisEkrani()),
       ),
     );
 
@@ -43,7 +61,7 @@ void main() {
       await tester.pumpWidget(
         ChangeNotifierProvider.value(
           value: durum,
-          child: const MaterialApp(home: GirisEkrani()),
+          child: _uygulamaSarici(const GirisEkrani()),
         ),
       );
       await tester.pumpAndSettle();
@@ -71,7 +89,7 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: durum,
-        child: const MaterialApp(home: GirisEkrani()),
+        child: _uygulamaSarici(const GirisEkrani()),
       ),
     );
     await tester.pumpAndSettle();

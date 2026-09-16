@@ -32,6 +32,7 @@ import '../models/kullanici_profili.dart';
 import '../models/kuyruklanmis_komut.dart';
 import '../models/maliyet_parametreleri.dart';
 import '../models/sensor_okuma.dart';
+import '../models/uygulama_dili.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
 import '../models/tema_modu.dart';
@@ -59,6 +60,7 @@ class DepolamaServisi {
   static const _sahaModuAnahtari = 'aquaguard_saha_modu_acik';
   static const _kuyruklananKomutlarAnahtari = 'aquaguard_kuyruklanan_komutlar';
   static const _maliyetParametreleriAnahtari = 'aquaguard_maliyet_parametreleri';
+  static const _uygulamaDiliAnahtari = 'aquaguard_uygulama_dili';
   static const _kullaniciProfiliAnahtari = 'aquaguard_kullanici_profili';
   static const _gecmisMaksimumUzunluk = 200;
 
@@ -367,6 +369,24 @@ class DepolamaServisi {
       _maliyetParametreleriAnahtari,
       jsonEncode(parametreler.toJson()),
     );
+  }
+
+  // ==========================================================================
+  // UYGULAMA DILI (i18n, bkz. models/uygulama_dili.dart)
+  // ==========================================================================
+
+  Future<UygulamaDili> uygulamaDiliGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_uygulamaDiliAnahtari);
+    return UygulamaDili.values.firstWhere(
+      (d) => d.name == ham,
+      orElse: () => UygulamaDili.turkce,
+    );
+  }
+
+  Future<void> uygulamaDiliKaydet(UygulamaDili dil) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(_uygulamaDiliAnahtari, dil.name);
   }
 
   // ==========================================================================

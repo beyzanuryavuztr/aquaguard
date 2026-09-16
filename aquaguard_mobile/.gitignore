@@ -23,6 +23,11 @@ migrate_working_dir/
 # is commented out by default.
 #.vscode/
 
+# l10n: 'flutter pub get' otomatik olarak lib/l10n/*.arb'den yeniden
+# uretir (generate: true, bkz. pubspec.yaml) -- ARB kaynaklari commit
+# edilir, uretilen Dart kodu edilmez.
+lib/l10n/app_localizations*.dart
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id

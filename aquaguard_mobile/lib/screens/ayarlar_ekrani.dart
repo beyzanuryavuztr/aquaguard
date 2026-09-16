@@ -17,10 +17,12 @@ import '../config/ayarlar_sabitleri.dart';
 import '../config/kalibrasyon_sabitleri.dart';
 import '../config/sensor_imzalari.dart';
 import '../config/tarih_bicimleri.dart';
+import '../l10n/app_localizations.dart';
 import '../models/aksan_rengi.dart';
 import '../models/bakim_gorevi.dart';
 import '../models/kullanici_profili.dart';
 import '../models/tema_modu.dart';
+import '../models/uygulama_dili.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/mqtt_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -171,75 +173,127 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
               ),
             ),
             const SizedBox(height: 24),
-            _BolumBasligi(baslik: 'Görünüm'),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+            // i18n PILOT (kisitli kapsam -- bkz. lib/l10n/app_tr.arb dosya
+            // basi notu): SADECE bu kart AppLocalizations uzerinden
+            // cekilir, uygulamanin geri kalani hala sabit Turkce metin
+            // kullanir. Bilincli/izole bir pilot secimi -- Ayarlar'in
+            // diger bolumleri (MQTT, bildirimler, maliyet, vb.) COK
+            // sayida widget testi tarafindan sabit Turkce metin aranarak
+            // dogrulaniyor, tam migrasyon AYRI bir is.
+            Builder(
+              builder: (context) {
+                final l10n = AppLocalizations.of(context);
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Tema',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<TemaModu>(
-                      segments: TemaModu.values
-                          .map(
-                            (t) => ButtonSegment(
-                              value: t,
-                              label: Text(t.etiket),
+                    _BolumBasligi(baslik: l10n.gorunumBasligi),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.temaEtiketi,
+                              style: Theme.of(context).textTheme.titleSmall,
                             ),
-                          )
-                          .toList(),
-                      selected: {durum.temaModu},
-                      showSelectedIcon: false,
-                      onSelectionChanged: (secim) => context
-                          .read<UygulamaDurumu>()
-                          .temaModuAyarla(secim.first),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Aksan Rengi',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<AksanRengi>(
-                      segments: AksanRengi.values
-                          .map(
-                            (a) => ButtonSegment(
-                              value: a,
-                              label: Text(a.etiket),
-                              icon: Icon(
-                                Icons.circle,
-                                color: aksanPaletleri[a]!.renk,
-                                size: 14,
-                              ),
+                            const SizedBox(height: 8),
+                            SegmentedButton<TemaModu>(
+                              segments: [
+                                ButtonSegment(
+                                  value: TemaModu.koyu,
+                                  label: Text(l10n.temaKoyu),
+                                ),
+                                ButtonSegment(
+                                  value: TemaModu.acik,
+                                  label: Text(l10n.temaAcik),
+                                ),
+                                ButtonSegment(
+                                  value: TemaModu.sistem,
+                                  label: Text(l10n.temaSistem),
+                                ),
+                              ],
+                              selected: {durum.temaModu},
+                              showSelectedIcon: false,
+                              onSelectionChanged: (secim) => context
+                                  .read<UygulamaDurumu>()
+                                  .temaModuAyarla(secim.first),
                             ),
-                          )
-                          .toList(),
-                      selected: {durum.aksanRengi},
-                      showSelectedIcon: false,
-                      onSelectionChanged: (secim) => context
-                          .read<UygulamaDurumu>()
-                          .aksanRengiAyarla(secim.first),
-                    ),
-                    const SizedBox(height: 8),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Saha Modu'),
-                      subtitle: const Text(
-                        'Parlak güneş altında okunabilirlik için daha '
-                        'kalın metin ve belirgin kenarlıklar.',
+                            const SizedBox(height: 16),
+                            Text(
+                              l10n.aksanRengiEtiketi,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 8),
+                            SegmentedButton<AksanRengi>(
+                              segments: [
+                                ButtonSegment(
+                                  value: AksanRengi.teal,
+                                  label: Text(l10n.aksanTurkuvaz),
+                                  icon: Icon(
+                                    Icons.circle,
+                                    color: aksanPaletleri[AksanRengi.teal]!.renk,
+                                    size: 14,
+                                  ),
+                                ),
+                                ButtonSegment(
+                                  value: AksanRengi.toprak,
+                                  label: Text(l10n.aksanToprak),
+                                  icon: Icon(
+                                    Icons.circle,
+                                    color:
+                                        aksanPaletleri[AksanRengi.toprak]!.renk,
+                                    size: 14,
+                                  ),
+                                ),
+                              ],
+                              selected: {durum.aksanRengi},
+                              showSelectedIcon: false,
+                              onSelectionChanged: (secim) => context
+                                  .read<UygulamaDurumu>()
+                                  .aksanRengiAyarla(secim.first),
+                            ),
+                            const SizedBox(height: 8),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.sahaModuBaslik),
+                              subtitle: Text(l10n.sahaModuAciklama),
+                              value: durum.sahaModuAktif,
+                              onChanged: (yeni) => context
+                                  .read<UygulamaDurumu>()
+                                  .sahaModuAyarla(yeni),
+                            ),
+                          ],
+                        ),
                       ),
-                      value: durum.sahaModuAktif,
-                      onChanged: (yeni) => context
-                          .read<UygulamaDurumu>()
-                          .sahaModuAyarla(yeni),
+                    ),
+                    const SizedBox(height: 24),
+                    _BolumBasligi(baslik: l10n.dilBolumBasligi),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SegmentedButton<UygulamaDili>(
+                          segments: [
+                            ButtonSegment(
+                              value: UygulamaDili.turkce,
+                              label: Text(l10n.dilTurkce),
+                            ),
+                            ButtonSegment(
+                              value: UygulamaDili.ingilizce,
+                              label: Text(l10n.dilIngilizce),
+                            ),
+                          ],
+                          selected: {durum.uygulamaDili},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (secim) => context
+                              .read<UygulamaDurumu>()
+                              .uygulamaDiliniAyarla(secim.first),
+                        ),
+                      ),
                     ),
                   ],
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: 24),
             _BolumBasligi(baslik: 'Veri Kaynağı'),

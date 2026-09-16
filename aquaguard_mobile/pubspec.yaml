@@ -30,11 +30,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   mqtt_client: ^10.11.11
   provider: ^6.1.5+1
   shared_preferences: ^2.5.5
-  intl: ^0.20.3
+  intl: 0.20.2
   fl_chart: ^1.2.0
   google_fonts: ^8.2.1
   path_provider: ^2.1.5
@@ -70,6 +72,14 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # i18n ALTYAPISI (sema v2, 2026-09-16, KISITLI KAPSAM -- bkz. lib/l10n/
+  # dosya basi notu): SADECE Ayarlar'daki "Görünüm" bolumu pilot olarak
+  # AppLocalizations uzerinden cekilir. Geri kalan uygulama (150+ dosya,
+  # ~800+ inline Turkce string) BILEREK bu turun kapsami DISINDA -- tam
+  # migrasyon, mevcut 300+ widget testinin cogunun Turkce metin arayarak
+  # calismasi nedeniyle tek basina haftalar surecek AYRI bir is.
+  generate: true
 
   # python/aquaguard_karar_motoru.py egitim/dogrulama sirasinda uretilen
   # gorseller (karisiklik matrisi, CV dogruluk grafigi vb.) -- bkz.

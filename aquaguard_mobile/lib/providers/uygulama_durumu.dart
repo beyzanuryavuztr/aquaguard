@@ -37,6 +37,7 @@ import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
 import '../models/tema_modu.dart';
+import '../models/uygulama_dili.dart';
 import '../services/bildirim_servisi.dart';
 import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
@@ -79,6 +80,7 @@ class UygulamaDurumu extends ChangeNotifier {
   // gosterilmez.
   bool _cihazBagliMi = true;
   MaliyetParametreleri _maliyetParametreleri = const MaliyetParametreleri();
+  UygulamaDili _uygulamaDili = UygulamaDili.turkce;
   final List<KuyruklanmisKomut> _kuyruklananKomutlar = [];
   BildirimTercihleri _bildirimTercihleri = const BildirimTercihleri();
   bool _hazir = false;
@@ -124,6 +126,7 @@ class UygulamaDurumu extends ChangeNotifier {
   MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
   bool get cihazBagliMi => _cihazBagliMi;
   MaliyetParametreleri get maliyetParametreleri => _maliyetParametreleri;
+  UygulamaDili get uygulamaDili => _uygulamaDili;
   BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
   List<AktiviteKaydi> get bildirimGecmisi =>
       List.unmodifiable(_bildirimGecmisi);
@@ -320,6 +323,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _aksanRengi = await _depolama.aksanRengiGetir();
     _sahaModuAktif = await _depolama.sahaModuGetir();
     _maliyetParametreleri = await _depolama.maliyetParametreleriGetir();
+    _uygulamaDili = await _depolama.uygulamaDiliGetir();
     _kullaniciProfili = await _depolama.kullaniciProfiliGetir();
     final kayitliBakimGorevleri = await _depolama.bakimGorevleriGetir();
     if (kayitliBakimGorevleri == null) {
@@ -581,6 +585,12 @@ class UygulamaDurumu extends ChangeNotifier {
   ) async {
     _maliyetParametreleri = parametreler;
     await _depolama.maliyetParametreleriKaydet(parametreler);
+    notifyListeners();
+  }
+
+  Future<void> uygulamaDiliniAyarla(UygulamaDili dil) async {
+    _uygulamaDili = dil;
+    await _depolama.uygulamaDiliKaydet(dil);
     notifyListeners();
   }
 

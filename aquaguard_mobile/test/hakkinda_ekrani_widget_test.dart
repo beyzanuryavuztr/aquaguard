@@ -5,10 +5,12 @@
 // satirinin gercekten bu ekrana gectigini dogrular.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:aquaguard_mobile/l10n/app_localizations.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/screens/ayarlar_ekrani.dart';
 import 'package:aquaguard_mobile/screens/hakkinda_ekrani.dart';
@@ -108,7 +110,7 @@ void main() {
     // her biri isThreeLine) eklendi, Hakkında satiri artik daha asagida
     // (bkz. Oncelik 12). 3800 -> 4300: yeni "Kullanıcı Profili" karti (3
     // metin alani + kaydet butonu) en basa eklendi (Faz 3).
-    await tester.binding.setSurfaceSize(const Size(500, 5100));
+    await tester.binding.setSurfaceSize(const Size(500, 5400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final durum = UygulamaDurumu();
@@ -117,7 +119,16 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: durum,
-        child: const MaterialApp(home: AyarlarEkrani()),
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AyarlarEkrani(),
+        ),
       ),
     );
     await tester.pump();
