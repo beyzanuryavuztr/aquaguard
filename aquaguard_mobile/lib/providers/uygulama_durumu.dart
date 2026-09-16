@@ -708,8 +708,27 @@ class UygulamaDurumu extends ChangeNotifier {
   void _dusukPilKontroluYap() {
     final pil = EnerjiDurumu.pilYuzdesiHesapla();
     if (pil >= EnerjiDurumu.dusukPilEsigi) return;
+
+    // ACIMASIZ DENETIM/CI DUZELTMESI (2026-09-16): pil seviyesi ZAMAN
+    // BAZLI (10 gunluk testere disi dongu, bkz. EnerjiDurumu) bir
+    // simulasyondur -- bu esigin ALTINDA kaldigi surece (birkac gun),
+    // uygulama HER SOGUK BASLANGICTA (baslat() her cagrildiginda) AYNI
+    // uyariyi tekrar tekrar ekliyordu. Bu hem gercek kullanicida gereksiz
+    // bildirim spam'i, hem de testlerde (iki UygulamaDurumu ornegi arka
+    // arkaya baslatilinca) BELIRSIZ/FLAKY bir sonuc yaratiyordu (ikinci
+    // oturumun kendi dusukPil kaydi, kalici depodan yuklenen onceki
+    // kayitlarin ONUNE geciyordu). Son 24 saat icinde ZATEN bir dusukPil
+    // kaydi varsa TEKRAR eklenmez.
+    final simdi = DateTime.now();
+    final yakinZamandaUyarildiMi = _aktiviteGecmisi.any(
+      (k) =>
+          k.tur == AktiviteTuru.dusukPil &&
+          simdi.difference(k.zaman) < const Duration(hours: 24),
+    );
+    if (yakinZamandaUyarildiMi) return;
+
     final kayit = AktiviteKaydi(
-      zaman: DateTime.now(),
+      zaman: simdi,
       zone: 0,
       mesaj: 'Pil seviyesi düşük: %$pil',
       tur: AktiviteTuru.dusukPil,

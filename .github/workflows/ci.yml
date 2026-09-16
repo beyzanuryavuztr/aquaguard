@@ -17,7 +17,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          # Kanal (channel: stable) yerine SABIT bir surum -- yerel
+          # gelistirme ortami Flutter 3.44.4 kullaniyor ve bu projede
+          # intl paketi flutter_localizations'in SDK-ici surumune tam
+          # eslesmesi gereken bir versiyona sabitlenmis (bkz. pubspec.yaml).
+          # "stable" kanali zaman icinde farkli bir Flutter surumune
+          # kayabilir ve o surumun beklediği intl versiyonu YEREL ile
+          # ESLESMEYEBILIR -- bu, "flutter pub get" asamasinda bagimlilik
+          # cozumleme hatasina yol acardi (CI'da tekrarlanan basarisizligin
+          # olasi kok nedeni).
+          flutter-version: '3.44.4'
       - run: flutter pub get
       - run: flutter analyze --fatal-infos
       - run: flutter test
