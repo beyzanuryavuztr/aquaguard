@@ -28,6 +28,7 @@ import '../models/sensor_tanimi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/sensor_trend_grafigi.dart';
+import '../widgets/yardim_butonu.dart';
 
 class TrendAnaliziEkrani extends StatefulWidget {
   const TrendAnaliziEkrani({super.key});
@@ -52,7 +53,12 @@ class _TrendAnaliziEkraniState extends State<TrendAnaliziEkrani> {
         : durum.gecmis(zon);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Trend Analizi')),
+      appBar: AppBar(
+        title: const Text('Trend Analizi'),
+        actions: const [
+          YardimButonu(ekranAnahtari: 'trend_analizi', baslik: 'Trend Analizi'),
+        ],
+      ),
       body: DuyarliIcerik(
         child: tumZonlar.isEmpty
             ? const Center(child: Text('Henüz izlenen bir zon yok'))

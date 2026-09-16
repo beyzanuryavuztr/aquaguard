@@ -35,6 +35,7 @@ import '../services/rapor_pdf_servisi.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/tikanma_turu_ikonu.dart';
+import '../widgets/yardim_butonu.dart';
 
 enum _TarihAraligi { tumu, saat24, gun7, gun30 }
 
@@ -132,6 +133,10 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
       appBar: AppBar(
         title: const Text('Tedavi Geçmişi'),
         actions: [
+          const YardimButonu(
+            ekranAnahtari: 'tedavi_gecmisi',
+            baslik: 'Tedavi Geçmişi',
+          ),
           IconButton(
             icon: const Icon(Icons.picture_as_pdf_outlined),
             tooltip: 'Görüntülenen Raporu PDF Olarak Dışa Aktar',

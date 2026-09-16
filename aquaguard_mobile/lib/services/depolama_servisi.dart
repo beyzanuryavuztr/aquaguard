@@ -23,6 +23,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/ayarlar_sabitleri.dart';
+import '../models/aksan_rengi.dart';
 import '../models/aktivite_kaydi.dart';
 import '../models/bakim_gorevi.dart';
 import '../models/bildirim_tercihleri.dart';
@@ -52,6 +53,8 @@ class DepolamaServisi {
   static const _pinKorumasiAnahtari = 'aquaguard_pin_korumasi_acik';
   static const _bakimGorevleriAnahtari = 'aquaguard_bakim_gorevleri';
   static const _temaModuAnahtari = 'aquaguard_tema_modu';
+  static const _aksanRengiAnahtari = 'aquaguard_aksan_rengi';
+  static const _sahaModuAnahtari = 'aquaguard_saha_modu_acik';
   static const _kullaniciProfiliAnahtari = 'aquaguard_kullanici_profili';
   static const _gecmisMaksimumUzunluk = 200;
 
@@ -291,6 +294,30 @@ class DepolamaServisi {
   Future<void> temaModuKaydet(TemaModu modu) async {
     final tercihler = await _tercihler;
     await tercihler.setString(_temaModuAnahtari, modu.name);
+  }
+
+  Future<AksanRengi> aksanRengiGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_aksanRengiAnahtari);
+    return AksanRengi.values.firstWhere(
+      (e) => e.name == ham,
+      orElse: () => AksanRengi.teal,
+    );
+  }
+
+  Future<void> aksanRengiKaydet(AksanRengi aksan) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(_aksanRengiAnahtari, aksan.name);
+  }
+
+  Future<bool> sahaModuGetir() async {
+    final tercihler = await _tercihler;
+    return tercihler.getBool(_sahaModuAnahtari) ?? false;
+  }
+
+  Future<void> sahaModuKaydet(bool acik) async {
+    final tercihler = await _tercihler;
+    await tercihler.setBool(_sahaModuAnahtari, acik);
   }
 
   // ==========================================================================

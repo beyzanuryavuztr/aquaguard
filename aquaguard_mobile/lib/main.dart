@@ -42,8 +42,14 @@ class AquaGuardUygulamasi extends StatelessWidget {
         builder: (context, durum, _) => MaterialApp(
           title: 'AquaGuard',
           debugShowCheckedModeBanner: false,
-          theme: AquaGuardTema.acikTema(),
-          darkTheme: AquaGuardTema.koyuTema(),
+          theme: AquaGuardTema.acikTema(
+            aksan: durum.aksanRengi,
+            sahaModu: durum.sahaModuAktif,
+          ),
+          darkTheme: AquaGuardTema.koyuTema(
+            aksan: durum.aksanRengi,
+            sahaModu: durum.sahaModuAktif,
+          ),
           // Varsayilan Koyu (bkz. TemaModu.koyu) -- "tarla gunesinde ekran
           // okunabilirligi" ve profesyonel bir "kontrol merkezi" hissi icin
           // kullanicinin ilk talebi. Artik operator Ayarlar'dan Açık/Sistem'e

@@ -36,6 +36,7 @@ import '../widgets/sensor_karti.dart';
 import '../widgets/sensor_trend_grafigi.dart';
 import '../widgets/sulama_kontrol_karti.dart';
 import '../widgets/tikanma_turu_ikonu.dart';
+import '../widgets/yardim_butonu.dart';
 import 'aktif_tedavi_ekrani.dart';
 
 class TikanmaDetayEkrani extends StatelessWidget {
@@ -53,7 +54,12 @@ class TikanmaDetayEkrani extends StatelessWidget {
     final oncesiSonrasi = tedaviOncesiSonrasiBul(gecmisEnYeniOnce);
 
     return Scaffold(
-      appBar: AppBar(title: Text('${durum.zonAdiGetir(zonNumarasi)} Detayı')),
+      appBar: AppBar(
+        title: Text('${durum.zonAdiGetir(zonNumarasi)} Detayı'),
+        actions: const [
+          YardimButonu(ekranAnahtari: 'zon_detay', baslik: 'Zon Detayı'),
+        ],
+      ),
       body: okuma == null
           ? const Center(child: Text('Bu zon için henüz veri alınmadı'))
           : DuyarliIcerik(

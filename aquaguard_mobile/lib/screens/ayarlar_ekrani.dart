@@ -17,12 +17,14 @@ import '../config/ayarlar_sabitleri.dart';
 import '../config/kalibrasyon_sabitleri.dart';
 import '../config/sensor_imzalari.dart';
 import '../config/tarih_bicimleri.dart';
+import '../models/aksan_rengi.dart';
 import '../models/bakim_gorevi.dart';
 import '../models/kullanici_profili.dart';
 import '../models/tema_modu.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/mqtt_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
+import '../widgets/yardim_butonu.dart';
 import 'hakkinda_ekrani.dart';
 
 class AyarlarEkrani extends StatefulWidget {
@@ -73,7 +75,12 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ayarlar')),
+      appBar: AppBar(
+        title: const Text('Ayarlar'),
+        actions: const [
+          YardimButonu(ekranAnahtari: 'ayarlar', baslik: 'Ayarlar'),
+        ],
+      ),
       body: DuyarliIcerik(
         maksimumGenislik: 700,
         child: ListView(
@@ -167,6 +174,45 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                       onSelectionChanged: (secim) => context
                           .read<UygulamaDurumu>()
                           .temaModuAyarla(secim.first),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Aksan Rengi',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<AksanRengi>(
+                      segments: AksanRengi.values
+                          .map(
+                            (a) => ButtonSegment(
+                              value: a,
+                              label: Text(a.etiket),
+                              icon: Icon(
+                                Icons.circle,
+                                color: aksanPaletleri[a]!.renk,
+                                size: 14,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      selected: {durum.aksanRengi},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (secim) => context
+                          .read<UygulamaDurumu>()
+                          .aksanRengiAyarla(secim.first),
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Saha Modu'),
+                      subtitle: const Text(
+                        'Parlak güneş altında okunabilirlik için daha '
+                        'kalın metin ve belirgin kenarlıklar.',
+                      ),
+                      value: durum.sahaModuAktif,
+                      onChanged: (yeni) => context
+                          .read<UygulamaDurumu>()
+                          .sahaModuAyarla(yeni),
                     ),
                   ],
                 ),

@@ -27,6 +27,7 @@ import '../widgets/duyarli_icerik.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/enerji_gostergesi.dart';
 import '../widgets/sistem_sagligi_gostergesi.dart';
+import '../widgets/yardim_butonu.dart';
 import '../widgets/zon_durum_karti.dart';
 import '../widgets/zon_semasi.dart';
 import 'aktivite_gecmisi_ekrani.dart';
@@ -60,6 +61,7 @@ class GenelBakisEkrani extends StatelessWidget {
           ],
         ),
         actions: [
+          const YardimButonu(ekranAnahtari: 'genel_bakis', baslik: 'Genel Bakış'),
           Badge(
             label: Text('${durum.okunmamisBildirimSayisi}'),
             isLabelVisible: durum.okunmamisBildirimSayisi > 0,

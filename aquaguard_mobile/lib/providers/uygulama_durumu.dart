@@ -19,6 +19,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../models/aksan_rengi.dart';
 import '../models/aktivite_kaydi.dart';
 import '../models/bakim_gorevi.dart';
 import '../models/bildirim_tercihleri.dart';
@@ -52,6 +53,8 @@ class UygulamaDurumu extends ChangeNotifier {
   DateTime? _pinKilitBitisZamani;
   List<BakimGorevi> _bakimGorevleri = [];
   TemaModu _temaModu = TemaModu.koyu;
+  AksanRengi _aksanRengi = AksanRengi.teal;
+  bool _sahaModuAktif = false;
   KullaniciProfili _kullaniciProfili = const KullaniciProfili();
 
   List<Tarla> _tarlalar = [];
@@ -137,6 +140,8 @@ class UygulamaDurumu extends ChangeNotifier {
   );
 
   TemaModu get temaModu => _temaModu;
+  AksanRengi get aksanRengi => _aksanRengi;
+  bool get sahaModuAktif => _sahaModuAktif;
   KullaniciProfili get kullaniciProfili => _kullaniciProfili;
 
   /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
@@ -287,6 +292,8 @@ class UygulamaDurumu extends ChangeNotifier {
     _pinKorumasiAktif = await _depolama.pinKorumasiAcikMi();
     _pinKilitliSuAn = _pinKorumasiAktif;
     _temaModu = await _depolama.temaModuGetir();
+    _aksanRengi = await _depolama.aksanRengiGetir();
+    _sahaModuAktif = await _depolama.sahaModuGetir();
     _kullaniciProfili = await _depolama.kullaniciProfiliGetir();
     final kayitliBakimGorevleri = await _depolama.bakimGorevleriGetir();
     if (kayitliBakimGorevleri == null) {
@@ -527,6 +534,18 @@ class UygulamaDurumu extends ChangeNotifier {
   Future<void> temaModuAyarla(TemaModu modu) async {
     _temaModu = modu;
     await _depolama.temaModuKaydet(modu);
+    notifyListeners();
+  }
+
+  Future<void> aksanRengiAyarla(AksanRengi aksan) async {
+    _aksanRengi = aksan;
+    await _depolama.aksanRengiKaydet(aksan);
+    notifyListeners();
+  }
+
+  Future<void> sahaModuAyarla(bool acik) async {
+    _sahaModuAktif = acik;
+    await _depolama.sahaModuKaydet(acik);
     notifyListeners();
   }
 

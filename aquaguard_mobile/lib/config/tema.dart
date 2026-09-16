@@ -40,12 +40,14 @@ library;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../models/aksan_rengi.dart';
+
 class AquaGuardTema {
   AquaGuardTema._();
 
   // --- Kullanicinin verdigi kesin palet ---
   static const Color anaRenk = Color(0xFF0D2137); // koyu lacivert/petrol
-  static const Color vurguRenk = Color(0xFF00BFA6); // turkuvaz/aqua
+  static const Color vurguRenk = Color(0xFF00BFA6); // turkuvaz/aqua (varsayilan aksan)
   static const Color uyariRenk = Color(0xFFFFB300); // amber
   static const Color tehlikeRenk = Color(0xFFE53935); // kirmizi
   static const Color basariRenk = Color(0xFF43A047); // yesil
@@ -61,82 +63,98 @@ class AquaGuardTema {
     ).apply(bodyColor: renk, displayColor: renk);
   }
 
-  static ThemeData koyuTema() {
-    const renkSemasi = ColorScheme(
+  static ThemeData koyuTema({
+    AksanRengi aksan = AksanRengi.teal,
+    bool sahaModu = false,
+  }) {
+    final palet = aksanPaletleri[aksan]!;
+    final renkSemasi = ColorScheme(
       brightness: Brightness.dark,
-      primary: vurguRenk,
-      onPrimary: Color(0xFF00251F),
-      primaryContainer: Color(0xFF00473C),
-      onPrimaryContainer: Color(0xFF7BFFE9),
+      primary: palet.renk,
+      onPrimary: palet.onRenkKoyu,
+      primaryContainer: palet.renkContainerKoyu,
+      onPrimaryContainer: palet.onRenkContainerKoyu,
       secondary: basariRenk,
       onSecondary: Colors.white,
-      secondaryContainer: Color(0xFF1E4D24),
-      onSecondaryContainer: Color(0xFFC8F5CC),
+      secondaryContainer: const Color(0xFF1E4D24),
+      onSecondaryContainer: const Color(0xFFC8F5CC),
       tertiary: uyariRenk,
-      onTertiary: Color(0xFF3D2900),
-      tertiaryContainer: Color(0xFF5C3F00),
-      onTertiaryContainer: Color(0xFFFFE4A8),
+      onTertiary: const Color(0xFF3D2900),
+      tertiaryContainer: const Color(0xFF5C3F00),
+      onTertiaryContainer: const Color(0xFFFFE4A8),
       error: tehlikeRenk,
       onError: Colors.white,
-      errorContainer: Color(0xFF601410),
-      onErrorContainer: Color(0xFFFFDAD6),
+      errorContainer: const Color(0xFF601410),
+      onErrorContainer: const Color(0xFFFFDAD6),
       surface: arkaPlanRenk,
-      onSurface: Color(0xFFE6ECF1),
-      surfaceContainerLowest: Color(0xFF0A0F15),
-      surfaceContainerLow: Color(0xFF141C25),
+      onSurface: const Color(0xFFE6ECF1),
+      surfaceContainerLowest: const Color(0xFF0A0F15),
+      surfaceContainerLow: const Color(0xFF141C25),
       surfaceContainer: kartRenk,
-      surfaceContainerHigh: Color(0xFF212C3A),
-      surfaceContainerHighest: Color(0xFF2A3747),
-      onSurfaceVariant: Color(0xFF9AACBC),
-      outline: Color(0xFF3A4A5C),
-      outlineVariant: Color(0xFF283645),
+      surfaceContainerHigh: const Color(0xFF212C3A),
+      surfaceContainerHighest: const Color(0xFF2A3747),
+      onSurfaceVariant: const Color(0xFF9AACBC),
+      outline: const Color(0xFF3A4A5C),
+      outlineVariant: const Color(0xFF283645),
       shadow: Colors.black,
       scrim: Colors.black,
-      inverseSurface: Color(0xFFE6ECF1),
+      inverseSurface: const Color(0xFFE6ECF1),
       onInverseSurface: anaRenk,
-      inversePrimary: Color(0xFF00695C),
+      inversePrimary: palet.inversePrimaryKoyu,
     );
 
-    return _bilesenTemasiOlustur(renkSemasi, Brightness.dark);
+    return _bilesenTemasiOlustur(
+      renkSemasi,
+      Brightness.dark,
+      sahaModu: sahaModu,
+    );
   }
 
-  static ThemeData acikTema() {
-    const renkSemasi = ColorScheme(
+  static ThemeData acikTema({
+    AksanRengi aksan = AksanRengi.teal,
+    bool sahaModu = false,
+  }) {
+    final palet = aksanPaletleri[aksan]!;
+    final renkSemasi = ColorScheme(
       brightness: Brightness.light,
-      primary: vurguRenk,
-      onPrimary: Colors.white,
-      primaryContainer: Color(0xFFB2F5EA),
-      onPrimaryContainer: Color(0xFF00443B),
+      primary: palet.renk,
+      onPrimary: palet.onRenkAcik,
+      primaryContainer: palet.renkContainerAcik,
+      onPrimaryContainer: palet.onRenkContainerAcik,
       secondary: basariRenk,
       onSecondary: Colors.white,
-      secondaryContainer: Color(0xFFC8F5CC),
-      onSecondaryContainer: Color(0xFF1E4D24),
+      secondaryContainer: const Color(0xFFC8F5CC),
+      onSecondaryContainer: const Color(0xFF1E4D24),
       tertiary: uyariRenk,
       onTertiary: Colors.white,
-      tertiaryContainer: Color(0xFFFFE4A8),
-      onTertiaryContainer: Color(0xFF3D2900),
+      tertiaryContainer: const Color(0xFFFFE4A8),
+      onTertiaryContainer: const Color(0xFF3D2900),
       error: tehlikeRenk,
       onError: Colors.white,
-      errorContainer: Color(0xFFFFDAD6),
-      onErrorContainer: Color(0xFF601410),
-      surface: Color(0xFFF6F8FA),
-      onSurface: Color(0xFF1A2332),
+      errorContainer: const Color(0xFFFFDAD6),
+      onErrorContainer: const Color(0xFF601410),
+      surface: const Color(0xFFF6F8FA),
+      onSurface: const Color(0xFF1A2332),
       surfaceContainerLowest: Colors.white,
-      surfaceContainerLow: Color(0xFFF0F3F6),
+      surfaceContainerLow: const Color(0xFFF0F3F6),
       surfaceContainer: Colors.white,
-      surfaceContainerHigh: Color(0xFFE8ECF1),
-      surfaceContainerHighest: Color(0xFFDEE4EA),
-      onSurfaceVariant: Color(0xFF5C6B7A),
-      outline: Color(0xFFC5CDD6),
-      outlineVariant: Color(0xFFDDE3E9),
+      surfaceContainerHigh: const Color(0xFFE8ECF1),
+      surfaceContainerHighest: const Color(0xFFDEE4EA),
+      onSurfaceVariant: const Color(0xFF5C6B7A),
+      outline: const Color(0xFFC5CDD6),
+      outlineVariant: const Color(0xFFDDE3E9),
       shadow: Colors.black,
       scrim: Colors.black,
       inverseSurface: anaRenk,
-      onInverseSurface: Color(0xFFE6ECF1),
-      inversePrimary: Color(0xFF7BFFE9),
+      onInverseSurface: const Color(0xFFE6ECF1),
+      inversePrimary: palet.inversePrimaryAcik,
     );
 
-    return _bilesenTemasiOlustur(renkSemasi, Brightness.light);
+    return _bilesenTemasiOlustur(
+      renkSemasi,
+      Brightness.light,
+      sahaModu: sahaModu,
+    );
   }
 
   /// Koyu ve acik tema TAMAMEN AYNI bilesen (AppBar/Card/buton/...) stilini
@@ -145,10 +163,31 @@ class AquaGuardTema {
   /// ilkesi).
   static ThemeData _bilesenTemasiOlustur(
     ColorScheme renkSemasi,
-    Brightness parlaklik,
-  ) {
+    Brightness parlaklik, {
+    bool sahaModu = false,
+  }) {
     final tabanTema = ThemeData(brightness: parlaklik);
-    final metinTemasi = _tipografi(tabanTema.textTheme, renkSemasi.onSurface);
+    final temelMetinTemasi = _tipografi(
+      tabanTema.textTheme,
+      renkSemasi.onSurface,
+    );
+    // Saha Modu: parlak gunes altinda dusuk kaliteli ekranlarda okunabilirligi
+    // artirmak icin govde metnini daha kalin agirlikta cizer + kart/ayirac
+    // kenarliklarini belirginlestirir (asagida). ColorScheme'e DOKUNULMAZ --
+    // tek nokta (bu fonksiyon) uzerinden, dark/light toggle kadar dusuk riskli.
+    final metinTemasi = sahaModu
+        ? temelMetinTemasi.copyWith(
+            bodyLarge: temelMetinTemasi.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            bodyMedium: temelMetinTemasi.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            titleMedium: temelMetinTemasi.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          )
+        : temelMetinTemasi;
 
     return ThemeData(
       useMaterial3: true,
@@ -175,7 +214,10 @@ class AquaGuardTema {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kartRadius),
-          side: BorderSide(color: renkSemasi.outlineVariant, width: 1),
+          side: BorderSide(
+            color: renkSemasi.outlineVariant,
+            width: sahaModu ? 2 : 1,
+          ),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -235,7 +277,7 @@ class AquaGuardTema {
 
       dividerTheme: DividerThemeData(
         color: renkSemasi.outlineVariant,
-        thickness: 1,
+        thickness: sahaModu ? 2 : 1,
       ),
 
       listTileTheme: ListTileThemeData(
