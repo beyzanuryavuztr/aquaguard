@@ -33,15 +33,20 @@ enum MqttBaglantiDurumu { baglaniyor, bagli, baglantiKesildi, hata }
 
 class MqttServisi {
   MqttClient? _istemci;
+  int _komutSayaci = 0;
 
   final void Function(SensorOkuma okuma) veriGeldiginde;
   final void Function(int zone, bool cevrimici) zonDurumuDegistiginde;
   final void Function(MqttBaglantiDurumu durum) baglantiDurumuDegistiginde;
+  // Sema v2 (ACK/NACK) -- opsiyonel, verilmezse komut_durumu mesajlari
+  // sessizce yoksayilir. bkz. models/bekleyen_komut.dart.
+  final void Function(String komutId, bool basarili)? komutDurumuGeldiginde;
 
   MqttServisi({
     required this.veriGeldiginde,
     required this.zonDurumuDegistiginde,
     required this.baglantiDurumuDegistiginde,
+    this.komutDurumuGeldiginde,
   });
 
   bool get bagliMi =>
@@ -110,6 +115,10 @@ class MqttServisi {
     for (final zon in zonlar) {
       istemci.subscribe(AyarlarSabitleri.veriKonusu(zon), MqttQos.atLeastOnce);
       istemci.subscribe(AyarlarSabitleri.durumKonusu(zon), MqttQos.atLeastOnce);
+      istemci.subscribe(
+        AyarlarSabitleri.komutDurumuKonusu(zon),
+        MqttQos.atLeastOnce,
+      );
     }
 
     istemci.updates?.listen(_mesajlariIsle);
@@ -124,6 +133,10 @@ class MqttServisi {
     if (istemci == null || !bagliMi) return;
     istemci.subscribe(AyarlarSabitleri.veriKonusu(zon), MqttQos.atLeastOnce);
     istemci.subscribe(AyarlarSabitleri.durumKonusu(zon), MqttQos.atLeastOnce);
+    istemci.subscribe(
+      AyarlarSabitleri.komutDurumuKonusu(zon),
+      MqttQos.atLeastOnce,
+    );
   }
 
   void _mesajlariIsle(List<MqttReceivedMessage<MqttMessage>> olaylar) {
@@ -138,6 +151,8 @@ class MqttServisi {
         _veriMesajiniIsle(metin);
       } else if (konu.endsWith('/durum')) {
         _durumMesajiniIsle(konu, metin);
+      } else if (konu.endsWith('/komut_durumu')) {
+        _komutDurumuMesajiniIsle(metin);
       }
     }
   }
@@ -157,6 +172,18 @@ class MqttServisi {
     zonDurumuDegistiginde(zon, metin.trim() == 'online');
   }
 
+  void _komutDurumuMesajiniIsle(String metin) {
+    try {
+      final json = jsonDecode(metin) as Map<String, dynamic>;
+      final komutId = json['komut_id'] as String?;
+      final durum = json['durum'] as String?;
+      if (komutId == null) return;
+      komutDurumuGeldiginde?.call(komutId, durum == 'tamamlandi');
+    } on FormatException {
+      // Bozuk JSON -- sessizce yoksay.
+    }
+  }
+
   int? _konudanZonNumarasiCikar(String konu) {
     final eslesme = RegExp(r'zone(\d+)').firstMatch(konu);
     if (eslesme == null) return null;
@@ -173,17 +200,28 @@ class MqttServisi {
   /// bu bir "an" komutudur, gec baglanan bir istemcinin eski bir komutu
   /// tekrar almasi istenmez. Baglanti yoksa sessizce yoksayilir (demo
   /// modunda zaten bu servis hic kullanilmaz -- bkz. UygulamaDurumu).
-  void komutGonder(int zone, Map<String, dynamic> komut) {
+  ///
+  /// Uretilen benzersiz komut_id'yi DONER -- cagiran taraf (bkz.
+  /// UygulamaDurumu._komutGonderVeOnayBekle) bunu komut_durumu konusundan
+  /// gelecek ACK/NACK'i eslestirmek icin kullanir. Baglanti yoksa BILE bir
+  /// id uretilip donulur (yayin yapilmaz) -- cagiran taraf bunu zaman
+  /// asimina birakir, cokmez.
+  String komutGonder(int zone, Map<String, dynamic> komut) {
+    final komutId = '${DateTime.now().microsecondsSinceEpoch}-$_komutSayaci';
+    _komutSayaci++;
+
     final istemci = _istemci;
     if (istemci == null || !bagliMi) {
       debugPrint('[AquaGuard/MQTT] Komut gönderilemedi, bağlantı yok: $komut');
-      return;
+      return komutId;
     }
-    final yuk = MqttClientPayloadBuilder()..addString(jsonEncode(komut));
+    final govde = {...komut, 'komut_id': komutId};
+    final yuk = MqttClientPayloadBuilder()..addString(jsonEncode(govde));
     istemci.publishMessage(
       AyarlarSabitleri.komutKonusu(zone),
       MqttQos.atLeastOnce,
       yuk.payload!,
     );
+    return komutId;
   }
 }

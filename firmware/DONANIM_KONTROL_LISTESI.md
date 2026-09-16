@@ -103,6 +103,15 @@ Diğer, düşük öncelikli/bilinen sınırlamalar (değiştirilmedi, riski dü�
 - `mqtt_handler.h`'nin her yayında yeni `String` nesnesi oluşturması
   (heap fragmentation riski) — ESP32'nin büyük heap'i sayesinde kısa
   vadede sorun çıkarması olası değil.
+- **Komut ACK/NACK (sema v2, 2026-09-16, HENÜZ UYGULANMADI)**: Flutter
+  tarafı artık operatör komutlarına bir `komut_id` ekliyor ve
+  `aquaguard/zone{N}/komut_durumu` konusundan bir yanıt (ACK/NACK)
+  bekliyor — 30 saniye içinde yanıt gelmezse "zaman aşımı" gösteriyor.
+  Bu firmware HENÜZ bu konuyu yayınlamıyor (bkz. `mqtt_handler.h` dosya
+  başı sema v2 notu) — donanım entegrasyonu sırasında bu eklenene kadar,
+  gerçek MQTT modunda manuel müdahale komutları HER ZAMAN "zaman aşımı"
+  ile sonuçlanacaktır (Python mock yayıncı bunu zaten uyguluyor, gerçek
+  firmware ile karşılaştırmalı test edin).
 
 ## Kaynak / Tek Kaynak Referansları
 

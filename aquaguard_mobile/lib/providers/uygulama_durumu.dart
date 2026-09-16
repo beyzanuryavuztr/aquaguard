@@ -17,11 +17,15 @@
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../config/ayarlar_sabitleri.dart';
 import '../models/aksan_rengi.dart';
 import '../models/aktivite_kaydi.dart';
 import '../models/bakim_gorevi.dart';
+import '../models/bekleyen_komut.dart';
 import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
 import '../models/enerji_durumu.dart';
@@ -69,6 +73,11 @@ class UygulamaDurumu extends ChangeNotifier {
   BildirimTercihleri _bildirimTercihleri = const BildirimTercihleri();
   bool _hazir = false;
 
+  // SEMA v2 (ACK/NACK, bkz. models/bekleyen_komut.dart): komut_id -> henuz
+  // sonuclanmamis komutun Completer'i. _komutGonderVeOnayBekle() ekler,
+  // _komutDurumuGeldiginde() (ACK/NACK geldiginde) veya zaman asimi
+  // Timer'i tamamlar/kaldirir.
+  final Map<String, Completer<KomutSonucu>> _bekleyenKomutlar = {};
   final List<AktiviteKaydi> _bildirimKuyrugu = [];
   final Map<int, DateTime> _tedaviBaslangicZamanlari = {};
   final List<AktiviteKaydi> _aktiviteGecmisi = [];
@@ -406,6 +415,7 @@ class UygulamaDurumu extends ChangeNotifier {
       veriGeldiginde: _veriGeldiginde,
       zonDurumuDegistiginde: _zonDurumuDegistiginde,
       baglantiDurumuDegistiginde: _baglantiDurumuDegistiginde,
+      komutDurumuGeldiginde: _komutDurumuGeldiginde,
     );
     await _mqtt!.baglan(
       host: _mqttHost,
@@ -805,7 +815,7 @@ class UygulamaDurumu extends ChangeNotifier {
   /// sonucunu (sessizce reddedilecegini) beklemek zorunda kalmasin.
   /// Donen `bool`, cagiran arayuze (bkz. widgets/manuel_mudahale_paneli.dart)
   /// reddedilme durumunda bir geri bildirim gosterme firsati verir.
-  Future<bool> manuelTedaviBaslat(int zone, TedaviTuru tedavi) async {
+  Future<KomutSonucu> manuelTedaviBaslat(int zone, TedaviTuru tedavi) async {
     final tur = tedaviyeKarsilikGelenTur(tedavi);
     final guncelOkuma = _sonOkumalar[zone];
     final zatenMesgulMu =
@@ -813,27 +823,69 @@ class UygulamaDurumu extends ChangeNotifier {
         (guncelOkuma.tedaviAktif != TedaviTuru.yok ||
             guncelOkuma.durulamaAktif);
 
-    bool basarili;
+    KomutSonucu sonuc;
     if (_demoModuAktif) {
-      basarili = _simulasyon?.manuelTedaviBaslat(zone, tur) ?? false;
+      final basarili = _simulasyon?.manuelTedaviBaslat(zone, tur) ?? false;
+      sonuc = basarili ? KomutSonucu.uygulandi : KomutSonucu.reddedildi;
     } else if (zatenMesgulMu) {
-      basarili = false;
+      sonuc = KomutSonucu.reddedildi;
     } else {
-      _mqtt?.komutGonder(zone, {
+      sonuc = await _komutGonderVeOnayBekle(zone, {
         'komut': 'tedavi_baslat',
         'tedavi_turu': tedaviKoduGetir(tedavi),
       });
-      basarili = true;
     }
 
-    _manuelMudahaleKaydet(
-      zone,
-      basarili
-          ? 'Zon $zone: Operatör "${tedaviEtiketi(tedavi)}" tedavisini manuel olarak başlattı'
-          : 'Zon $zone: "${tedaviEtiketi(tedavi)}" tedavisi REDDEDİLDİ '
-                '(mutex kilidi — zon zaten bir tedavi/durulama sürdürüyor)',
-    );
-    return basarili;
+    final mesaj = switch (sonuc) {
+      KomutSonucu.uygulandi =>
+        'Zon $zone: Operatör "${tedaviEtiketi(tedavi)}" tedavisini manuel olarak başlattı',
+      KomutSonucu.reddedildi =>
+        'Zon $zone: "${tedaviEtiketi(tedavi)}" tedavisi REDDEDİLDİ '
+            '(mutex kilidi — zon zaten bir tedavi/durulama sürdürüyor)',
+      KomutSonucu.zamanAsimi =>
+        'Zon $zone: "${tedaviEtiketi(tedavi)}" komutu için cihazdan yanıt '
+            'alınamadı (zaman aşımı) — bağlantıyı kontrol edin',
+    };
+    _manuelMudahaleKaydet(zone, mesaj);
+    return sonuc;
+  }
+
+  /// SEMA v2 (ACK/NACK): komutu MqttServisi uzerinden gonderir, cihazdan
+  /// (veya gelistirmede mock yayincidan) `komut_durumu` konusunda bir yanit
+  /// gelene kadar BEKLER. 30 saniye icinde yanit gelmezse `zamanAsimi`
+  /// doner -- baglanti yoksa (bagliMi==false) beklemeden HEMEN zamanAsimi
+  /// doner (bos yere 30 saniye beklemenin anlami yok). GERCEK firmware
+  /// HENUZ bu konuyu yayinlamiyor (bkz. firmware/mqtt_handler.h notu) --
+  /// bu yuzden gercek donanimda bu her zaman zamanAsimi ile sonuclanir,
+  /// entegrasyona kadar.
+  Future<KomutSonucu> _komutGonderVeOnayBekle(
+    int zone,
+    Map<String, dynamic> komut,
+  ) async {
+    final mqtt = _mqtt;
+    if (mqtt == null || !mqtt.bagliMi) return KomutSonucu.zamanAsimi;
+
+    final komutId = mqtt.komutGonder(zone, komut);
+    final tamamlayici = Completer<KomutSonucu>();
+    _bekleyenKomutlar[komutId] = tamamlayici;
+
+    Timer(AyarlarSabitleri.komutZamanAsimi, () {
+      final beklenen = _bekleyenKomutlar.remove(komutId);
+      if (beklenen != null && !beklenen.isCompleted) {
+        beklenen.complete(KomutSonucu.zamanAsimi);
+      }
+    });
+
+    return tamamlayici.future;
+  }
+
+  void _komutDurumuGeldiginde(String komutId, bool basarili) {
+    final tamamlayici = _bekleyenKomutlar.remove(komutId);
+    if (tamamlayici != null && !tamamlayici.isCompleted) {
+      tamamlayici.complete(
+        basarili ? KomutSonucu.uygulandi : KomutSonucu.reddedildi,
+      );
+    }
   }
 
   /// Su an suren bir tedaviyi operatorun ERKEN sonlandirmasini saglar

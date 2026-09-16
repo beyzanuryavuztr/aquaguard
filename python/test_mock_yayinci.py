@@ -252,3 +252,68 @@ class TestMesajOlustur:
         assert mesaj["durulama_aktif"] is False
         assert mesaj["hazne_asit_seviye_yuzde"] == 100.0
         assert mesaj["hazne_klor_seviye_yuzde"] == 100.0
+
+
+class _SahteMqttIstemci:
+    """_komut_isle()'in ACK/NACK yayinini gercek bir brokera baglanmadan
+    dogrulamak icin -- publish() cagrilarini bir listede biriktirir."""
+
+    def __init__(self):
+        self.yayinlar = []
+
+    def publish(self, topic, payload, qos=0):
+        self.yayinlar.append((topic, payload, qos))
+
+
+class TestKomutAck:
+    """SEMA v2: _komut_isle(), komut_id verilmisse islem sonucunu
+    komut_durumu konusuna ACK("tamamlandi")/NACK("reddedildi") olarak
+    yayinlamali -- bkz. models/bekleyen_komut.dart (Dart tarafi bu ACK'i
+    bekler)."""
+
+    def _durum(self, **kwargs):
+        return TestKomutIsle()._durum(**kwargs)
+
+    def test_basarili_komut_tamamlandi_ack_gonderir(self):
+        import json
+
+        istemci = _SahteMqttIstemci()
+        calisma_durumu = self._durum()
+        _komut_isle(
+            {"komut": "normale_dondur", "komut_id": "abc-1"},
+            calisma_durumu, istemci=istemci, komut_durumu_konusu="aquaguard/zone1/komut_durumu",
+        )
+        assert len(istemci.yayinlar) == 1
+        topic, payload, qos = istemci.yayinlar[0]
+        assert topic == "aquaguard/zone1/komut_durumu"
+        gövde = json.loads(payload)
+        assert gövde == {"komut_id": "abc-1", "durum": "tamamlandi"}
+
+    def test_reddedilen_komut_reddedildi_ack_gonderir(self):
+        import json
+
+        istemci = _SahteMqttIstemci()
+        calisma_durumu = self._durum()
+        calisma_durumu["tedavi_aktif"] = "asit_dozlama"  # mutex mesgul
+        _komut_isle(
+            {"komut": "tedavi_baslat", "tedavi_turu": "klor_enjeksiyon", "komut_id": "abc-2"},
+            calisma_durumu, istemci=istemci, komut_durumu_konusu="aquaguard/zone1/komut_durumu",
+        )
+        assert len(istemci.yayinlar) == 1
+        gövde = json.loads(istemci.yayinlar[0][1])
+        assert gövde == {"komut_id": "abc-2", "durum": "reddedildi"}
+
+    def test_komut_id_yoksa_ack_gonderilmez(self):
+        istemci = _SahteMqttIstemci()
+        calisma_durumu = self._durum()
+        _komut_isle(
+            {"komut": "normale_dondur"},  # komut_id YOK
+            calisma_durumu, istemci=istemci, komut_durumu_konusu="aquaguard/zone1/komut_durumu",
+        )
+        assert istemci.yayinlar == []
+
+    def test_istemci_verilmezse_ack_gonderilmez_hata_olusmaz(self):
+        calisma_durumu = self._durum()
+        # istemci/komut_durumu_konusu verilmedi -- mevcut TestKomutIsle
+        # testlerinin kullandigi eski cagri sekli, hala hatasiz calismali.
+        _komut_isle({"komut": "normale_dondur", "komut_id": "abc-3"}, calisma_durumu)

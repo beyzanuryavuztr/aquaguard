@@ -183,14 +183,33 @@ def senaryo_adimlarini_uret(rng: np.random.Generator):
         yield from tedavi_ve_iyilesme_adimlarini_uret(hedef_tur, rng)
 
 
-def _komut_isle(mesaj_json: dict, calisma_durumu: dict) -> None:
+def _komut_isle(mesaj_json: dict, calisma_durumu: dict, istemci=None,
+                 komut_durumu_konusu: str | None = None) -> None:
     """
     Operatorden gelen bir MQTT komutunu isler, calisma_durumu["uretec"]'i
     (o an aktif olan senaryo ureteci) gerekirse DEGISTIRIR. bkz. dosya basi
     aciklamasi ve Flutter tarafinda providers/uygulama_durumu.dart.
+
+    SEMA v2 (ACK/NACK): mesaj_json["komut_id"] verilmisse (Dart tarafi her
+    komuta bir tane ekler -- bkz. MqttServisi.komutGonder), islem sonucunu
+    `komut_durumu_konusu`'na yayinlar. `istemci`/`komut_durumu_konusu`
+    verilmezse (ornegin dogrudan birim testlerinde) ACK gonderimi sessizce
+    atlanir -- gercek firmware BU DAVRANISI HENUZ UYGULAMIYOR (bkz.
+    firmware/mqtt_handler.h sema v2 notu), sadece bu mock/gelistirme
+    yayincisi uygular.
     """
     komut = mesaj_json.get("komut")
+    komut_id = mesaj_json.get("komut_id")
     rng = calisma_durumu["rng"]
+
+    def _ack_gonder(basarili: bool) -> None:
+        if istemci is None or komut_durumu_konusu is None or komut_id is None:
+            return
+        govde = json.dumps(
+            {"komut_id": komut_id, "durum": "tamamlandi" if basarili else "reddedildi"},
+            ensure_ascii=False,
+        )
+        istemci.publish(komut_durumu_konusu, govde, qos=1)
 
     if komut == "tedavi_baslat":
         # ACIMASIZ DENETIM DUZELTMESI (2026-09-14): bu isleyici daha once
@@ -202,20 +221,24 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict) -> None:
         # bir komutu burada "basarili" gibi isleyip yanlis guven verirdi.
         if not calisma_durumu["sulama_acik"]:
             print("[Komut] Operatör: manuel tedavi REDDEDİLDİ (ana vana kapalı, akış yok).")
+            _ack_gonder(False)
             return
         if calisma_durumu["tedavi_aktif"] != "yok" or calisma_durumu["durulama_aktif"]:
             print("[Komut] Operatör: manuel tedavi REDDEDİLDİ (mutex meşgul -- başka bir tedavi/durulama sürüyor).")
+            _ack_gonder(False)
             return
         tedavi_turu = mesaj_json.get("tedavi_turu")
         hedef_tur = TUR_ESLEME_TERS.get(tedavi_turu)
         if hedef_tur is None:
             print(f"[Komut] Gecersiz/eksik tedavi_turu: {tedavi_turu!r}, yoksayildi.")
+            _ack_gonder(False)
             return
         print(f"[Komut] Operatör: '{tedavi_turu}' tedavisi manuel başlatılıyor.")
         calisma_durumu["uretec"] = itertools.chain(
             tedavi_ve_iyilesme_adimlarini_uret(hedef_tur, rng),
             senaryo_adimlarini_uret(rng),
         )
+        _ack_gonder(True)
     elif komut == "tedavi_durdur":
         guncel_tur = calisma_durumu.get("guncel_tur") or "fiziksel"
         print(f"[Komut] Operatör: aktif tedavi erken durduruluyor (tür={guncel_tur}).")
@@ -223,17 +246,22 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict) -> None:
             durulama_ve_iyilesme_adimlarini_uret(guncel_tur, rng),
             senaryo_adimlarini_uret(rng),
         )
+        _ack_gonder(True)
     elif komut == "normale_dondur":
         print("[Komut] Operatör: durum yanlış alarm olarak işaretlendi, normale dönülüyor.")
         calisma_durumu["uretec"] = senaryo_adimlarini_uret(rng)
+        _ack_gonder(True)
     elif komut == "sulama_durdur":
         print("[Komut] Operatör: ana vana MANUEL kapatıldı, sulama durdu.")
         calisma_durumu["sulama_acik"] = False
+        _ack_gonder(True)
     elif komut == "sulama_baslat":
         print("[Komut] Operatör: ana vana yeniden açıldı, sulama başladı.")
         calisma_durumu["sulama_acik"] = True
+        _ack_gonder(True)
     else:
         print(f"[Komut] Bilinmeyen komut: {komut!r}")
+        _ack_gonder(False)
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +314,7 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
     veri_konusu = f"aquaguard/zone{zone}/veri"
     durum_konusu = f"aquaguard/zone{zone}/durum"
     komut_konusu = f"aquaguard/zone{zone}/komut"
+    komut_durumu_konusu = f"aquaguard/zone{zone}/komut_durumu"
 
     istemci = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"aquaguard-mock-zone{zone}")
     istemci.will_set(durum_konusu, payload="offline", qos=1, retain=True)
@@ -332,7 +361,10 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
         if not isinstance(mesaj_json, dict):
             print(f"[Komut] Beklenmeyen komut govdesi (sozluk degil): {mesaj_json!r}, yoksayildi.")
             return
-        _komut_isle(mesaj_json, calisma_durumu)
+        _komut_isle(
+            mesaj_json, calisma_durumu,
+            istemci=client, komut_durumu_konusu=komut_durumu_konusu,
+        )
 
     istemci.on_connect = _baglaninca
     istemci.on_message = _mesaj_geldiginde

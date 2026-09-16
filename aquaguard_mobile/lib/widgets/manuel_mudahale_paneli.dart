@@ -20,6 +20,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/bekleyen_komut.dart';
 import '../models/sensor_okuma.dart';
 import '../providers/uygulama_durumu.dart';
 
@@ -114,7 +115,7 @@ class _DurdurKarti extends StatelessWidget {
                   await context.read<UygulamaDurumu>().manuelTedaviDurdur(
                     zonNumarasi,
                   );
-                  return true;
+                  return KomutSonucu.uygulandi;
                 },
               ),
             ),
@@ -193,7 +194,7 @@ class _SecimKarti extends StatelessWidget {
                   await context.read<UygulamaDurumu>().manuelNormaleDondur(
                     zonNumarasi,
                   );
-                  return true;
+                  return KomutSonucu.uygulandi;
                 },
               ),
             ),
@@ -204,17 +205,19 @@ class _SecimKarti extends StatelessWidget {
   }
 }
 
-/// [onOnay] artik bir `Future<bool>` doner -- ACIMASIZ DENETIM (2026-09-06):
+/// [onOnay] bir `Future<KomutSonucu>` doner -- ACIMASIZ DENETIM (2026-09-06):
 /// onceden `VoidCallback` idi ve SONUCU HIC beklemeden/kontrol etmeden HER
-/// ZAMAN "$baslik uygulandı" gosteriyordu. Bu, manuelTedaviBaslat() mutex
-/// kilidi nedeniyle reddedebildigi icin YANLIŞ bir "basarili" mesaji
-/// gosterebilirdi (operator, tedavinin aslinda BASLAMADIGINI bilmezdi).
+/// ZAMAN "$baslik uygulandı" gosteriyordu. SEMA v2 GENISLEMESI (2026-09-16):
+/// eskiden `Future<bool>` idi (basarili/basarisiz), simdi cihazdan ACK/NACK
+/// gelene kadar BEKLEYEN gercek MQTT modunda 3. bir durumu (zamanAsimi)
+/// da ayirt edebiliyor -- bir "REDDEDİLDİ" mesaji artik SADECE mutex
+/// kilidi anlamina gelir, "cihazla iletisim sorunlu" ile KARISTIRILMAZ.
 void _onayDiyaloguGoster(
   BuildContext context, {
   required String baslik,
   required String icerik,
   required String onayEtiketi,
-  required Future<bool> Function() onOnay,
+  required Future<KomutSonucu> Function() onOnay,
 }) {
   showDialog<void>(
     context: context,
@@ -228,19 +231,21 @@ void _onayDiyaloguGoster(
         ),
         FilledButton(
           onPressed: () async {
-            final basarili = await onOnay();
+            final sonuc = await onOnay();
             if (dialogContext.mounted) Navigator.of(dialogContext).pop();
             if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  basarili
-                      ? '$baslik uygulandı'
-                      : '$baslik REDDEDİLDİ (mutex kilidi — zon zaten '
-                            'bir tedavi/durulama sürdürüyor)',
-                ),
-              ),
-            );
+            final mesaj = switch (sonuc) {
+              KomutSonucu.uygulandi => '$baslik uygulandı',
+              KomutSonucu.reddedildi =>
+                '$baslik REDDEDİLDİ (mutex kilidi — zon zaten '
+                    'bir tedavi/durulama sürdürüyor)',
+              KomutSonucu.zamanAsimi =>
+                '$baslik için cihazdan yanıt alınamadı (zaman aşımı) — '
+                    'bağlantıyı kontrol edin',
+            };
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(mesaj)));
           },
           child: Text(onayEtiketi),
         ),

@@ -65,6 +65,18 @@ class AyarlarSabitleri {
   //     firmware/mqtt_handler.h buna abone olup treatment.h'ye iletir. ---
   static String komutKonusu(int zone) => 'aquaguard/zone$zone/komut';
 
+  // --- Komut durumu (ACK/NACK) konusu -- cihazdan uygulamaya, "komut_id"si
+  //     verilen bir komutun islendigini bildirir (bkz. models/bekleyen_komut.dart,
+  //     services/mqtt_servisi.dart). Gercek firmware HENUZ bunu yayinlamiyor
+  //     (bkz. firmware/mqtt_handler.h sema v2 notu) -- altyapi hazir, donanim
+  //     entegrasyonu bekleniyor. ---
+  static String komutDurumuKonusu(int zone) => 'aquaguard/zone$zone/komut_durumu';
+
+  // --- Komut ACK/NACK zaman asimi -- bu sureden uzun yanit gelmezse
+  //     operatore "zaman asimi" gosterilir (bkz. providers/uygulama_durumu.dart
+  //     _komutGonderVeOnayBekle). ---
+  static const Duration komutZamanAsimi = Duration(seconds: 30);
+
   // --- Tedavi sureleri (firmware/config.h TEDAVI_*_SURESI_MS ile ayni, saniye) ---
   static const Map<TedaviTuru, int> tedaviSuresiSaniye = {
     TedaviTuru.asitDozlama: 30,

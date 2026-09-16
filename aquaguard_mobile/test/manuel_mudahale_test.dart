@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:aquaguard_mobile/models/aktivite_kaydi.dart';
+import 'package:aquaguard_mobile/models/bekleyen_komut.dart';
 import 'package:aquaguard_mobile/models/sensor_okuma.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/services/simulasyon_servisi.dart';
@@ -199,8 +200,8 @@ void main() {
           TedaviTuru.asitDozlama,
         );
 
-        expect(ilkBasarili, isTrue);
-        expect(ikinciBasarili, isFalse);
+        expect(ilkBasarili, KomutSonucu.uygulandi);
+        expect(ikinciBasarili, KomutSonucu.reddedildi);
         expect(durum.aktiviteGecmisi.first.mesaj, contains('REDDEDİLDİ'));
         expect(durum.aktiviteGecmisi.first.mesaj, contains('mutex'));
 
