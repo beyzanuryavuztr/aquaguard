@@ -24,6 +24,14 @@ class Tarla {
   final String? konum;
   final String? aciklama;
   final String? fotografBase64;
+  // GPS KONUMU (opsiyonel, sema v2): serbest metin `konum` alanindan
+  // BAGIMSIZ, ikisi BIRLIKTE var olabilir (ornegin "Şanlıurfa, Harran
+  // Ovası" + gercek koordinatlar). Ayri tutulmasinin nedeni: konum metni
+  // HER ZAMAN operator tarafindan girilir, enlem/boylam ise GPS'ten
+  // OKUNUR -- ikisini tek bir alanda birlestirmek, birini degistirirken
+  // digerinin YANLISLIKLA silinmesi riskini tasirdi.
+  final double? enlem;
+  final double? boylam;
 
   const Tarla({
     required this.id,
@@ -32,7 +40,11 @@ class Tarla {
     this.konum,
     this.aciklama,
     this.fotografBase64,
+    this.enlem,
+    this.boylam,
   });
+
+  bool get gpsKonumuVarMi => enlem != null && boylam != null;
 
   Tarla kopyalaVeGuncelle({
     String? ad,
@@ -41,6 +53,8 @@ class Tarla {
     String? aciklama,
     String? fotografBase64,
     bool fotografiKaldir = false,
+    double? enlem,
+    double? boylam,
   }) {
     return Tarla(
       id: id,
@@ -51,6 +65,8 @@ class Tarla {
       fotografBase64: fotografiKaldir
           ? null
           : (fotografBase64 ?? this.fotografBase64),
+      enlem: enlem ?? this.enlem,
+      boylam: boylam ?? this.boylam,
     );
   }
 
@@ -61,6 +77,8 @@ class Tarla {
     'konum': konum,
     'aciklama': aciklama,
     'fotografBase64': fotografBase64,
+    'enlem': enlem,
+    'boylam': boylam,
   };
 
   factory Tarla.fromJson(Map<String, dynamic> json) => Tarla(
@@ -72,6 +90,8 @@ class Tarla {
     konum: json['konum'] as String?,
     aciklama: json['aciklama'] as String?,
     fotografBase64: json['fotografBase64'] as String?,
+    enlem: (json['enlem'] as num?)?.toDouble(),
+    boylam: (json['boylam'] as num?)?.toDouble(),
   );
 
   /// Uygulama ilk acildiginda (kayitli tarla yokken) gosterilecek varsayilan

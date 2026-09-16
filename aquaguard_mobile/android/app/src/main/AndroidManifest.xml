@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- geolocator (Faz 8, tarla GPS konumu): saha koordinatini kaydetmek
+         icin sadece ON PLANDA, TEK SEFERLIK bir konum okumasi -- surekli
+         arka plan takibi YOK, bu yuzden ACCESS_BACKGROUND_LOCATION
+         istenmiyor. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:label="aquaguard_mobile"
         android:name="${applicationName}"

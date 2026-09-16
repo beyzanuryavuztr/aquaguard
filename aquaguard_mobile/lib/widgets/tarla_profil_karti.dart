@@ -23,11 +23,13 @@ library;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
+import 'tarla_gps_haritasi.dart';
 
 class TarlaProfilKarti extends StatelessWidget {
   final Tarla tarla;
@@ -62,6 +64,43 @@ class TarlaProfilKarti extends StatelessWidget {
     await context.read<UygulamaDurumu>().tarlaGuncelle(
       tarla.kopyalaVeGuncelle(fotografiKaldir: true),
     );
+  }
+
+  /// Cihazin GPS'inden GUNCEL konumu okuyup tarlaya kaydeder. Izin/servis
+  /// reddi try/catch DISINDA da ayrica kontrol edilir -- Geolocator bu
+  /// durumlarda istisna FIRLATMAK yerine ozel donus degerleri kullanir,
+  /// bu yuzden operatore ANLAMLI bir mesaj gosterebilmek icin ayri ayri
+  /// ele alinir.
+  Future<void> _konumuKaydet(BuildContext context) async {
+    String? hataMesaji;
+    try {
+      var izin = await Geolocator.checkPermission();
+      if (izin == LocationPermission.denied) {
+        izin = await Geolocator.requestPermission();
+      }
+      if (izin == LocationPermission.denied ||
+          izin == LocationPermission.deniedForever) {
+        hataMesaji = 'Konum izni verilmedi.';
+      } else if (!await Geolocator.isLocationServiceEnabled()) {
+        hataMesaji = 'Cihazda konum servisi kapalı.';
+      } else {
+        final konum = await Geolocator.getCurrentPosition();
+        if (!context.mounted) return;
+        await context.read<UygulamaDurumu>().tarlaGuncelle(
+          tarla.kopyalaVeGuncelle(
+            enlem: konum.latitude,
+            boylam: konum.longitude,
+          ),
+        );
+      }
+    } catch (hata) {
+      hataMesaji = 'Konum alınamadı: $hata';
+    }
+    if (hataMesaji != null && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(hataMesaji)));
+    }
   }
 
   @override
@@ -166,6 +205,29 @@ class TarlaProfilKarti extends StatelessWidget {
                 ],
               ),
             ),
+          if (tarla.gpsKonumuVarMi)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: TarlaGpsHaritasi(
+                enlem: tarla.enlem!,
+                boylam: tarla.boylam!,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.my_location, size: 16),
+                label: Text(
+                  tarla.gpsKonumuVarMi
+                      ? 'GPS Konumunu Güncelle'
+                      : 'GPS Konumunu Kaydet',
+                ),
+                onPressed: () => _konumuKaydet(context),
+              ),
+            ),
+          ),
         ],
       ),
     );
