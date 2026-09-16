@@ -16,6 +16,9 @@
 /// Tarih:  2026-09-05
 library;
 
+import 'sensor_okuma.dart';
+import 'trend_tahmini.dart';
+
 enum BakimDurumu { normal, yaklasiyor, gecikti }
 
 class BakimGorevi {
@@ -123,4 +126,40 @@ List<BakimGorevi> varsayilanBakimGorevleri([DateTime? simdi]) {
       sonYapilmaTarihi: baslangic,
     ),
   ];
+}
+
+/// AKILLI ONERI (sema v2, kisitli kapsam -- bkz. proje hafizasi): sabit
+/// takvimi (periyotGun) DEGISTIRMEZ, SADECE turbidite gecmisinde ANLAMLI
+/// bir artis egilimi varsa "filtre temizligi" gorevinin ERKENDEN
+/// yapilmasini ONERIR -- karar HER ZAMAN operatorde kalir. Ayri bir
+/// depolanan alan DEGIL, HER cagrida gecmisten YENIDEN hesaplanir (bu
+/// projenin genel "hesapla, saklama" ilkesiyle tutarli -- bkz.
+/// BakimGorevi.durumu(), TedaviBasariAnalizi ile ayni desen).
+///
+/// [turbiditeGecmisleriKronolojik]: izlenen HER zonun turbidite gecmisi,
+/// ESKIDEN YENIYE sirali (birden fazla zon varsa EN KOTU/en hizli artan
+/// egilim kullanilir -- en erken uyari sinyali).
+DateTime? filtreTemizligiOnerilenTarih({
+  required List<List<SensorOkuma>> turbiditeGecmisleriKronolojik,
+  required BakimGorevi gorev,
+  DateTime? simdi,
+}) {
+  final su = simdi ?? DateTime.now();
+  double? enKotuHaftalikArtis;
+
+  for (final gecmis in turbiditeGecmisleriKronolojik) {
+    final tahmin = trendHesapla(gecmis, (o) => o.turbidite);
+    if (tahmin == null || tahmin.egim <= 0) continue;
+    final haftalikArtis = tahmin.egim * 7;
+    if (enKotuHaftalikArtis == null || haftalikArtis > enKotuHaftalikArtis) {
+      enKotuHaftalikArtis = haftalikArtis;
+    }
+  }
+
+  // Esik: haftada en az 2 NTU'luk artis -- olcum gurultusunden ayirt
+  // edilebilecek, anlamli bir kademeli kirlenme egilimi.
+  if (enKotuHaftalikArtis == null || enKotuHaftalikArtis < 2.0) return null;
+
+  final onerilen = gorev.sonrakiTarih.subtract(const Duration(days: 7));
+  return onerilen.isBefore(su) ? su : onerilen;
 }

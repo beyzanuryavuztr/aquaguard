@@ -24,6 +24,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../models/sensor_okuma.dart';
+import '../models/trend_tahmini.dart';
 
 enum TrendDonemi { saat24, gun7, gun30 }
 
@@ -103,6 +104,7 @@ class _SensorTrendGrafigiState extends State<SensorTrendGrafigi> {
         .reversed
         .toList();
     final degerler = kronolojik.map(widget.secici).toList();
+    final tahmin = trendHesapla(kronolojik, widget.secici);
 
     return Card(
       child: Padding(
@@ -148,6 +150,10 @@ class _SensorTrendGrafigiState extends State<SensorTrendGrafigi> {
                     )
                   : _grafik(degerler),
             ),
+            if (tahmin != null) ...[
+              const SizedBox(height: 10),
+              _TrendOzetSatiri(tahmin: tahmin, birim: widget.birim),
+            ],
           ],
         ),
       ),
@@ -227,6 +233,58 @@ class _SensorTrendGrafigiState extends State<SensorTrendGrafigi> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Grafigin ALTINDA, cizgiye MUDAHALE etmeden (bkz. dosya basi notu --
+/// gercek bir "tahmin cizgisi" fl_chart'in index-tabanli x-eksenini
+/// gercek zaman damgalarina genisletmeyi gerektirirdi, bu risk/fayda
+/// oraninda DUSUK oncelikli bulundu) kisa bir metin ozeti gosterir.
+/// "İstatistiksel eğilim (tahmin değildir)" ibaresi BILEREK, RF karar
+/// katmaninin durustluk cercevesiyle (bkz. _KararKatmaniEtiketi) AYNI
+/// tonda -- yapay zeka/ML cagrisimi yapan bir dil KULLANILMAZ.
+class _TrendOzetSatiri extends StatelessWidget {
+  final TrendTahmini tahmin;
+  final String birim;
+
+  const _TrendOzetSatiri({required this.tahmin, required this.birim});
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    final gunlukEgim = tahmin.egim;
+    final IconData ikon;
+    final String yon;
+    if (gunlukEgim.abs() < 0.001) {
+      ikon = Icons.trending_flat;
+      yon = 'sabit seyrediyor';
+    } else if (gunlukEgim > 0) {
+      ikon = Icons.trending_up;
+      yon = 'artış eğiliminde';
+    } else {
+      ikon = Icons.trending_down;
+      yon = 'azalış eğiliminde';
+    }
+    final birimGosterim = birim.isNotEmpty ? ' $birim' : '';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(ikon, size: 14, color: onSurfaceVariant),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'İstatistiksel eğilim (tahmin değildir): $yon '
+            '(günde ~${gunlukEgim.abs().toStringAsFixed(2)}$birimGosterim)',
+            style: TextStyle(
+              fontSize: 11,
+              color: onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

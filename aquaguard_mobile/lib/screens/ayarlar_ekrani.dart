@@ -628,7 +628,20 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                 children: [
                   for (var i = 0; i < durum.bakimGorevleri.length; i++) ...[
                     if (i > 0) const Divider(height: 1),
-                    _BakimGoreviSatiri(gorev: durum.bakimGorevleri[i]),
+                    _BakimGoreviSatiri(
+                      gorev: durum.bakimGorevleri[i],
+                      onerilenTarih: durum.bakimGorevleri[i].id != 'filtre_temizligi'
+                          ? null
+                          : filtreTemizligiOnerilenTarih(
+                              turbiditeGecmisleriKronolojik: durum
+                                  .tumZonNumaralari
+                                  .map(
+                                    (z) => durum.gecmis(z).reversed.toList(),
+                                  )
+                                  .toList(),
+                              gorev: durum.bakimGorevleri[i],
+                            ),
+                    ),
                   ],
                 ],
               ),
@@ -1001,7 +1014,8 @@ Future<void> _pinBelirleDialoguGoster(BuildContext context) async {
 
 class _BakimGoreviSatiri extends StatelessWidget {
   final BakimGorevi gorev;
-  const _BakimGoreviSatiri({required this.gorev});
+  final DateTime? onerilenTarih;
+  const _BakimGoreviSatiri({required this.gorev, this.onerilenTarih});
 
   @override
   Widget build(BuildContext context) {
@@ -1018,6 +1032,10 @@ class _BakimGoreviSatiri extends StatelessWidget {
       BakimDurumu.normal =>
         'Sıradaki: ${TarihBicimleri.sadeceTarih.format(gorev.sonrakiTarih)}',
     };
+    final oneriMetni = onerilenTarih == null
+        ? ''
+        : '\n📈 Türbidite artış eğiliminde — önerilen erken tarih: '
+              '${TarihBicimleri.sadeceTarih.format(onerilenTarih!)}';
 
     return ListTile(
       leading: Icon(
@@ -1028,7 +1046,7 @@ class _BakimGoreviSatiri extends StatelessWidget {
       ),
       title: Text(gorev.baslik),
       subtitle: Text(
-        '${gorev.aciklama}\n$durumMetni',
+        '${gorev.aciklama}\n$durumMetni$oneriMetni',
         style: TextStyle(color: renk),
       ),
       isThreeLine: true,

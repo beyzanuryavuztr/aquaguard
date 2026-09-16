@@ -4,6 +4,7 @@
 // tamamlandiOlarakIsaretle'nin sonraki tarihi doğru ileri attigini dogrular.
 
 import 'package:aquaguard_mobile/models/bakim_gorevi.dart';
+import 'package:aquaguard_mobile/models/sensor_okuma.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -140,4 +141,135 @@ void main() {
       expect(gorevler.map((g) => g.id).toSet().length, 4);
     });
   });
+
+  group('filtreTemizligiOnerilenTarih (sema v2, akilli oneri)', () {
+    final gorev = BakimGorevi(
+      id: 'filtre_temizligi',
+      baslik: 'Filtre Temizliği',
+      aciklama: '',
+      periyotGun: 30,
+      sonYapilmaTarihi: DateTime(2026, 1, 1), // sonrakiTarih: 31 Ocak
+    );
+
+    test('bos gecmis listesinde null doner (yetersiz veri)', () {
+      final sonuc = filtreTemizligiOnerilenTarih(
+        turbiditeGecmisleriKronolojik: const [],
+        gorev: gorev,
+        simdi: DateTime(2026, 1, 10),
+      );
+      expect(sonuc, isNull);
+    });
+
+    test('turbidite SABIT/azalan iken null doner (oneri gerekmiyor)', () {
+      final baslangic = DateTime(2026, 1, 1);
+      final sabitGecmis = List.generate(
+        5,
+        (i) => _okuma(zaman: baslangic.add(Duration(days: i)), turbidite: 5.0),
+      );
+      final sonuc = filtreTemizligiOnerilenTarih(
+        turbiditeGecmisleriKronolojik: [sabitGecmis],
+        gorev: gorev,
+        simdi: DateTime(2026, 1, 10),
+      );
+      expect(sonuc, isNull);
+    });
+
+    test('haftada 2 NTU\'nun ALTINDA hafif bir artis oneri TETIKLEMEZ', () {
+      final baslangic = DateTime(2026, 1, 1);
+      // gunde 0.1 NTU artis = haftada 0.7 NTU -- esigin (2.0) altinda.
+      final hafifArtan = List.generate(
+        7,
+        (i) => _okuma(
+          zaman: baslangic.add(Duration(days: i)),
+          turbidite: 5.0 + 0.1 * i,
+        ),
+      );
+      final sonuc = filtreTemizligiOnerilenTarih(
+        turbiditeGecmisleriKronolojik: [hafifArtan],
+        gorev: gorev,
+        simdi: DateTime(2026, 1, 10),
+      );
+      expect(sonuc, isNull);
+    });
+
+    test('haftada 2 NTU\'nun UZERINDE belirgin artis erken tarih onerir', () {
+      final baslangic = DateTime(2026, 1, 1);
+      // gunde 1.0 NTU artis = haftada 7 NTU -- esigin cok uzerinde.
+      final hizliArtan = List.generate(
+        7,
+        (i) => _okuma(
+          zaman: baslangic.add(Duration(days: i)),
+          turbidite: 5.0 + 1.0 * i,
+        ),
+      );
+      final simdi = DateTime(2026, 1, 10);
+      final sonuc = filtreTemizligiOnerilenTarih(
+        turbiditeGecmisleriKronolojik: [hizliArtan],
+        gorev: gorev,
+        simdi: simdi,
+      );
+
+      expect(sonuc, isNotNull);
+      // sonrakiTarih (31 Ocak) - 7 gun = 24 Ocak, simdi'den (10 Ocak) SONRA.
+      expect(sonuc, DateTime(2026, 1, 24));
+    });
+
+    test('onerilen tarih GECMISTE kalirsa "simdi" donulur (gecmis bir tarih ONERILMEZ)', () {
+      final baslangic = DateTime(2026, 1, 1);
+      final hizliArtan = List.generate(
+        7,
+        (i) => _okuma(
+          zaman: baslangic.add(Duration(days: i)),
+          turbidite: 5.0 + 1.0 * i,
+        ),
+      );
+      // simdi, onerilen tarihten (24 Ocak) SONRASI -- 28 Ocak.
+      final simdi = DateTime(2026, 1, 28);
+      final sonuc = filtreTemizligiOnerilenTarih(
+        turbiditeGecmisleriKronolojik: [hizliArtan],
+        gorev: gorev,
+        simdi: simdi,
+      );
+      expect(sonuc, simdi);
+    });
+
+    test('birden fazla zon varsa EN KOTU (en hizli artan) egilim kullanilir', () {
+      final baslangic = DateTime(2026, 1, 1);
+      final sabitZon = List.generate(
+        7,
+        (i) => _okuma(zaman: baslangic.add(Duration(days: i)), turbidite: 5.0),
+      );
+      final hizliArtanZon = List.generate(
+        7,
+        (i) => _okuma(
+          zaman: baslangic.add(Duration(days: i)),
+          turbidite: 5.0 + 1.0 * i,
+        ),
+      );
+      final sonuc = filtreTemizligiOnerilenTarih(
+        turbiditeGecmisleriKronolojik: [sabitZon, hizliArtanZon],
+        gorev: gorev,
+        simdi: DateTime(2026, 1, 10),
+      );
+      expect(sonuc, isNotNull);
+    });
+  });
+}
+
+SensorOkuma _okuma({required DateTime zaman, required double turbidite}) {
+  return SensorOkuma(
+    zaman: zaman,
+    zone: 1,
+    ph: 7,
+    ec: 1.2,
+    orp: 300,
+    turbidite: turbidite,
+    debi: 4.0,
+    deltaBasinc: 0.1,
+    durum: TeshisDurumu.normal,
+    tikanmaTuru: TikanmaTuru.yok,
+    guven: 0,
+    tedaviAktif: TedaviTuru.yok,
+    durulamaAktif: false,
+  );
 }
