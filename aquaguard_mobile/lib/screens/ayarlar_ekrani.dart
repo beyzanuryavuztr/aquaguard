@@ -24,7 +24,6 @@ import '../models/kullanici_profili.dart';
 import '../models/tema_modu.dart';
 import '../models/uygulama_dili.dart';
 import '../providers/uygulama_durumu.dart';
-import '../services/mqtt_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/yardim_butonu.dart';
 import 'hakkinda_ekrani.dart';

@@ -31,6 +31,7 @@ import 'package:provider/provider.dart';
 
 import '../models/aktivite_kaydi.dart';
 import '../models/bildirim_onceligi.dart';
+import '../providers/depolama_unawaited.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/bildirim_servisi.dart';
 import '../widgets/duyarli_icerik.dart';

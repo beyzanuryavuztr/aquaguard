@@ -14,7 +14,6 @@ import 'package:provider/provider.dart';
 
 import '../models/tarla.dart';
 import '../providers/uygulama_durumu.dart';
-import '../services/mqtt_servisi.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';

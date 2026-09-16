@@ -1,1337 +1,264 @@
-/// AquaGuard - Uygulama Durumu (Ana Provider)
-/// ==============================================
+/// AquaGuard - Uygulama Durumu (GECICI FACADE, Mimari Bolunme Faz 12)
+/// ======================================================================
 ///
 /// Amac:
-///   Uygulamanin TUM canli durumunu tek bir yerde tutar: tarlalar, her
-///   zonun son okumasi, baglanti durumu, gecmis kayitlar. MQTT servisinden
-///   gelen olaylari dinler, yerel depolamaya (cevrimdisi mod icin) yazar
-///   ve UI'nin dinleyecegi tek "gercek kaynak" (single source of truth)
-///   olarak calisir.
+///   Bu sinif ARTIK gercek durumu TUTMUYOR -- eskiden 1300+ satirlik bir
+///   "God Object" olan bu provider, 6 kucuk/odakli provider'a bolundu
+///   (bkz. ayarlar_provider.dart, tarla_provider.dart, guvenlik_provider.dart,
+///   bakim_provider.dart, aktivite_bildirim_provider.dart,
+///   cihaz_iletisim_provider.dart -- her birinin dosya basi notu KENDI
+///   sorumluluk alanini ve boluunme gerekcesini aciklar).
 ///
-///   Neden Provider/ChangeNotifier: Bu proje icin en basit, en yaygin
-///   ogretilen state management yontemi budur -- her ekran, sadece
-///   ihtiyaci olan veriye `context.watch<UygulamaDurumu>()` ile abone
-///   olur, veri degisince otomatik yeniden cizilir (rebuild).
+///   Bu facade GECICIDIR: 76 dosya (42 lib + 34 test) hala
+///   `context.watch<UygulamaDurumu>()` / `Provider.of<UygulamaDurumu>()`
+///   uzerinden calisiyor -- hepsini TEK seferde 6 yeni provider'a tasimak
+///   riskli bir "big bang" degisiklik olurdu. Bunun yerine: TUM eski genel
+///   API (getter/metod imzalari) BIREBIR korunur, her cagri ilgili yeni
+///   provider'a DELEGE edilir. Ekranlar zamanla (en yuksek trafikliden
+///   baslanarak) dogrudan ilgili yeni provider'a tasindikca, bu facade'a
+///   olan bagimlilik azalir; TUM ekranlar tasindiginda bu dosya kaldirilir.
 ///
-/// Tarih:  2026-09-01
-/// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
+///   ChangeNotifier OLARAK KALIR (Provider'in bekledigi tip), ama kendi
+///   durumunu TUTMAZ -- 6 alt provider'dan herhangi biri degisince
+///   (`addListener` ile dinlenir) kendi `notifyListeners()`'ini tetikler,
+///   boylece hala bu facade'i dinleyen (henuz tasinmamis) ekranlar da
+///   dogru zamanda yeniden cizilir.
+///
+/// Tarih:  2026-09-01 (ilk yazim) / 2026-09-17 (facade'a donusturuldu)
 library;
 
-import 'dart:async';
-
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 
-import '../config/ayarlar_sabitleri.dart';
 import '../models/aksan_rengi.dart';
 import '../models/aktivite_kaydi.dart';
 import '../models/bakim_gorevi.dart';
 import '../models/bekleyen_komut.dart';
 import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
-import '../models/enerji_durumu.dart';
 import '../models/kullanici_profili.dart';
-import '../models/kuyruklanmis_komut.dart';
 import '../models/maliyet_parametreleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
 import '../models/tema_modu.dart';
 import '../models/uygulama_dili.dart';
-import '../services/bildirim_servisi.dart';
-import '../services/depolama_servisi.dart';
-import '../services/gecmis_veri_uretici.dart';
 import '../services/mqtt_servisi.dart';
-import '../services/pin_servisi.dart';
-import '../services/simulasyon_servisi.dart';
-import '../widgets/durum_renkleri.dart';
+import 'aktivite_bildirim_provider.dart';
+import 'ayarlar_provider.dart';
+import 'bakim_provider.dart';
+import 'cihaz_iletisim_provider.dart';
+import 'guvenlik_provider.dart';
+import 'tarla_provider.dart';
+
+export '../services/mqtt_servisi.dart' show MqttBaglantiDurumu;
+export 'cihaz_iletisim_provider.dart' show DemoSenaryosu, ZonDurumOzeti;
 
 class UygulamaDurumu extends ChangeNotifier {
-  final DepolamaServisi _depolama = DepolamaServisi();
-  MqttServisi? _mqtt;
-  SimulasyonServisi? _simulasyon;
-  bool _demoModuAktif = true;
-  DemoHizi _demoHizi = DemoHizi.normal;
-  bool _onboardingGoruldu = false;
-  bool _pinKorumasiAktif = false;
-  // Bu oturumda PIN kilidi henuz acilmadi mi? -- SADECE bellekte (kalici
-  // DEGIL): her SOGUK acilista yeniden kilitlenmesi ISTENEN davranis.
-  bool _pinKilitliSuAn = false;
-  int _basarisizPinDenemesi = 0;
-  DateTime? _pinKilitBitisZamani;
-  List<BakimGorevi> _bakimGorevleri = [];
-  TemaModu _temaModu = TemaModu.koyu;
-  AksanRengi _aksanRengi = AksanRengi.teal;
-  bool _sahaModuAktif = false;
-  KullaniciProfili _kullaniciProfili = const KullaniciProfili();
-
-  List<Tarla> _tarlalar = [];
-  final Map<int, SensorOkuma> _sonOkumalar = {};
-  final Map<int, bool> _zonCevrimici = {};
-  final Map<int, List<SensorOkuma>> _gecmisler = {};
-
-  String _mqttHost = '';
-  int _mqttPort = 0;
-  bool _mqttGuvenli = false;
-  MqttBaglantiDurumu _baglantiDurumu = MqttBaglantiDurumu.baglaniyor;
-  // Cihazin kendi ag durumu -- MQTT broker baglantisindan (_baglantiDurumu)
-  // BAGIMSIZ, bkz. OFFLINE MOD bolumu. Iyimser varsayilan: baglanti kontrol
-  // edilene kadar (asenkron) "bagli" kabul edilir, gereksiz erken banner
-  // gosterilmez.
-  bool _cihazBagliMi = true;
-  MaliyetParametreleri _maliyetParametreleri = const MaliyetParametreleri();
-  UygulamaDili _uygulamaDili = UygulamaDili.turkce;
-  final List<KuyruklanmisKomut> _kuyruklananKomutlar = [];
-  BildirimTercihleri _bildirimTercihleri = const BildirimTercihleri();
-  bool _hazir = false;
-
-  // SEMA v2 (ACK/NACK, bkz. models/bekleyen_komut.dart): komut_id -> henuz
-  // sonuclanmamis komutun Completer'i. _komutGonderVeOnayBekle() ekler,
-  // _komutDurumuGeldiginde() (ACK/NACK geldiginde) veya zaman asimi
-  // Timer'i tamamlar/kaldirir.
-  final Map<String, Completer<KomutSonucu>> _bekleyenKomutlar = {};
-  final List<AktiviteKaydi> _bildirimKuyrugu = [];
-  final Map<int, DateTime> _tedaviBaslangicZamanlari = {};
-  final List<AktiviteKaydi> _aktiviteGecmisi = [];
-  // BILDIRIM GECMISI: _aktiviteGecmisi'nin (TUM olaylar) aksine, sadece
-  // gercekten bir bildirime DONUSMUS (operatorun 4 kategorili tercihini
-  // GECEN) kayitlarin kalici listesi -- Bildirim Gecmisi ekraninin ve
-  // rozetin (badge) kaynagi. Ikisi de _aktiviteKaydiEkle() icinde AYNI
-  // anda beslenir, ayri ayri elle kopyalanmaz.
-  final List<AktiviteKaydi> _bildirimGecmisi = [];
-  // Okundu olarak isaretlenmis bildirim ID'leri (bkz.
-  // models/aktivite_kaydi.dart -> bildirimIdGetir()). bildirimGecmisi'nden
-  // dusen (200 sinirini asan) eski kayitlarin ID'si buradan da temizlenir --
-  // aksi halde bu kume sonsuza dek buyurdu.
-  final Set<int> _okunmusBildirimIdleri = {};
-  // OPERATOR MUDAHALESI: sulamasi manuel durdurulmus zonlar -- ana vana
-  // acik/kapali durumu, teshis akisindan BAGIMSIZ bir operator kontrolu
-  // (bkz. sulamayiDurdur/sulamayiBaslat). Yeniden acilista kaybolmamasi
-  // icin kalici depolanir -- bir operator sizinti supheyle vanayi kapattiysa,
-  // uygulama kapanip acilsa bile bu bilgi kaybolmamali.
-  final Set<int> _sulamasiDurdurulanZonlar = {};
-  final List<TarlaNotu> _tarlaNotlari = [];
-  // Operatorun her zona verdigi opsiyonel takma ad (bos ise "Zon N" gosterilir).
-  final Map<int, String> _zonTakmaAdlari = {};
-
-  // ============================================================================
-  // DISARIYA ACIK (READ-ONLY) DURUM
-  // ============================================================================
-
-  List<Tarla> get tarlalar => List.unmodifiable(_tarlalar);
-  bool get hazir => _hazir;
-  String get mqttHost => _mqttHost;
-  int get mqttPort => _mqttPort;
-  bool get mqttGuvenli => _mqttGuvenli;
-  MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
-  bool get cihazBagliMi => _cihazBagliMi;
-  MaliyetParametreleri get maliyetParametreleri => _maliyetParametreleri;
-  UygulamaDili get uygulamaDili => _uygulamaDili;
-  BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
-  List<AktiviteKaydi> get bildirimGecmisi =>
-      List.unmodifiable(_bildirimGecmisi);
-  int get okunmamisBildirimSayisi =>
-      _bildirimGecmisi.where((k) => !bildirimOkunmusMu(k)).length;
-
-  bool bildirimOkunmusMu(AktiviteKaydi kayit) =>
-      _okunmusBildirimIdleri.contains(bildirimIdGetir(kayit));
-  bool get demoModuAktif => _demoModuAktif;
-  DemoHizi get demoHizi => _demoHizi;
-  bool get onboardingGoruldu => _onboardingGoruldu;
-  bool get pinKorumasiAktif => _pinKorumasiAktif;
-  bool get pinKilitliSuAn => _pinKorumasiAktif && _pinKilitliSuAn;
-
-  /// 3 basarisiz denemeden sonra 30 saniyelik kilit -- SADECE bellekte
-  /// tutulur (kalici depolanmaz): uygulama yeniden baslatilirsa kilit
-  /// sifirlanir. Bu bilerek yapilmis bir kapsam karari -- gercek bir
-  /// guvenlik urunu bunu kalici tutar, ama bu bir yarisma/demo uygulamasi
-  /// ve asiri mühendislik burada oncelik degil.
-  bool get pinGirisiKilitliMi =>
-      _pinKilitBitisZamani != null &&
-      DateTime.now().isBefore(_pinKilitBitisZamani!);
-
-  Duration? get pinKilidiKalanSure => pinGirisiKilitliMi
-      ? _pinKilitBitisZamani!.difference(DateTime.now())
-      : null;
-
-  List<BakimGorevi> get bakimGorevleri => List.unmodifiable(_bakimGorevleri);
-
-  /// Gecikmis VEYA yaklasan (bkz. BakimGorevi.durumu) en az bir gorev var mi
-  /// -- Genel Bakış'taki uyari kartinin gosterilip gosterilmeyecegine karar
-  /// verir.
-  bool get bakimUyarisiVarMi => _bakimGorevleri.any(
-    (g) => g.durumu() != BakimDurumu.normal,
+  // Alt provider'lar disaridan enjekte EDILMEZ -- bu facade'in TEK
+  // gorevi, eski `UygulamaDurumu()` (parametresiz) genel API'sini 76
+  // tuketici dosya (42 lib + 34 test) icin DEGISTIRMEDEN korumaktir.
+  // TarlaProvider'in callback'leri (bkz. o dosyanin dosya basi notu)
+  // CihazIletisimProvider'a `late final` araciligiyla GECIKMELI referans
+  // verir -- callback'ler ancak tarlaEkle/tarlaSil cagrildiginda (yani
+  // baslat() TAMAMLANDIKTAN sonra) TETIKLENDIGI icin bu guvenlidir,
+  // gercek bir dongusel bagimlilik OLUSTURMAZ.
+  final AyarlarProvider _ayarlar = AyarlarProvider();
+  late final TarlaProvider _tarla = TarlaProvider(
+    zonlarEklendiginde: (zonlar) => _cihaz.zonlarEklendi(zonlar),
+    zonlarYetimKaldiginda: (zonlar) => _cihaz.zonlarYetimKaldi(zonlar),
+  );
+  final GuvenlikProvider _guvenlik = GuvenlikProvider();
+  final BakimProvider _bakim = BakimProvider();
+  late final AktiviteBildirimProvider _aktivite = AktiviteBildirimProvider(
+    ayarlar: _ayarlar,
+  );
+  late final CihazIletisimProvider _cihaz = CihazIletisimProvider(
+    tarla: _tarla,
+    aktivite: _aktivite,
   );
 
-  TemaModu get temaModu => _temaModu;
-  AksanRengi get aksanRengi => _aksanRengi;
-  bool get sahaModuAktif => _sahaModuAktif;
-  KullaniciProfili get kullaniciProfili => _kullaniciProfili;
-
-  /// Zonun operator tarafindan verilmis takma adi varsa onu, yoksa
-  /// varsayilan "Zon N" bicimini doner -- tum ekranlar zon basligini
-  /// GOSTERIRKEN bu fonksiyonu kullanmalidir (tek kaynak).
-  String zonAdiGetir(int zone) => _zonTakmaAdlari[zone] ?? 'Zon $zone';
-
-  /// Ilgili zonda su an suren tedavinin (varsa) BASLANGIC zamani. Bu bilgi
-  /// cihazdan gelmez; ilk kez "tedavi_aktif != yok" gorduğumuz an istemci
-  /// tarafinda kaydedilir. Aktif tedavi ekranindaki ilerleme cubugu bunu kullanir.
-  DateTime? tedaviBaslangicZamani(int zone) => _tedaviBaslangicZamanlari[zone];
-
-  SensorOkuma? sonOkuma(int zone) => _sonOkumalar[zone];
-  bool zonCevrimiciMi(int zone) => _zonCevrimici[zone] ?? false;
-
-  /// Verilen tarlaya ait notlar, EN YENI ONCE.
-  List<TarlaNotu> tarlaNotlari(String tarlaId) {
-    final liste = _tarlaNotlari.where((n) => n.tarlaId == tarlaId).toList()
-      ..sort((a, b) => b.zaman.compareTo(a.zaman));
-    return List.unmodifiable(liste);
+  UygulamaDurumu() {
+    _ayarlar.addListener(notifyListeners);
+    _tarla.addListener(notifyListeners);
+    _guvenlik.addListener(notifyListeners);
+    _bakim.addListener(notifyListeners);
+    _aktivite.addListener(notifyListeners);
+    _cihaz.addListener(notifyListeners);
   }
 
-  /// Zonun ana vanasi operator tarafindan MANUEL kapatilmis mi? (teshis
-  /// durumundan bagimsiz bir kontrol -- bkz. sulamayiDurdur/sulamayiBaslat)
-  bool sulamasiDurduruldu(int zone) =>
-      _sulamasiDurdurulanZonlar.contains(zone);
-  List<SensorOkuma> gecmis(int zone) =>
-      List.unmodifiable(_gecmisler[zone] ?? const <SensorOkuma>[]);
-
-  /// Tum zonlardaki onemli olaylarin kalici gecmisi, EN YENI ONCE.
-  List<AktiviteKaydi> get aktiviteGecmisi =>
-      List.unmodifiable(_aktiviteGecmisi);
-
-  /// Tedavi sayilari (turlere gore), KALICI gecmisten HESAPLANIR (ayri bir
-  /// sayac tutulmuyor) -- boylece uygulama yeniden acildiginda sifirlanmaz,
-  /// depolanmis sensor gecmisiyle her zaman tutarlidir. Her zonun gecmisinde
-  /// "tedavi_aktif" alaninin YOK'tan bir tedaviye GECTIGI anlar sayilir.
-  Map<TedaviTuru, int> get tedaviSayaclari {
-    final sayaclar = <TedaviTuru, int>{
-      TedaviTuru.asitDozlama: 0,
-      TedaviTuru.klorEnjeksiyon: 0,
-      TedaviTuru.yuksekBasincliYikama: 0,
-    };
-    for (final zon in tumZonNumaralari) {
-      // _gecmisler EN YENI ONCE saklanir; kronolojik (eskiden yeniye) gerekir.
-      final kronolojik = (_gecmisler[zon] ?? const <SensorOkuma>[]).reversed;
-      var oncekiTedavi = TedaviTuru.yok;
-      for (final okuma in kronolojik) {
-        if (okuma.tedaviAktif != TedaviTuru.yok &&
-            oncekiTedavi == TedaviTuru.yok) {
-          sayaclar[okuma.tedaviAktif] = (sayaclar[okuma.tedaviAktif] ?? 0) + 1;
-        }
-        oncekiTedavi = okuma.tedaviAktif;
-      }
-    }
-    return sayaclar;
-  }
-
-  /// Tum zonlardaki tum gecmis okumalar tek bir listede (istatistik hesaplari icin).
-  List<SensorOkuma> get tumOkumalarBirlesik {
-    final liste = <SensorOkuma>[];
-    for (final zon in tumZonNumaralari) {
-      liste.addAll(_gecmisler[zon] ?? const <SensorOkuma>[]);
-    }
-    return liste;
-  }
-
-  List<AktiviteKaydi> bildirimleriAlVeTemizle() {
-    final kopya = List<AktiviteKaydi>.from(_bildirimKuyrugu);
-    _bildirimKuyrugu.clear();
-    return kopya;
-  }
-
-  /// Bildirim Gecmisi ekrani acildiginda cagrilir -- suan bildirimGecmisi'nde
-  /// olan TUM kayitlari okunmus isaretler (rozet sifirlanir). Okunmus ID
-  /// kumesi, GUNCEL bildirimGecmisi ID'leriyle KESISTIRILEREK kaydedilir --
-  /// aksi halde 200 sinirindan dusen eski kayitlarin ID'si kumede sonsuza
-  /// dek birikirdi.
-  Future<void> bildirimleriOkunduIsaretle() async {
-    final guncelIdler = _bildirimGecmisi.map(bildirimIdGetir).toSet();
-    _okunmusBildirimIdleri
-      ..addAll(guncelIdler)
-      ..retainAll(guncelIdler);
-    await _depolama.okunmusBildirimIdleriniKaydet(_okunmusBildirimIdleri);
-    notifyListeners();
-  }
-
-  /// Tum tarlalardaki tum zon numaralarinin tekil (benzersiz) listesi.
-  List<int> get tumZonNumaralari {
-    final kume = <int>{};
-    for (final tarla in _tarlalar) {
-      kume.addAll(tarla.zonNumaralari);
-    }
-    return kume.toList()..sort();
-  }
-
-  /// Verilen zon listesinin durum ozetini hesaplar (Genel Bakış ve Zon
-  /// Dashboard ekranlarinin ikisi de bunu kullanir -- ayni mantigin iki
-  /// yerde elle kopyalanmasini onler). Her zon TEK bir kovaya duser;
-  /// siniflandirma DurumRenkleri.onceligiBelirle()'den gelir (tek kaynak --
-  /// bkz. o fonksiyonun dokumantasyonu, tarla karti da AYNI fonksiyonu kullanir).
-  ZonDurumOzeti durumOzetiHesapla(List<int> zonlar) {
-    var normal = 0,
-        belirsiz = 0,
-        tespitEdildi = 0,
-        tedavide = 0,
-        cevrimdisi = 0;
-    for (final zon in zonlar) {
-      final okuma = _sonOkumalar[zon];
-      final cevrimici = _zonCevrimici[zon] ?? false;
-      switch (DurumRenkleri.onceligiBelirle(okuma: okuma, cevrimici: cevrimici)) {
-        case ZonOnceligi.cevrimdisi:
-          cevrimdisi++;
-        case ZonOnceligi.tedavide:
-          tedavide++;
-        case ZonOnceligi.tespitEdildi:
-          tespitEdildi++;
-        case ZonOnceligi.belirsiz:
-          belirsiz++;
-        case ZonOnceligi.normal:
-          normal++;
-      }
-    }
-    return ZonDurumOzeti(
-      normal: normal,
-      belirsiz: belirsiz,
-      tespitEdildi: tespitEdildi,
-      tedavide: tedavide,
-      cevrimdisi: cevrimdisi,
-    );
-  }
-
-  // ============================================================================
-  // BASLATMA
-  // ============================================================================
-
+  /// Altı alt provider'ı doğru bağımlılık sırasıyla başlatır (main.dart'ta
+  /// tek tek çağırmak yerine, geçiş süresince tek bir giriş noktası).
   Future<void> baslat() async {
-    unawaited(BildirimServisi.baslat());
-    unawaited(_cihazAgDurumunuIzlemeyeBasla());
-    _kuyruklananKomutlar
-      ..clear()
-      ..addAll(await _depolama.kuyruklananKomutlariGetir());
-    _tarlalar = await _depolama.tarlalariGetir();
-    final ayarlar = await _depolama.mqttAyarlariniGetir();
-    _mqttHost = ayarlar.host;
-    _mqttPort = ayarlar.port;
-    _mqttGuvenli = ayarlar.guvenli;
-    _bildirimTercihleri = await _depolama.bildirimTercihleriniGetir();
-    _demoModuAktif = await _depolama.demoModuAcikMi();
-    _demoHizi = await _depolama.demoHiziGetir();
-    _onboardingGoruldu = await _depolama.onboardingGorulduMu();
-    _pinKorumasiAktif = await _depolama.pinKorumasiAcikMi();
-    _pinKilitliSuAn = _pinKorumasiAktif;
-    _temaModu = await _depolama.temaModuGetir();
-    _aksanRengi = await _depolama.aksanRengiGetir();
-    _sahaModuAktif = await _depolama.sahaModuGetir();
-    _maliyetParametreleri = await _depolama.maliyetParametreleriGetir();
-    _uygulamaDili = await _depolama.uygulamaDiliGetir();
-    _kullaniciProfili = await _depolama.kullaniciProfiliGetir();
-    final kayitliBakimGorevleri = await _depolama.bakimGorevleriGetir();
-    if (kayitliBakimGorevleri == null) {
-      _bakimGorevleri = varsayilanBakimGorevleri();
-      await _depolama.bakimGorevleriniKaydet(_bakimGorevleri);
-    } else {
-      _bakimGorevleri = kayitliBakimGorevleri;
-    }
-    _sulamasiDurdurulanZonlar
-      ..clear()
-      ..addAll(await _depolama.sulamaKapaliZonlariGetir());
-    _tarlaNotlari
-      ..clear()
-      ..addAll(await _depolama.tarlaNotlariGetir());
-    _zonTakmaAdlari
-      ..clear()
-      ..addAll(await _depolama.zonTakmaAdlariGetir());
-
-    // Cevrimdisi mod: baglanmadan ONCE son bilinen degerleri yukle,
-    // boylece ekran hicbir zaman bomben acilmiyor.
-    for (final zon in tumZonNumaralari) {
-      var gecmis = await _depolama.gecmisiGetir(zon);
-
-      // Bu zon icin HIC gecmis yoksa (gercekten ilk kurulum): sanki sistem
-      // gunlerdir sahada calisiyormus gibi GECMISE DONUK sentetik bir
-      // gecmis uret ve kaydet -- boylece Istatistikler/Aktivite Gecmisi/
-      // trend grafikleri ilk acilista bile bombos degil, dolu gorunur.
-      if (gecmis.isEmpty) {
-        final kronolojikGecmis = GecmisVeriUreticisi.zonGecmisiUret(zon);
-        gecmis = kronolojikGecmis.reversed
-            .toList(); // depolama EN YENI ONCE bekler
-        unawaited(_depolama.gecmisiTopluKaydet(zon, gecmis));
-
-        final uretilenAktiviteler = GecmisVeriUreticisi.aktiviteleriTuret(
-          kronolojikGecmis,
-        );
-        _aktiviteGecmisi.addAll(uretilenAktiviteler.reversed);
-        // ACIMASIZ DENETIM DUZELTMESI (2026-09-14): bu sentetik gecmis
-        // sadece aktiviteGecmisi'ne ekleniyordu -- Bildirim Gecmisi
-        // ekrani/rozeti GERCEKTEN ILK KURULUMDA bombos kalirdi, halbuki
-        // Aktivite Gecmisi ayni anda onlarca kayitla dolu gorunurdu (tutarsiz
-        // ilk-acilis deneyimi). Canli SnackBar/push bildirimi KASITLI OLARAK
-        // tetiklenmiyor (backdated veri icin bildirim firtinasi olmasin diye)
-        // ama kalici Bildirim Gecmisi listesine, kategori tercihine uyanlar
-        // ekleniyor -- boylece iki ekran birbiriyle tutarli.
-        _bildirimGecmisi.addAll(
-          uretilenAktiviteler.reversed.where(
-            (k) => _bildirimKategoriAcikMi(k.tur),
-          ),
-        );
-
-        if (kronolojikGecmis.isNotEmpty) {
-          final sonUretilen = kronolojikGecmis.last;
-          unawaited(_depolama.sonOkumayiKaydet(sonUretilen));
-        }
-      }
-      _gecmisler[zon] = gecmis;
-
-      final onbellek = await _depolama.sonOkumayiGetir(zon);
-      if (onbellek != null) {
-        _sonOkumalar[zon] = onbellek;
-        // Uygulama tedavi surerken kapatilip acilmis olabilir -- bu durumda
-        // ilerleme cubugunun "sifirdan basliyormus" gibi gorunmemesi icin
-        // son bilinen okumanin zaman damgasini YAKLASIK baslangic olarak kullan.
-        if (onbellek.tedaviAktif != TedaviTuru.yok) {
-          _tedaviBaslangicZamanlari[zon] = onbellek.zaman;
-        }
-      }
-    }
-
-    final oncedenKayitliAktiviteler = await _depolama.aktiviteGecmisiGetir();
-    final yeniUretilenVarMi = _aktiviteGecmisi.isNotEmpty;
-    _aktiviteGecmisi.addAll(oncedenKayitliAktiviteler);
-    _aktiviteGecmisi.sort((a, b) => b.zaman.compareTo(a.zaman));
-    if (_aktiviteGecmisi.length > 200) {
-      _aktiviteGecmisi.removeRange(200, _aktiviteGecmisi.length);
-    }
-    // Yeni zonlar icin uretilen aktiviteler varsa, birlestirilmis+sirali
-    // son hali kalici depoya yaz (aksi halde bir sonraki acilista kaybolur).
-    if (yeniUretilenVarMi) {
-      unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    }
-
-    final bildirimGecmisiYeniUretilenVarMi = _bildirimGecmisi.isNotEmpty;
-    _bildirimGecmisi.addAll(await _depolama.bildirimGecmisiGetir());
-    _bildirimGecmisi.sort((a, b) => b.zaman.compareTo(a.zaman));
-    if (_bildirimGecmisi.length > 200) {
-      _bildirimGecmisi.removeRange(200, _bildirimGecmisi.length);
-    }
-    if (bildirimGecmisiYeniUretilenVarMi) {
-      unawaited(_depolama.bildirimGecmisiniKaydet(_bildirimGecmisi));
-    }
-    _okunmusBildirimIdleri.addAll(await _depolama.okunmusBildirimIdleriGetir());
-
-    _dusukPilKontroluYap();
-
-    _hazir = true;
-    notifyListeners();
-
-    if (_demoModuAktif) {
-      _simulasyonuBaslat();
-    } else {
-      await _mqttyeBaglan();
-    }
-  }
-
-  Future<void> _mqttyeBaglan() async {
-    _mqtt?.baglantiyiKapat();
-    _mqtt = MqttServisi(
-      veriGeldiginde: _veriGeldiginde,
-      zonDurumuDegistiginde: _zonDurumuDegistiginde,
-      baglantiDurumuDegistiginde: _baglantiDurumuDegistiginde,
-      komutDurumuGeldiginde: _komutDurumuGeldiginde,
-    );
-    await _mqtt!.baglan(
-      host: _mqttHost,
-      port: _mqttPort,
-      zonlar: tumZonNumaralari,
-      guvenli: _mqttGuvenli,
-    );
-  }
-
-  void _simulasyonuBaslat() {
-    _simulasyon?.durdur();
-    _simulasyon = SimulasyonServisi(
-      zonlar: tumZonNumaralari,
-      veriUretildiginde: _veriGeldiginde,
-    );
-    _simulasyon!.baslat(aralik: _demoHizi.sure);
-    // SimulasyonServisi.baslat() kendi ic "duraklatilmis zonlar" kaydini
-    // sifirlar -- daha once (kalici depodan yuklenmis) manuel kapatilmis
-    // zonlar varsa yeni servise TEKRAR uygula, aksi halde vana "yeniden
-    // acilmis" gibi gorunur.
-    for (final zon in _sulamasiDurdurulanZonlar) {
-      _simulasyon!.sulamayiDuraklat(zon);
-    }
-    _baglantiDurumuDegistiginde(MqttBaglantiDurumu.bagli);
-    for (final zon in tumZonNumaralari) {
-      _zonDurumuDegistiginde(zon, true);
-    }
+    await _ayarlar.baslat();
+    await _tarla.baslat();
+    await _guvenlik.baslat();
+    await _bakim.baslat();
+    await _aktivite.baslat();
+    await _cihaz.baslat();
   }
 
   // ============================================================================
-  // DEMO MODU
+  // AYARLAR PROVIDER
   // ============================================================================
 
-  /// Demo modunu acar: gercek MQTT baglantisini keser, uygulama-ici
-  /// simulasyon servisini baslatir. Donanim henuz hazir olmadiginda veya
-  /// juriye/kullaniciya offline bir demo gostermek icin kullanilir.
-  Future<void> demoModunuAc() async {
-    if (_demoModuAktif) return;
-    _demoModuAktif = true;
-    await _depolama.demoModunuAyarla(true);
-    _mqtt?.baglantiyiKapat();
-    _mqtt = null;
-    _simulasyonuBaslat();
-    notifyListeners();
-  }
+  bool get onboardingGoruldu => _ayarlar.onboardingGoruldu;
+  Future<void> onboardingiTamamla() => _ayarlar.onboardingiTamamla();
 
-  /// Demo modunu kapatir: simulasyonu durdurur, gercek MQTT brokerina baglanir.
-  Future<void> demoModunuKapat() async {
-    if (!_demoModuAktif) return;
-    _demoModuAktif = false;
-    await _depolama.demoModunuAyarla(false);
-    _simulasyon?.durdur();
-    _simulasyon = null;
-    notifyListeners();
-    await _mqttyeBaglan();
-  }
+  TemaModu get temaModu => _ayarlar.temaModu;
+  Future<void> temaModuAyarla(TemaModu modu) => _ayarlar.temaModuAyarla(modu);
 
-  /// Demo Modu'nun veri üretim hızını değiştirir (bkz. models/demo_hizi.dart) --
-  /// sadece Demo Modu açıkken anlamlıdır; SimulasyonServisi.hiziDegistir()
-  /// sayesinde devam eden bir senaryo (örn. bir tedavi ortasında) hız
-  /// değişince KESİNTİYE UĞRAMAZ.
-  Future<void> demoHiziniAyarla(DemoHizi hiz) async {
-    _demoHizi = hiz;
-    await _depolama.demoHiziniKaydet(hiz);
-    _simulasyon?.hiziDegistir(hiz.sure);
-    notifyListeners();
-  }
+  AksanRengi get aksanRengi => _ayarlar.aksanRengi;
+  Future<void> aksanRengiAyarla(AksanRengi aksan) =>
+      _ayarlar.aksanRengiAyarla(aksan);
 
-  /// Onboarding turu tamamlandiginda (veya "Atla" ile gecildiginde) bir
-  /// daha GORUNMEMESI icin kalici olarak isaretler.
-  Future<void> onboardingiTamamla() async {
-    if (_onboardingGoruldu) return;
-    _onboardingGoruldu = true;
-    await _depolama.onboardingGorulduOlarakIsaretle();
-    notifyListeners();
-  }
+  bool get sahaModuAktif => _ayarlar.sahaModuAktif;
+  Future<void> sahaModuAyarla(bool acik) => _ayarlar.sahaModuAyarla(acik);
 
-  /// PIN korumasini ACAR -- [yeniPin] guvenli depoya yazilir. Ayarlar
-  /// ekranindaki "PIN Belirle" akisi tarafindan cagrilir.
-  Future<void> pinKorumasiniAc(String yeniPin) async {
-    await PinServisi.pinKaydet(yeniPin);
-    await _depolama.pinKorumasiniKaydet(true);
-    _pinKorumasiAktif = true;
-    notifyListeners();
-  }
+  KullaniciProfili get kullaniciProfili => _ayarlar.kullaniciProfili;
+  Future<void> kullaniciProfiliniGuncelle(KullaniciProfili profil) =>
+      _ayarlar.kullaniciProfiliniGuncelle(profil);
 
-  Future<void> pinKorumasiniKapat() async {
-    await PinServisi.pinSil();
-    await _depolama.pinKorumasiniKaydet(false);
-    _pinKorumasiAktif = false;
-    _pinKilitliSuAn = false;
-    notifyListeners();
-  }
-
-  /// Girilen PIN'i dogrular. Yanlissa basarisiz deneme sayacini artirir ve
-  /// 3. yanlistan sonra 30 saniyelik bir giris kilidi baslatir (bkz.
-  /// pinGirisiKilitliMi). Dogruysa oturum kilidini acar ve sayaci sifirlar.
-  Future<bool> pinDenemesiYap(String girilen) async {
-    if (pinGirisiKilitliMi) return false;
-    final dogruMu = await PinServisi.pinDogrula(girilen);
-    if (dogruMu) {
-      _basarisizPinDenemesi = 0;
-      _pinKilitBitisZamani = null;
-      _pinKilitliSuAn = false;
-      notifyListeners();
-      return true;
-    }
-    _basarisizPinDenemesi++;
-    if (_basarisizPinDenemesi >= 3) {
-      _pinKilitBitisZamani = DateTime.now().add(const Duration(seconds: 30));
-      _basarisizPinDenemesi = 0;
-    }
-    notifyListeners();
-    return false;
-  }
-
-  /// Biyometrik dogrulama basarili oldugunda cagrilir -- PIN girisine
-  /// gerek kalmadan oturum kilidini acar.
-  void pinKilidiniBiyometrikIleAc() {
-    _pinKilitliSuAn = false;
-    notifyListeners();
-  }
-
-  /// [gorevId] ile eslesen bakim gorevini "bugun yapildi" olarak isaretler
-  /// -- sonraki tarihi periyoduna gore ileri atar.
-  Future<void> temaModuAyarla(TemaModu modu) async {
-    _temaModu = modu;
-    await _depolama.temaModuKaydet(modu);
-    notifyListeners();
-  }
-
-  Future<void> aksanRengiAyarla(AksanRengi aksan) async {
-    _aksanRengi = aksan;
-    await _depolama.aksanRengiKaydet(aksan);
-    notifyListeners();
-  }
-
-  Future<void> sahaModuAyarla(bool acik) async {
-    _sahaModuAktif = acik;
-    await _depolama.sahaModuKaydet(acik);
-    notifyListeners();
-  }
-
+  MaliyetParametreleri get maliyetParametreleri =>
+      _ayarlar.maliyetParametreleri;
   Future<void> maliyetParametreleriniGuncelle(
     MaliyetParametreleri parametreler,
-  ) async {
-    _maliyetParametreleri = parametreler;
-    await _depolama.maliyetParametreleriKaydet(parametreler);
-    notifyListeners();
-  }
+  ) => _ayarlar.maliyetParametreleriniGuncelle(parametreler);
 
-  Future<void> uygulamaDiliniAyarla(UygulamaDili dil) async {
-    _uygulamaDili = dil;
-    await _depolama.uygulamaDiliKaydet(dil);
-    notifyListeners();
-  }
+  UygulamaDili get uygulamaDili => _ayarlar.uygulamaDili;
+  Future<void> uygulamaDiliniAyarla(UygulamaDili dil) =>
+      _ayarlar.uygulamaDiliniAyarla(dil);
 
-  Future<void> kullaniciProfiliniGuncelle(KullaniciProfili profil) async {
-    _kullaniciProfili = profil;
-    await _depolama.kullaniciProfiliniKaydet(profil);
-    notifyListeners();
-  }
-
-  Future<void> bakimGoreviTamamlandiIsaretle(String gorevId) async {
-    _bakimGorevleri = [
-      for (final g in _bakimGorevleri)
-        if (g.id == gorevId) g.tamamlandiOlarakIsaretle() else g,
-    ];
-    await _depolama.bakimGorevleriniKaydet(_bakimGorevleri);
-    notifyListeners();
-  }
+  BildirimTercihleri get bildirimTercihleri => _ayarlar.bildirimTercihleri;
+  Future<void> bildirimTercihleriniGuncelle(BildirimTercihleri yeni) =>
+      _ayarlar.bildirimTercihleriniGuncelle(yeni);
 
   // ============================================================================
-  // MQTT OLAY ISLEYICILERI
+  // TARLA PROVIDER
   // ============================================================================
 
-  void _veriGeldiginde(SensorOkuma okuma) {
-    debugPrint(
-      '[AquaGuard/Veri] Zon ${okuma.zone}: durum=${okuma.durum.name} '
-      'tur=${okuma.tikanmaTuru.name} guven=%${okuma.guven.toStringAsFixed(0)}',
-    );
-    final onceki = _sonOkumalar[okuma.zone];
+  List<Tarla> get tarlalar => _tarla.tarlalar;
+  List<int> get tumZonNumaralari => _tarla.tumZonNumaralari;
+  String zonAdiGetir(int zone) => _tarla.zonAdiGetir(zone);
+  List<TarlaNotu> tarlaNotlari(String tarlaId) =>
+      _tarla.tarlaNotlari(tarlaId);
 
-    _degisimleriKaydet(onceki, okuma);
-
-    if (okuma.tedaviAktif != TedaviTuru.yok &&
-        (onceki == null || onceki.tedaviAktif != okuma.tedaviAktif)) {
-      _tedaviBaslangicZamanlari[okuma.zone] = okuma.zaman;
-    } else if (okuma.tedaviAktif == TedaviTuru.yok) {
-      _tedaviBaslangicZamanlari.remove(okuma.zone);
-    }
-
-    _sonOkumalar[okuma.zone] = okuma;
-    _zonCevrimici[okuma.zone] = true;
-
-    final guncelGecmis = [
-      okuma,
-      ...(_gecmisler[okuma.zone] ?? const <SensorOkuma>[]),
-    ].take(100).toList();
-    _gecmisler[okuma.zone] = guncelGecmis;
-
-    unawaited(_depolama.sonOkumayiKaydet(okuma));
-    unawaited(_depolama.gecmiseEkle(okuma));
-
-    notifyListeners();
-  }
-
-  void _degisimleriKaydet(SensorOkuma? onceki, SensorOkuma yeni) {
-    if (onceki == null) return; // ilk veri -- gecmis karsilastirma yok
-
-    // Mesaj/kural mantigi burada DEGIL -- gecisAktiviteleriniUret() saf
-    // fonksiyonunda (bkz. models/aktivite_kaydi.dart). GecmisVeriUreticisi
-    // de (gecmise donuk toplu veri uretirken) AYNI fonksiyonu kullanir.
-    for (final kayit in gecisAktiviteleriniUret(onceki, yeni)) {
-      _aktiviteKaydiEkle(kayit);
-    }
-  }
-
-  /// TEK giris noktasi: bir AktiviteKaydi'ni kalici aktivite gecmisine
-  /// ekler VE (bildirimDegerlendir true ise VE kategori acik ise) hem
-  /// aninda gosterilecek bildirim kuyruguna, hem de kalici Bildirim
-  /// Gecmisi'ne ekler. ACIMASIZ DENETIM NOTU (2026-09-08): bu blok daha
-  /// once 5 farkli yerde elle kopyalanmisti (bkz.
-  /// [[feedback-schema-single-source-of-truth]]) -- Bildirim Gecmisi
-  /// ozelligini DOGRU yerden beslemek icin tek bir yardimciya cikarildi,
-  /// tum eski cagri yerleri buraya yonlendirildi.
-  void _aktiviteKaydiEkle(AktiviteKaydi kayit, {bool bildirimDegerlendir = true}) {
-    _aktiviteGecmisi.insert(0, kayit);
-    if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
-    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-
-    if (bildirimDegerlendir && _bildirimKategoriAcikMi(kayit.tur)) {
-      _bildirimKuyrugu.add(kayit);
-      _bildirimGecmisi.insert(0, kayit);
-      if (_bildirimGecmisi.length > 200) _bildirimGecmisi.removeLast();
-      unawaited(_depolama.bildirimGecmisiniKaydet(_bildirimGecmisi));
-    }
-  }
-
-  /// Bir aktivite turunun BILDIRIM kuyruguna eklenip eklenmeyecegini,
-  /// operatorun 4 kategorili tercihine (bkz. models/bildirim_tercihleri.dart)
-  /// gore belirler. "belirsiz" tespit kategorisiyle, "normale donus" tedavi
-  /// tamamlanma kategorisiyle GRUPLANIR (brief'te ayri bir kategori olarak
-  /// istenmedi); operatorun kendi eylemlerini (manuelMudahale) onaylayan
-  /// bildirimler HER ZAMAN gosterilir -- bu bir "uyari" degil, dogrudan
-  /// istenen bir eylemin ANINDA geri bildirimidir.
-  bool _bildirimKategoriAcikMi(AktiviteTuru tur) {
-    switch (tur) {
-      case AktiviteTuru.tespit:
-      case AktiviteTuru.belirsiz:
-        return _bildirimTercihleri.tespit;
-      case AktiviteTuru.tedaviBaslangic:
-        return _bildirimTercihleri.tedaviBaslangic;
-      case AktiviteTuru.tedaviBitis:
-      case AktiviteTuru.normaleDonus:
-        return _bildirimTercihleri.tedaviTamamlanma;
-      case AktiviteTuru.dusukPil:
-        return _bildirimTercihleri.dusukPil;
-      case AktiviteTuru.manuelMudahale:
-        return true;
-    }
-  }
-
-  /// SIMULE pil seviyesini (bkz. models/enerji_durumu.dart) kontrol eder;
-  /// esigin altindaysa VE operator bu kategoriyi actiysa, uygulama her
-  /// SOGUK basladiginda bir bildirim kuyruklar. Gercek donanim bu telemetriyi
-  /// yayinlamaya basladiginda, bu kontrol MQTT/simulasyon veri akisina
-  /// (_veriGeldiginde) tasinmalidir.
-  void _dusukPilKontroluYap() {
-    final pil = EnerjiDurumu.pilYuzdesiHesapla();
-    if (pil >= EnerjiDurumu.dusukPilEsigi) return;
-
-    // ACIMASIZ DENETIM/CI DUZELTMESI (2026-09-16): pil seviyesi ZAMAN
-    // BAZLI (10 gunluk testere disi dongu, bkz. EnerjiDurumu) bir
-    // simulasyondur -- bu esigin ALTINDA kaldigi surece (birkac gun),
-    // uygulama HER SOGUK BASLANGICTA (baslat() her cagrildiginda) AYNI
-    // uyariyi tekrar tekrar ekliyordu. Bu hem gercek kullanicida gereksiz
-    // bildirim spam'i, hem de testlerde (iki UygulamaDurumu ornegi arka
-    // arkaya baslatilinca) BELIRSIZ/FLAKY bir sonuc yaratiyordu (ikinci
-    // oturumun kendi dusukPil kaydi, kalici depodan yuklenen onceki
-    // kayitlarin ONUNE geciyordu). Son 24 saat icinde ZATEN bir dusukPil
-    // kaydi varsa TEKRAR eklenmez.
-    final simdi = DateTime.now();
-    final yakinZamandaUyarildiMi = _aktiviteGecmisi.any(
-      (k) =>
-          k.tur == AktiviteTuru.dusukPil &&
-          simdi.difference(k.zaman) < const Duration(hours: 24),
-    );
-    if (yakinZamandaUyarildiMi) return;
-
-    final kayit = AktiviteKaydi(
-      zaman: simdi,
-      zone: 0,
-      mesaj: 'Pil seviyesi düşük: %$pil',
-      tur: AktiviteTuru.dusukPil,
-    );
-    _aktiviteKaydiEkle(kayit);
-  }
-
-  void _zonDurumuDegistiginde(int zone, bool cevrimici) {
-    _zonCevrimici[zone] = cevrimici;
-    notifyListeners();
-  }
-
-  void _baglantiDurumuDegistiginde(MqttBaglantiDurumu durum) {
-    _baglantiDurumu = durum;
-    if (durum == MqttBaglantiDurumu.bagli) {
-      unawaited(_kuyruklananKomutlariGonder());
-    }
-    notifyListeners();
-  }
+  Future<void> tarlaEkle(Tarla tarla) => _tarla.tarlaEkle(tarla);
+  Future<void> tarlaSil(String id) => _tarla.tarlaSil(id);
+  Future<void> tarlaGuncelle(Tarla guncelTarla) =>
+      _tarla.tarlaGuncelle(guncelTarla);
+  Future<void> notEkle(String tarlaId, String metin) =>
+      _tarla.notEkle(tarlaId, metin);
+  Future<void> notSil(String notId) => _tarla.notSil(notId);
+  Future<void> zonTakmaAdiAyarla(int zone, String? ad) =>
+      _tarla.zonTakmaAdiAyarla(zone, ad);
 
   // ============================================================================
-  // OFFLINE MOD (cihaz agi + komut kuyrugu)
-  // ============================================================================
-  //
-  // Cihazin kendi ag durumu (telefonda internet var mi), MQTT broker
-  // baglanti durumundan (_baglantiDurumu -- "brokera bagli miyiz")
-  // BAGIMSIZDIR: biri "genel ag erisimi", digeri "bu spesifik servise
-  // baglanti". Banner SADECE gercek-MQTT modunda ve cihaz agi YOKKEN
-  // gosterilir (bkz. genel_bakis_ekrani.dart).
-
-  StreamSubscription<List<ConnectivityResult>>? _baglantiAboneligi;
-
-  Future<void> _cihazAgDurumunuIzlemeyeBasla() async {
-    try {
-      final ilkDurum = await Connectivity().checkConnectivity();
-      _cihazBagliMi = !ilkDurum.contains(ConnectivityResult.none);
-      _baglantiAboneligi = Connectivity().onConnectivityChanged.listen((
-        sonuc,
-      ) {
-        _cihazBagliMi = !sonuc.contains(ConnectivityResult.none);
-        notifyListeners();
-      });
-    } catch (_) {
-      // connectivity_plus bazi platformlarda (ornegin test ortami/bazi
-      // masaustu yapilandirmalari) desteklenmeyebilir -- bu bir
-      // IYILESTIRME, kritik yol degil, sessizce varsayilan (bagli) kalinir.
-    }
-  }
-
-  /// Baglanti yokken (veya hic kurulmamisken) bir "gonder ve unut" komutunu
-  /// (ACK bekleyen manuelTedaviBaslat'tan FARKLI, bkz. dosya basi notu)
-  /// kuyruga ekler; baglanti VARSA dogrudan gonderir. Kuyruktaki komutlar
-  /// baglanti geri gelince _kuyruklananKomutlariGonder() ile sirayla
-  /// gonderilir.
-  Future<void> _komutGonderVeyaKuyrukla(
-    int zone,
-    Map<String, dynamic> komut,
-  ) async {
-    final mqtt = _mqtt;
-    if (mqtt != null && mqtt.bagliMi) {
-      mqtt.komutGonder(zone, komut);
-      return;
-    }
-    _kuyruklananKomutlar.add(
-      KuyruklanmisKomut(zone: zone, komut: komut, olusturmaZamani: DateTime.now()),
-    );
-    await _depolama.kuyruklananKomutlariKaydet(_kuyruklananKomutlar);
-  }
-
-  Future<void> _kuyruklananKomutlariGonder() async {
-    if (_kuyruklananKomutlar.isEmpty) return;
-    final mqtt = _mqtt;
-    if (mqtt == null || !mqtt.bagliMi) return;
-
-    final gecerliler = _kuyruklananKomutlar
-        .where(
-          (k) => !k.suresiGecmisMi(AyarlarSabitleri.kuyrukKomutGecerlilikSuresi),
-        )
-        .toList();
-    for (final kuyruklu in gecerliler) {
-      mqtt.komutGonder(kuyruklu.zone, kuyruklu.komut);
-    }
-    _kuyruklananKomutlar.clear();
-    await _depolama.kuyruklananKomutlariKaydet(_kuyruklananKomutlar);
-  }
-
-  // ============================================================================
-  // TARLA YONETIMI
+  // GUVENLIK PROVIDER (PIN)
   // ============================================================================
 
-  Future<void> tarlaEkle(Tarla tarla) async {
-    _tarlalar = [..._tarlalar, tarla];
-    await _depolama.tarlalariKaydet(_tarlalar);
-    _yeniZonlariBaglantiyaEkle(tarla.zonNumaralari);
-    notifyListeners();
-  }
+  bool get pinKorumasiAktif => _guvenlik.pinKorumasiAktif;
+  bool get pinKilitliSuAn => _guvenlik.pinKilitliSuAn;
+  bool get pinGirisiKilitliMi => _guvenlik.pinGirisiKilitliMi;
+  Duration? get pinKilidiKalanSure => _guvenlik.pinKilidiKalanSure;
 
-  Future<void> tarlaSil(String id) async {
-    final silinenTarla = _tarlalar.firstWhere((t) => t.id == id);
-    _tarlalar = _tarlalar.where((t) => t.id != id).toList();
-    await _depolama.tarlalariKaydet(_tarlalar);
-
-    // Silinen tarlanin notlari da yetim kalir -- baska hicbir tarla ID'si
-    // asla ayni degeri tekrar kullanmayacagindan (zon numaralarinin aksine),
-    // burada temizlemezsek notlar SESSIZCE sonsuza kadar depoda birikir.
-    final notSilindiMi = _tarlaNotlari.any((n) => n.tarlaId == id);
-    if (notSilindiMi) {
-      _tarlaNotlari.removeWhere((n) => n.tarlaId == id);
-      unawaited(_depolama.tarlaNotlariniKaydet(_tarlaNotlari));
-    }
-
-    // Silinen tarlanin zonlarindan HALA baska bir tarlada kullanilanlari
-    // koru; kalanlarin (artik yetim) onbellek/gecmis verisini temizle --
-    // aksi halde ayni zon numarasi yeniden kullanilirsa eski veri "hayalet"
-    // gibi hemen gorunur.
-    final halaKullanilanZonlar = _tarlalar
-        .expand((t) => t.zonNumaralari)
-        .toSet();
-    var yetimZonVarMi = false;
-    for (final zon in silinenTarla.zonNumaralari) {
-      if (halaKullanilanZonlar.contains(zon)) continue;
-      yetimZonVarMi = true;
-      _sonOkumalar.remove(zon);
-      _zonCevrimici.remove(zon);
-      _gecmisler.remove(zon);
-      unawaited(_depolama.zonVerisiniTemizle(zon));
-    }
-
-    // Demo modunda simulasyon, zon listesini SADECE baslatildigi anda alir --
-    // yetim kalan bir zon icin veri uretmeye devam etmesin diye (hem israf
-    // hem de az sonra silinen verinin "hayalet" gibi geri gelmesine sebep
-    // olur) guncel zon listesiyle yeniden baslatiyoruz.
-    if (yetimZonVarMi && _demoModuAktif) {
-      _simulasyonuBaslat();
-    }
-
-    notifyListeners();
-  }
-
-  Future<void> tarlaGuncelle(Tarla guncelTarla) async {
-    _tarlalar = _tarlalar
-        .map((t) => t.id == guncelTarla.id ? guncelTarla : t)
-        .toList();
-    await _depolama.tarlalariKaydet(_tarlalar);
-    _yeniZonlariBaglantiyaEkle(guncelTarla.zonNumaralari);
-    notifyListeners();
-  }
-
-  /// Yeni eklenen/guncellenen zonlarin, aktif baglantiya (demo veya MQTT)
-  /// hemen dahil olmasini saglar.
-  void _yeniZonlariBaglantiyaEkle(List<int> zonlar) {
-    if (_demoModuAktif) {
-      _simulasyonuBaslat(); // tum zon listesiyle yeniden baslat, en basit ve tutarli yol
-    } else {
-      for (final zon in zonlar) {
-        _mqtt?.zonuAbonelikleEkle(zon);
-      }
-    }
-  }
+  Future<void> pinKorumasiniAc(String yeniPin) =>
+      _guvenlik.pinKorumasiniAc(yeniPin);
+  Future<void> pinKorumasiniKapat() => _guvenlik.pinKorumasiniKapat();
+  Future<bool> pinDenemesiYap(String girilen) =>
+      _guvenlik.pinDenemesiYap(girilen);
+  void pinKilidiniBiyometrikIleAc() => _guvenlik.pinKilidiniBiyometrikIleAc();
 
   // ============================================================================
-  // AYARLAR
+  // BAKIM PROVIDER
   // ============================================================================
 
+  List<BakimGorevi> get bakimGorevleri => _bakim.bakimGorevleri;
+  bool get bakimUyarisiVarMi => _bakim.bakimUyarisiVarMi;
+  Future<void> bakimGoreviTamamlandiIsaretle(String gorevId) =>
+      _bakim.bakimGoreviTamamlandiIsaretle(gorevId);
+
+  // ============================================================================
+  // AKTIVITE/BILDIRIM PROVIDER
+  // ============================================================================
+
+  List<AktiviteKaydi> get aktiviteGecmisi => _aktivite.aktiviteGecmisi;
+  List<AktiviteKaydi> get bildirimGecmisi => _aktivite.bildirimGecmisi;
+  int get okunmamisBildirimSayisi => _aktivite.okunmamisBildirimSayisi;
+  bool bildirimOkunmusMu(AktiviteKaydi kayit) =>
+      _aktivite.bildirimOkunmusMu(kayit);
+  List<AktiviteKaydi> bildirimleriAlVeTemizle() =>
+      _aktivite.bildirimleriAlVeTemizle();
+  Future<void> bildirimleriOkunduIsaretle() =>
+      _aktivite.bildirimleriOkunduIsaretle();
+
+  // ============================================================================
+  // CIHAZ ILETISIM PROVIDER
+  // ============================================================================
+
+  bool get hazir => _cihaz.hazir;
+  bool get demoModuAktif => _cihaz.demoModuAktif;
+  DemoHizi get demoHizi => _cihaz.demoHizi;
+  String get mqttHost => _cihaz.mqttHost;
+  int get mqttPort => _cihaz.mqttPort;
+  bool get mqttGuvenli => _cihaz.mqttGuvenli;
+  MqttBaglantiDurumu get baglantiDurumu => _cihaz.baglantiDurumu;
+  bool get cihazBagliMi => _cihaz.cihazBagliMi;
+
+  SensorOkuma? sonOkuma(int zone) => _cihaz.sonOkuma(zone);
+  bool zonCevrimiciMi(int zone) => _cihaz.zonCevrimiciMi(zone);
+  List<SensorOkuma> gecmis(int zone) => _cihaz.gecmis(zone);
+  DateTime? tedaviBaslangicZamani(int zone) =>
+      _cihaz.tedaviBaslangicZamani(zone);
+  bool sulamasiDurduruldu(int zone) => _cihaz.sulamasiDurduruldu(zone);
+  List<SensorOkuma> get tumOkumalarBirlesik => _cihaz.tumOkumalarBirlesik;
+  Map<TedaviTuru, int> get tedaviSayaclari => _cihaz.tedaviSayaclari;
+  ZonDurumOzeti durumOzetiHesapla(List<int> zonlar) =>
+      _cihaz.durumOzetiHesapla(zonlar);
+
+  Future<void> demoModunuAc() => _cihaz.demoModunuAc();
+  Future<void> demoModunuKapat() => _cihaz.demoModunuKapat();
+  Future<void> demoHiziniAyarla(DemoHizi hiz) =>
+      _cihaz.demoHiziniAyarla(hiz);
   Future<void> mqttAyarlariniGuncelle({
     required String host,
     required int port,
     required bool guvenli,
-  }) async {
-    _mqttHost = host;
-    _mqttPort = port;
-    _mqttGuvenli = guvenli;
-    await _depolama.mqttAyarlariniKaydet(host: host, port: port, guvenli: guvenli);
-    if (!_demoModuAktif) {
-      await _mqttyeBaglan();
-    }
-    notifyListeners();
-  }
+  }) => _cihaz.mqttAyarlariniGuncelle(host: host, port: port, guvenli: guvenli);
 
-  Future<void> bildirimTercihleriniGuncelle(BildirimTercihleri yeni) async {
-    _bildirimTercihleri = yeni;
-    await _depolama.bildirimTercihleriniKaydet(yeni);
-    notifyListeners();
-  }
+  Future<KomutSonucu> manuelTedaviBaslat(int zone, TedaviTuru tedavi) =>
+      _cihaz.manuelTedaviBaslat(zone, tedavi);
+  Future<void> manuelTedaviDurdur(int zone) =>
+      _cihaz.manuelTedaviDurdur(zone);
+  Future<void> manuelNormaleDondur(int zone) =>
+      _cihaz.manuelNormaleDondur(zone);
 
-  // ============================================================================
-  // OPERATOR MUDAHALESI (manuel komut)
-  // ============================================================================
-  //
-  // AquaGuard'in temel iddiasi OTONOM teshis+tedavidir (bkz. PROJE_BRIEF.md);
-  // asagidaki fonksiyonlar bunu degistirmez, sadece bir GUVENLIK/ESNEKLIK
-  // supabi ekler: dusuk guvenli "belirsiz" durumda sistem turu KENDISI
-  // seçemez (operator secmelidir) ve herhangi bir aktif tedavi, sahadaki bir
-  // operator tarafindan her zaman ERKEN durdurulabilmelidir. Demo modunda
-  // SimulasyonServisi'nin akisini degistirir; gercek MQTT modunda cihaza
-  // komut yayinlar (bkz. MqttServisi.komutGonder, firmware/mqtt_handler.h).
+  Future<void> sulamayiDurdur(int zone) => _cihaz.sulamayiDurdur(zone);
+  Future<void> sulamayiBaslat(int zone) => _cihaz.sulamayiBaslat(zone);
+  Future<List<int>> acilDurdurmaTetikle() => _cihaz.acilDurdurmaTetikle();
 
-  /// "Belirsiz" durumda operatorun, sistemin secemedigi tedaviyi MANUEL
-  /// olarak baslatmasini saglar.
-  ///
-  /// MUTEX KILIDI (ACIMASIZ DENETIM, 2026-09-06): zon zaten bir tedavi/
-  /// durulama surdurmekteyse istek REDDEDILIR (bkz.
-  /// SimulasyonServisi.manuelTedaviBaslat -- firmware/treatment.h'deki
-  /// GERCEK guvenlik kuralinin demo karsiligi). Gercek MQTT modunda bu
-  /// kontrol CIHAZ tarafinda da yapilir (mqtt_handler.h), ama burada da
-  /// ONCEDEN kontrol edilir ki operator anlamsiz bir komut gonderip
-  /// sonucunu (sessizce reddedilecegini) beklemek zorunda kalmasin.
-  /// Donen `bool`, cagiran arayuze (bkz. widgets/manuel_mudahale_paneli.dart)
-  /// reddedilme durumunda bir geri bildirim gosterme firsati verir.
-  Future<KomutSonucu> manuelTedaviBaslat(int zone, TedaviTuru tedavi) async {
-    final tur = tedaviyeKarsilikGelenTur(tedavi);
-    final guncelOkuma = _sonOkumalar[zone];
-    final zatenMesgulMu =
-        guncelOkuma != null &&
-        (guncelOkuma.tedaviAktif != TedaviTuru.yok ||
-            guncelOkuma.durulamaAktif);
-
-    KomutSonucu sonuc;
-    if (_demoModuAktif) {
-      final basarili = _simulasyon?.manuelTedaviBaslat(zone, tur) ?? false;
-      sonuc = basarili ? KomutSonucu.uygulandi : KomutSonucu.reddedildi;
-    } else if (zatenMesgulMu) {
-      sonuc = KomutSonucu.reddedildi;
-    } else {
-      sonuc = await _komutGonderVeOnayBekle(zone, {
-        'komut': 'tedavi_baslat',
-        'tedavi_turu': tedaviKoduGetir(tedavi),
-      });
-    }
-
-    final mesaj = switch (sonuc) {
-      KomutSonucu.uygulandi =>
-        'Zon $zone: Operatör "${tedaviEtiketi(tedavi)}" tedavisini manuel olarak başlattı',
-      KomutSonucu.reddedildi =>
-        'Zon $zone: "${tedaviEtiketi(tedavi)}" tedavisi REDDEDİLDİ '
-            '(mutex kilidi — zon zaten bir tedavi/durulama sürdürüyor)',
-      KomutSonucu.zamanAsimi =>
-        'Zon $zone: "${tedaviEtiketi(tedavi)}" komutu için cihazdan yanıt '
-            'alınamadı (zaman aşımı) — bağlantıyı kontrol edin',
-    };
-    _manuelMudahaleKaydet(zone, mesaj);
-    return sonuc;
-  }
-
-  /// SEMA v2 (ACK/NACK): komutu MqttServisi uzerinden gonderir, cihazdan
-  /// (veya gelistirmede mock yayincidan) `komut_durumu` konusunda bir yanit
-  /// gelene kadar BEKLER. 30 saniye icinde yanit gelmezse `zamanAsimi`
-  /// doner -- baglanti yoksa (bagliMi==false) beklemeden HEMEN zamanAsimi
-  /// doner (bos yere 30 saniye beklemenin anlami yok). GERCEK firmware
-  /// HENUZ bu konuyu yayinlamiyor (bkz. firmware/mqtt_handler.h notu) --
-  /// bu yuzden gercek donanimda bu her zaman zamanAsimi ile sonuclanir,
-  /// entegrasyona kadar.
-  Future<KomutSonucu> _komutGonderVeOnayBekle(
-    int zone,
-    Map<String, dynamic> komut,
-  ) async {
-    final mqtt = _mqtt;
-    if (mqtt == null || !mqtt.bagliMi) return KomutSonucu.zamanAsimi;
-
-    final komutId = mqtt.komutGonder(zone, komut);
-    final tamamlayici = Completer<KomutSonucu>();
-    _bekleyenKomutlar[komutId] = tamamlayici;
-
-    Timer(AyarlarSabitleri.komutZamanAsimi, () {
-      final beklenen = _bekleyenKomutlar.remove(komutId);
-      if (beklenen != null && !beklenen.isCompleted) {
-        beklenen.complete(KomutSonucu.zamanAsimi);
-      }
-    });
-
-    return tamamlayici.future;
-  }
-
-  void _komutDurumuGeldiginde(String komutId, bool basarili) {
-    final tamamlayici = _bekleyenKomutlar.remove(komutId);
-    if (tamamlayici != null && !tamamlayici.isCompleted) {
-      tamamlayici.complete(
-        basarili ? KomutSonucu.uygulandi : KomutSonucu.reddedildi,
-      );
-    }
-  }
-
-  /// Su an suren bir tedaviyi operatorun ERKEN sonlandirmasini saglar
-  /// (guvenlik supabi -- her zaman zorunlu durulamadan gecer).
-  Future<void> manuelTedaviDurdur(int zone) async {
-    final guncelOkuma = _sonOkumalar[zone];
-    if (guncelOkuma == null || guncelOkuma.tedaviAktif == TedaviTuru.yok) {
-      return;
-    }
-    final guncelTur = guncelOkuma.tikanmaTuru;
-    if (_demoModuAktif) {
-      _simulasyon?.manuelTedaviDurdur(zone, guncelTur);
-    } else {
-      await _komutGonderVeyaKuyrukla(zone, {'komut': 'tedavi_durdur'});
-    }
-    _manuelMudahaleKaydet(
-      zone,
-      'Zon $zone: Operatör devam eden tedaviyi manuel olarak durdurdu',
-    );
-  }
-
-  /// "Yanlis alarm" -- operator, tespiti/supheyi gecersiz sayar, tedaviye
-  /// gerek olmadan dogrudan normal izlemeye doner.
-  Future<void> manuelNormaleDondur(int zone) async {
-    if (_demoModuAktif) {
-      _simulasyon?.manuelNormaleDondur(zone);
-    } else {
-      await _komutGonderVeyaKuyrukla(zone, {'komut': 'normale_dondur'});
-    }
-    _manuelMudahaleKaydet(
-      zone,
-      'Zon $zone: Operatör yanlış alarm olarak işaretledi, durum normale döndürüldü',
-    );
-  }
-
-  void _manuelMudahaleKaydet(int zone, String mesaj) {
-    final kayit = AktiviteKaydi(
-      zaman: DateTime.now(),
-      zone: zone,
-      mesaj: mesaj,
-      tur: AktiviteTuru.manuelMudahale,
-    );
-    _aktiviteKaydiEkle(kayit);
-    notifyListeners();
-  }
-
-  // ============================================================================
-  // SULAMA KONTROLU (ana vana acik/kapali -- teshis akisindan BAGIMSIZ)
-  // ============================================================================
-  //
-  // Karar motoru "tikanma var/yok" teshis eder; bu bolum ise sahadaki
-  // operatorun tamamen ayri bir nedenle (sizinti supheci, bakim, komsu
-  // parselde is yapiliyor vb.) bir zonun sulamasini TAMAMEN durdurmasini
-  // saglar -- tedaviyi durdurmaktan farkli olarak, burada "yanlis teshis"
-  // degil "sahada baska bir sebep" soz konusudur. Demo modunda ilgili
-  // zonun veri akisi duraklatilir (son okuma donuk kalir); gercek MQTT
-  // modunda cihaza komut yayinlanir.
-
-  /// Zonun ana vanasini MANUEL olarak kapatir.
-  Future<void> sulamayiDurdur(int zone) async {
-    if (_sulamasiDurdurulanZonlar.contains(zone)) return;
-    _sulamasiDurdurulanZonlar.add(zone);
-    unawaited(
-      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
-    );
-    if (_demoModuAktif) {
-      _simulasyon?.sulamayiDuraklat(zone);
-    } else {
-      await _komutGonderVeyaKuyrukla(zone, {'komut': 'sulama_durdur'});
-    }
-    _manuelMudahaleKaydet(
-      zone,
-      'Zon $zone: Operatör sulamayı (ana vana) manuel olarak durdurdu',
-    );
-  }
-
-  // ============================================================================
-  // ACIL DURDURMA (tum sistem geneli guvenlik supabi)
-  // ============================================================================
-  //
-  // Dashboard'daki "ACİL DURDUR" FAB'ının dayandigi tek-tuşluk toplu eylem:
-  // TUM zonlardaki aktif tedavileri (guvenlik geregi zorunlu durulamadan
-  // GECIRIREK -- manuelTedaviDurdur ile AYNI guvenlik kurali, atlanmaz) durdurur
-  // VE henuz kapali olmayan tum zonlarin ana vanalarini kapatir. Sadece BU
-  // cagriyla kapatilan zonlarin listesini doner -- "Geri Al" (bkz.
-  // widgets/acil_durdurma_fab.dart) SADECE bu zonlarin vanasini yeniden acar;
-  // durdurulan tedaviler GERI ALINMAZ (zaten guvenlik durulamasindan gecmis
-  // olabilir, bu ISLEM GERI DONDURULEMEZ -- ayni "Tedaviyi Durdur" butonunun
-  // her zaman guvenlik oncelikli, tek yonlu davranisi).
-
-  Future<List<int>> acilDurdurmaTetikle() async {
-    final zonlar = tumZonNumaralari;
-    final vanasiYeniKapatilanlar = <int>[];
-
-    for (final zon in zonlar) {
-      final okuma = _sonOkumalar[zon];
-      if (okuma != null && okuma.tedaviAktif != TedaviTuru.yok) {
-        if (_demoModuAktif) {
-          _simulasyon?.manuelTedaviDurdur(zon, okuma.tikanmaTuru);
-        } else {
-          unawaited(_komutGonderVeyaKuyrukla(zon, {'komut': 'tedavi_durdur'}));
-        }
-      }
-      if (!_sulamasiDurdurulanZonlar.contains(zon)) {
-        vanasiYeniKapatilanlar.add(zon);
-        _sulamasiDurdurulanZonlar.add(zon);
-        if (_demoModuAktif) {
-          _simulasyon?.sulamayiDuraklat(zon);
-        } else {
-          unawaited(_komutGonderVeyaKuyrukla(zon, {'komut': 'sulama_durdur'}));
-        }
-      }
-    }
-    unawaited(
-      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
-    );
-
-    final kayit = AktiviteKaydi(
-      zaman: DateTime.now(),
-      zone: 0,
-      mesaj:
-          'ACİL DURDURMA tetiklendi: tüm tedaviler durduruldu, '
-          '${vanasiYeniKapatilanlar.length} zonun ana vanası kapatıldı',
-      tur: AktiviteTuru.manuelMudahale,
-    );
-    _aktiviteKaydiEkle(kayit);
-    notifyListeners();
-
-    return vanasiYeniKapatilanlar;
-  }
-
-  /// Manuel kapatilmis sulamayi yeniden acar.
-  Future<void> sulamayiBaslat(int zone) async {
-    if (!_sulamasiDurdurulanZonlar.contains(zone)) return;
-    _sulamasiDurdurulanZonlar.remove(zone);
-    unawaited(
-      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
-    );
-    if (_demoModuAktif) {
-      _simulasyon?.sulamayiDevamEttir(zone);
-    } else {
-      await _komutGonderVeyaKuyrukla(zone, {'komut': 'sulama_baslat'});
-    }
-    _manuelMudahaleKaydet(
-      zone,
-      'Zon $zone: Operatör sulamayı (ana vana) yeniden başlattı',
-    );
-  }
-
-  // ============================================================================
-  // DEMO SENARYO TETIKLEME (sadece Demo Modu'nda anlamli)
-  // ============================================================================
-  //
-  // Juri/izleyici onunde uygulamanin rastgele demo akisini beklemek yerine,
-  // tek dokunuşla ISTENEN senaryoyu hemen gostermek icin. Mevcut operator-
-  // mudahalesi altyapisini (SimulasyonServisi.manuelTedaviBaslat/
-  // manuelNormaleDondur -- yukaridaki bolum) DOGRUDAN kullanir, yeni bir
-  // simulasyon mekanizmasi icat edilmez. Hedef zon numaralari (1-4) SABITTIR
-  // -- bu, Tarla.varsayilanListe()'nin fiziksel prototiple birebir eslesen
-  // "1 çiftlik / 4 zon" karariyla dogrudan iliskilidir (bkz. models/tarla.dart);
-  // panel zaten sadece Demo Modu'nda gosterilir, gercek donanimda anlamsizdir.
-
-  /// Zonlari onceden ayarlanmis bir duruma sokan demo senaryolari.
-  Future<void> demoSenaryosuTetikle(DemoSenaryosu senaryo) async {
-    if (!_demoModuAktif || _simulasyon == null) return;
-    final mevcutZonlar = tumZonNumaralari;
-
-    // Onceki senaryonun kalintisi kalmasin diye ONCE tum zonlari normale
-    // dondur, boylece her tetikleme kullaniciya AYNI temiz baslangic
-    // noktasindan gosterilir (rastgele arka plan durumuna bagli degildir).
-    for (final zon in mevcutZonlar) {
-      _simulasyon!.manuelNormaleDondur(zon);
-    }
-
-    String aciklama;
-    switch (senaryo) {
-      case DemoSenaryosu.saglikli:
-        aciklama = 'Sağlıklı Sistem';
-        break;
-      case DemoSenaryosu.kimyasal:
-        if (mevcutZonlar.contains(2)) {
-          _simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.kimyasal);
-        }
-        aciklama = 'Kimyasal Tıkanma (Zon 2)';
-        break;
-      case DemoSenaryosu.biyolojik:
-        if (mevcutZonlar.contains(1)) {
-          _simulasyon!.manuelTedaviBaslat(1, TikanmaTuru.biyolojik);
-        }
-        aciklama = 'Biyolojik Tıkanma (Zon 1)';
-        break;
-      case DemoSenaryosu.fiziksel:
-        if (mevcutZonlar.contains(3)) {
-          _simulasyon!.manuelTedaviBaslat(3, TikanmaTuru.fiziksel);
-        }
-        aciklama = 'Fiziksel Tıkanma (Zon 3)';
-        break;
-      case DemoSenaryosu.mutexKilidi:
-        // ACIMASIZ DENETIM DUZELTMESI (2026-09-06): ONCEKI surum iki FARKLI
-        // zonu es zamanli tetikliyordu -- bu, HICBIR SEYI kilitlemiyordu
-        // (her zonun kendi bagimsiz durumu var, iki farkli zonun ayni anda
-        // farkli tedaviler gormesinde mutex acisindan sasirtici bir sey
-        // yoktur). GERCEK mutex kilidi TEK bir zonda, AYNI ANDA IKINCI bir
-        // tedavi denendiginde REDDEDILMESIDIR (bkz. firmware/treatment.h).
-        // Bu senaryo artik TAM OLARAK bunu gosterir: Zon 2'de once klor
-        // enjeksiyonu baslatilir, ardindan AYNI zonda asit dozlama denenir
-        // ve SimulasyonServisi.manuelTedaviBaslat() tarafindan REDDEDILIR --
-        // hem aktivite gunlugunde hem MutexKilitGostergesi widget'inda
-        // (Klor aktif, Asit/Yikama kilitli) gorunur.
-        if (mevcutZonlar.contains(2)) {
-          _simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.biyolojik);
-          final reddedildiMi =
-              !_simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.kimyasal);
-          if (reddedildiMi) {
-            final redKaydi = AktiviteKaydi(
-              zaman: DateTime.now(),
-              zone: 2,
-              mesaj:
-                  'Zon 2: Asit dozlama REDDEDİLDİ (mutex kilidi — '
-                  'klor enjeksiyonu sürüyor)',
-              tur: AktiviteTuru.manuelMudahale,
-            );
-            // bildirimDegerlendir: false -- bu sadece demo icin bir DETAY
-            // logu, ayrica bir bildirim/rozet tetiklemesi ISTENMIYOR
-            // (davranis oncekiyle ayni: bu kayit hicbir zaman
-            // _bildirimKuyrugu'na girmiyordu).
-            _aktiviteKaydiEkle(redKaydi, bildirimDegerlendir: false);
-          }
-        }
-        aciklama = 'Mutex Kilit Gösterimi (Zon 2: Klor sürüyor, Asit reddedildi)';
-        break;
-    }
-
-    final kayit = AktiviteKaydi(
-      zaman: DateTime.now(),
-      zone: 0,
-      mesaj: 'Demo senaryosu tetiklendi: $aciklama',
-      tur: AktiviteTuru.manuelMudahale,
-    );
-    _aktiviteKaydiEkle(kayit);
-    notifyListeners();
-  }
-
-  // ============================================================================
-  // TARLA NOTLARI (operatorun serbest metin notlari)
-  // ============================================================================
-
-  Future<void> notEkle(String tarlaId, String metin) async {
-    final temiz = metin.trim();
-    if (temiz.isEmpty) return;
-    _tarlaNotlari.insert(
-      0,
-      TarlaNotu(
-        id: 'not-${DateTime.now().microsecondsSinceEpoch}',
-        tarlaId: tarlaId,
-        metin: temiz,
-        zaman: DateTime.now(),
-      ),
-    );
-    await _depolama.tarlaNotlariniKaydet(_tarlaNotlari);
-    notifyListeners();
-  }
-
-  Future<void> notSil(String notId) async {
-    _tarlaNotlari.removeWhere((n) => n.id == notId);
-    await _depolama.tarlaNotlariniKaydet(_tarlaNotlari);
-    notifyListeners();
-  }
-
-  // ============================================================================
-  // ZON TAKMA ADLARI
-  // ============================================================================
-
-  /// Zona bir takma ad verir; [ad] bos/null ise takma adi KALDIRIR (varsayilan
-  /// "Zon N" bicimine doner).
-  Future<void> zonTakmaAdiAyarla(int zone, String? ad) async {
-    final temiz = ad?.trim();
-    if (temiz == null || temiz.isEmpty) {
-      _zonTakmaAdlari.remove(zone);
-    } else {
-      _zonTakmaAdlari[zone] = temiz;
-    }
-    await _depolama.zonTakmaAdlariniKaydet(_zonTakmaAdlari);
-    notifyListeners();
-  }
+  Future<void> demoSenaryosuTetikle(DemoSenaryosu senaryo) =>
+      _cihaz.demoSenaryosuTetikle(senaryo);
 
   @override
   void dispose() {
-    _mqtt?.baglantiyiKapat();
-    _simulasyon?.durdur();
-    _baglantiAboneligi?.cancel();
+    // Facade alt provider'lari SAHIPLENIR (main.dart bunlari ayrica
+    // Provider agacina KOYMUYOR) -- bu yuzden burada sadece listener'lari
+    // degil, ChangeNotifier.dispose()'lari da cagirmak gerekir. AKSI
+    // HALDE CihazIletisimProvider'in MQTT baglantisi/Demo Modu simulasyon
+    // Timer'i asla durmaz (ozellikle testlerde "Timer is still pending
+    // even after the widget tree was disposed" hatasina yol acar).
+    _ayarlar.removeListener(notifyListeners);
+    _tarla.removeListener(notifyListeners);
+    _guvenlik.removeListener(notifyListeners);
+    _bakim.removeListener(notifyListeners);
+    _aktivite.removeListener(notifyListeners);
+    _cihaz.removeListener(notifyListeners);
+    _ayarlar.dispose();
+    _tarla.dispose();
+    _guvenlik.dispose();
+    _bakim.dispose();
+    _aktivite.dispose();
+    _cihaz.dispose();
     super.dispose();
   }
-}
-
-/// `Future`'i "ates et ve unut" (fire-and-forget) sekilde calistirmak icin
-/// kucuk bir yardimci -- depolama yazma islemlerinin UI'yi bloklamasini
-/// istemiyoruz, ama hatalari da sessizce yutmak istemiyoruz.
-void unawaited(Future<void> future) {
-  future.catchError((Object hata) {
-    debugPrint('AquaGuard depolama hatasi: $hata');
-  });
-}
-
-/// Demo Modu'nda tek dokunuşla tetiklenebilecek onceden tanimli senaryolar
-/// (bkz. UygulamaDurumu.demoSenaryosuTetikle).
-enum DemoSenaryosu { saglikli, kimyasal, biyolojik, fiziksel, mutexKilidi }
-
-/// Bir zon grubunun (tarla veya tum sistem) durum dagilimi. Genel Bakış ve
-/// Zon Dashboard ekranlarinin ikisi de UygulamaDurumu.durumOzetiHesapla()
-/// araciligiyla bunu kullanir.
-class ZonDurumOzeti {
-  final int normal;
-  final int belirsiz;
-  final int tespitEdildi;
-  final int tedavide;
-  final int cevrimdisi;
-
-  const ZonDurumOzeti({
-    required this.normal,
-    required this.belirsiz,
-    required this.tespitEdildi,
-    required this.tedavide,
-    required this.cevrimdisi,
-  });
 }
