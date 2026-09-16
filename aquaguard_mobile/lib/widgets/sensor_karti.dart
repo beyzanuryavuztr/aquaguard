@@ -15,6 +15,9 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../models/sensor_saglik_durumu.dart';
+import 'durum_renkleri.dart';
+
 class SensorKarti extends StatelessWidget {
   final IconData ikon;
   final String baslik;
@@ -23,6 +26,12 @@ class SensorKarti extends StatelessWidget {
   final Color renk;
   final bool secili;
   final VoidCallback onTap;
+  // Sensorun KENDISININ arizali/guvenilmez olabilecegini gosterir --
+  // zon durumundan (tikanma tespiti) BAGIMSIZ bir uyari (bkz.
+  // models/sensor_saglik_durumu.dart). Varsayilan 'normal' -- rozet
+  // sadece anomali durumunda cizilir, mevcut kartlarin gorunumunu
+  // degistirmez.
+  final SensorSaglikDurumu saglikDurumu;
 
   const SensorKarti({
     super.key,
@@ -33,12 +42,13 @@ class SensorKarti extends StatelessWidget {
     required this.renk,
     required this.secili,
     required this.onTap,
+    this.saglikDurumu = SensorSaglikDurumu.normal,
   });
 
   @override
   Widget build(BuildContext context) {
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
-    return AnimatedContainer(
+    final kart = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: secili
@@ -90,6 +100,37 @@ class SensorKarti extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    if (saglikDurumu == SensorSaglikDurumu.normal) return kart;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        kart,
+        Positioned(
+          top: -4,
+          right: -4,
+          child: Tooltip(
+            message: sensorSagligiEtiketi(saglikDurumu),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: DurumRenkleri.belirsiz.rozetTonu,
+                shape: BoxShape.circle,
+                border: Border.all(color: DurumRenkleri.belirsiz, width: 1),
+              ),
+              child: Icon(
+                saglikDurumu == SensorSaglikDurumu.aniSicrama
+                    ? Icons.priority_high
+                    : Icons.pause_circle,
+                color: DurumRenkleri.belirsiz,
+                size: 12,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

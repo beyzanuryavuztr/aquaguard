@@ -20,8 +20,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/sensor_imzalari.dart';
 import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
+import '../models/sensor_saglik_durumu.dart';
 import '../models/sensor_tanimi.dart';
 import '../models/tedavi_karsilastirmasi.dart';
 import '../providers/uygulama_durumu.dart';
@@ -454,6 +456,14 @@ class _SensorAnaliziBolumuState extends State<_SensorAnaliziBolumu> {
                 renk: sensorTanimlari[i].renk,
                 secili: i == _secilenIndeks,
                 onTap: () => setState(() => _secilenIndeks = i),
+                saglikDurumu: sensorSagligiDegerlendir(
+                  sonDegerlerEnYeniOnce: widget.gecmisEnYeniOnce
+                      .map(sensorTanimlari[i].secici)
+                      .toList(),
+                  normalStd:
+                      sensorImzalari['normal']![sensorTanimlari[i].anahtar]!
+                          .std,
+                ),
               ),
           ],
         ),

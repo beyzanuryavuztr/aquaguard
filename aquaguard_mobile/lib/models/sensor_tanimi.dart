@@ -26,6 +26,10 @@ class SensorTanimi {
   final IconData ikon;
   final double Function(SensorOkuma) secici;
   final List<EsikCizgisi> esikler;
+  // sensorImzalari (config/sensor_imzalari.dart) haritasindaki anahtarla
+  // BIREBIR ayni -- sensor saglik degerlendirmesi (arıza tespiti) bu
+  // sensorun 'normal' sinif std sapmasini burdan bulur.
+  final String anahtar;
 
   const SensorTanimi({
     required this.baslik,
@@ -33,6 +37,7 @@ class SensorTanimi {
     required this.renk,
     required this.ikon,
     required this.secici,
+    required this.anahtar,
     this.esikler = const [],
   });
 }
@@ -44,6 +49,7 @@ final sensorTanimlari = <SensorTanimi>[
     renk: const Color(0xFF6D4C41),
     ikon: Icons.science,
     secici: (o) => o.ph,
+    anahtar: 'ph',
   ),
   SensorTanimi(
     baslik: 'EC',
@@ -51,6 +57,7 @@ final sensorTanimlari = <SensorTanimi>[
     renk: const Color(0xFF00838F),
     ikon: Icons.bolt,
     secici: (o) => o.ec,
+    anahtar: 'ec',
   ),
   SensorTanimi(
     baslik: 'ORP',
@@ -58,6 +65,7 @@ final sensorTanimlari = <SensorTanimi>[
     renk: const Color(0xFF6A1B9A),
     ikon: Icons.swap_vert,
     secici: (o) => o.orp,
+    anahtar: 'orp',
   ),
   SensorTanimi(
     baslik: 'Türbidite',
@@ -65,6 +73,7 @@ final sensorTanimlari = <SensorTanimi>[
     renk: const Color(0xFFEF6C00),
     ikon: Icons.blur_on,
     secici: (o) => o.turbidite,
+    anahtar: 'turbidite',
     esikler: [
       EsikCizgisi(
         deger: turbiditeEsigi,
@@ -79,6 +88,7 @@ final sensorTanimlari = <SensorTanimi>[
     renk: const Color(0xFF1565C0),
     ikon: Icons.water,
     secici: (o) => o.debi,
+    anahtar: 'debi',
     esikler: [
       EsikCizgisi(
         deger: referansDebi - debiDususEsigi,
@@ -94,6 +104,7 @@ final sensorTanimlari = <SensorTanimi>[
     renk: const Color(0xFFC62828),
     ikon: Icons.speed,
     secici: (o) => o.deltaBasinc,
+    anahtar: 'delta_basinc',
     esikler: [
       EsikCizgisi(
         deger: basincArtisEsigi,
