@@ -21,6 +21,7 @@ import '../providers/uygulama_durumu.dart';
 import '../widgets/acil_durdurma_fab.dart';
 import '../widgets/aktif_tedaviler_bolumu.dart';
 import '../widgets/bakim_uyari_karti.dart';
+import '../widgets/cevrimdisi_banner.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/demo_senaryo_paneli.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -122,6 +123,8 @@ class GenelBakisEkrani extends StatelessWidget {
                         padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
                         child: DemoSenaryoPaneli(),
                       ),
+                    ] else if (!durum.cihazBagliMi) ...[
+                      const CevrimdisiBanner(),
                     ],
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),

@@ -29,6 +29,7 @@ import '../models/bakim_gorevi.dart';
 import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
 import '../models/kullanici_profili.dart';
+import '../models/kuyruklanmis_komut.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -55,6 +56,7 @@ class DepolamaServisi {
   static const _temaModuAnahtari = 'aquaguard_tema_modu';
   static const _aksanRengiAnahtari = 'aquaguard_aksan_rengi';
   static const _sahaModuAnahtari = 'aquaguard_saha_modu_acik';
+  static const _kuyruklananKomutlarAnahtari = 'aquaguard_kuyruklanan_komutlar';
   static const _kullaniciProfiliAnahtari = 'aquaguard_kullanici_profili';
   static const _gecmisMaksimumUzunluk = 200;
 
@@ -318,6 +320,28 @@ class DepolamaServisi {
   Future<void> sahaModuKaydet(bool acik) async {
     final tercihler = await _tercihler;
     await tercihler.setBool(_sahaModuAnahtari, acik);
+  }
+
+  // ==========================================================================
+  // KUYRUKLANAN KOMUTLAR (offline mod -- bkz. models/kuyruklanmis_komut.dart)
+  // ==========================================================================
+
+  Future<List<KuyruklanmisKomut>> kuyruklananKomutlariGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_kuyruklananKomutlarAnahtari);
+    if (ham == null) return [];
+    final liste = jsonDecode(ham) as List<dynamic>;
+    return liste
+        .map((e) => KuyruklanmisKomut.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> kuyruklananKomutlariKaydet(
+    List<KuyruklanmisKomut> komutlar,
+  ) async {
+    final tercihler = await _tercihler;
+    final ham = jsonEncode(komutlar.map((k) => k.toJson()).toList());
+    await tercihler.setString(_kuyruklananKomutlarAnahtari, ham);
   }
 
   // ==========================================================================

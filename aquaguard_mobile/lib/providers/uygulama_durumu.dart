@@ -19,6 +19,7 @@ library;
 
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/ayarlar_sabitleri.dart';
@@ -30,6 +31,7 @@ import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
 import '../models/enerji_durumu.dart';
 import '../models/kullanici_profili.dart';
+import '../models/kuyruklanmis_komut.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -70,6 +72,12 @@ class UygulamaDurumu extends ChangeNotifier {
   int _mqttPort = 0;
   bool _mqttGuvenli = false;
   MqttBaglantiDurumu _baglantiDurumu = MqttBaglantiDurumu.baglaniyor;
+  // Cihazin kendi ag durumu -- MQTT broker baglantisindan (_baglantiDurumu)
+  // BAGIMSIZ, bkz. OFFLINE MOD bolumu. Iyimser varsayilan: baglanti kontrol
+  // edilene kadar (asenkron) "bagli" kabul edilir, gereksiz erken banner
+  // gosterilmez.
+  bool _cihazBagliMi = true;
+  final List<KuyruklanmisKomut> _kuyruklananKomutlar = [];
   BildirimTercihleri _bildirimTercihleri = const BildirimTercihleri();
   bool _hazir = false;
 
@@ -112,6 +120,7 @@ class UygulamaDurumu extends ChangeNotifier {
   int get mqttPort => _mqttPort;
   bool get mqttGuvenli => _mqttGuvenli;
   MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
+  bool get cihazBagliMi => _cihazBagliMi;
   BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
   List<AktiviteKaydi> get bildirimGecmisi =>
       List.unmodifiable(_bildirimGecmisi);
@@ -289,6 +298,10 @@ class UygulamaDurumu extends ChangeNotifier {
 
   Future<void> baslat() async {
     unawaited(BildirimServisi.baslat());
+    unawaited(_cihazAgDurumunuIzlemeyeBasla());
+    _kuyruklananKomutlar
+      ..clear()
+      ..addAll(await _depolama.kuyruklananKomutlariGetir());
     _tarlalar = await _depolama.tarlalariGetir();
     final ayarlar = await _depolama.mqttAyarlariniGetir();
     _mqttHost = ayarlar.host;
@@ -689,7 +702,76 @@ class UygulamaDurumu extends ChangeNotifier {
 
   void _baglantiDurumuDegistiginde(MqttBaglantiDurumu durum) {
     _baglantiDurumu = durum;
+    if (durum == MqttBaglantiDurumu.bagli) {
+      unawaited(_kuyruklananKomutlariGonder());
+    }
     notifyListeners();
+  }
+
+  // ============================================================================
+  // OFFLINE MOD (cihaz agi + komut kuyrugu)
+  // ============================================================================
+  //
+  // Cihazin kendi ag durumu (telefonda internet var mi), MQTT broker
+  // baglanti durumundan (_baglantiDurumu -- "brokera bagli miyiz")
+  // BAGIMSIZDIR: biri "genel ag erisimi", digeri "bu spesifik servise
+  // baglanti". Banner SADECE gercek-MQTT modunda ve cihaz agi YOKKEN
+  // gosterilir (bkz. genel_bakis_ekrani.dart).
+
+  StreamSubscription<List<ConnectivityResult>>? _baglantiAboneligi;
+
+  Future<void> _cihazAgDurumunuIzlemeyeBasla() async {
+    try {
+      final ilkDurum = await Connectivity().checkConnectivity();
+      _cihazBagliMi = !ilkDurum.contains(ConnectivityResult.none);
+      _baglantiAboneligi = Connectivity().onConnectivityChanged.listen((
+        sonuc,
+      ) {
+        _cihazBagliMi = !sonuc.contains(ConnectivityResult.none);
+        notifyListeners();
+      });
+    } catch (_) {
+      // connectivity_plus bazi platformlarda (ornegin test ortami/bazi
+      // masaustu yapilandirmalari) desteklenmeyebilir -- bu bir
+      // IYILESTIRME, kritik yol degil, sessizce varsayilan (bagli) kalinir.
+    }
+  }
+
+  /// Baglanti yokken (veya hic kurulmamisken) bir "gonder ve unut" komutunu
+  /// (ACK bekleyen manuelTedaviBaslat'tan FARKLI, bkz. dosya basi notu)
+  /// kuyruga ekler; baglanti VARSA dogrudan gonderir. Kuyruktaki komutlar
+  /// baglanti geri gelince _kuyruklananKomutlariGonder() ile sirayla
+  /// gonderilir.
+  Future<void> _komutGonderVeyaKuyrukla(
+    int zone,
+    Map<String, dynamic> komut,
+  ) async {
+    final mqtt = _mqtt;
+    if (mqtt != null && mqtt.bagliMi) {
+      mqtt.komutGonder(zone, komut);
+      return;
+    }
+    _kuyruklananKomutlar.add(
+      KuyruklanmisKomut(zone: zone, komut: komut, olusturmaZamani: DateTime.now()),
+    );
+    await _depolama.kuyruklananKomutlariKaydet(_kuyruklananKomutlar);
+  }
+
+  Future<void> _kuyruklananKomutlariGonder() async {
+    if (_kuyruklananKomutlar.isEmpty) return;
+    final mqtt = _mqtt;
+    if (mqtt == null || !mqtt.bagliMi) return;
+
+    final gecerliler = _kuyruklananKomutlar
+        .where(
+          (k) => !k.suresiGecmisMi(AyarlarSabitleri.kuyrukKomutGecerlilikSuresi),
+        )
+        .toList();
+    for (final kuyruklu in gecerliler) {
+      mqtt.komutGonder(kuyruklu.zone, kuyruklu.komut);
+    }
+    _kuyruklananKomutlar.clear();
+    await _depolama.kuyruklananKomutlariKaydet(_kuyruklananKomutlar);
   }
 
   // ============================================================================
@@ -899,7 +981,7 @@ class UygulamaDurumu extends ChangeNotifier {
     if (_demoModuAktif) {
       _simulasyon?.manuelTedaviDurdur(zone, guncelTur);
     } else {
-      _mqtt?.komutGonder(zone, {'komut': 'tedavi_durdur'});
+      await _komutGonderVeyaKuyrukla(zone, {'komut': 'tedavi_durdur'});
     }
     _manuelMudahaleKaydet(
       zone,
@@ -913,7 +995,7 @@ class UygulamaDurumu extends ChangeNotifier {
     if (_demoModuAktif) {
       _simulasyon?.manuelNormaleDondur(zone);
     } else {
-      _mqtt?.komutGonder(zone, {'komut': 'normale_dondur'});
+      await _komutGonderVeyaKuyrukla(zone, {'komut': 'normale_dondur'});
     }
     _manuelMudahaleKaydet(
       zone,
@@ -954,7 +1036,7 @@ class UygulamaDurumu extends ChangeNotifier {
     if (_demoModuAktif) {
       _simulasyon?.sulamayiDuraklat(zone);
     } else {
-      _mqtt?.komutGonder(zone, {'komut': 'sulama_durdur'});
+      await _komutGonderVeyaKuyrukla(zone, {'komut': 'sulama_durdur'});
     }
     _manuelMudahaleKaydet(
       zone,
@@ -986,7 +1068,7 @@ class UygulamaDurumu extends ChangeNotifier {
         if (_demoModuAktif) {
           _simulasyon?.manuelTedaviDurdur(zon, okuma.tikanmaTuru);
         } else {
-          _mqtt?.komutGonder(zon, {'komut': 'tedavi_durdur'});
+          unawaited(_komutGonderVeyaKuyrukla(zon, {'komut': 'tedavi_durdur'}));
         }
       }
       if (!_sulamasiDurdurulanZonlar.contains(zon)) {
@@ -995,7 +1077,7 @@ class UygulamaDurumu extends ChangeNotifier {
         if (_demoModuAktif) {
           _simulasyon?.sulamayiDuraklat(zon);
         } else {
-          _mqtt?.komutGonder(zon, {'komut': 'sulama_durdur'});
+          unawaited(_komutGonderVeyaKuyrukla(zon, {'komut': 'sulama_durdur'}));
         }
       }
     }
@@ -1027,7 +1109,7 @@ class UygulamaDurumu extends ChangeNotifier {
     if (_demoModuAktif) {
       _simulasyon?.sulamayiDevamEttir(zone);
     } else {
-      _mqtt?.komutGonder(zone, {'komut': 'sulama_baslat'});
+      await _komutGonderVeyaKuyrukla(zone, {'komut': 'sulama_baslat'});
     }
     _manuelMudahaleKaydet(
       zone,
@@ -1176,6 +1258,7 @@ class UygulamaDurumu extends ChangeNotifier {
   void dispose() {
     _mqtt?.baglantiyiKapat();
     _simulasyon?.durdur();
+    _baglantiAboneligi?.cancel();
     super.dispose();
   }
 }

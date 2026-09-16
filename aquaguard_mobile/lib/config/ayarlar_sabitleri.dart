@@ -77,6 +77,12 @@ class AyarlarSabitleri {
   //     _komutGonderVeOnayBekle). ---
   static const Duration komutZamanAsimi = Duration(seconds: 30);
 
+  // --- Offline mod: cihazin kendi agi/broker baglantisi yokken kuyruga
+  //     alinan komutlarin gecerlilik suresi -- bundan eski komutlar
+  //     SESSIZCE silinir, otomatik gonderilmez (bkz. models/
+  //     kuyruklanmis_komut.dart). ---
+  static const Duration kuyrukKomutGecerlilikSuresi = Duration(minutes: 5);
+
   // --- Tedavi sureleri (firmware/config.h TEDAVI_*_SURESI_MS ile ayni, saniye) ---
   static const Map<TedaviTuru, int> tedaviSuresiSaniye = {
     TedaviTuru.asitDozlama: 30,
