@@ -21,6 +21,8 @@ library;
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../models/bildirim_onceligi.dart';
+
 class BildirimServisi {
   BildirimServisi._();
 
@@ -67,23 +69,47 @@ class BildirimServisi {
     }
   }
 
+  /// [oncelik]: SEMA v2 (2026-09-16) -- Android tarafinda ayri bir kanal
+  /// (channel) ve Importance/Priority seviyesi secer; kritik/yuksek AYRI
+  /// bir kanalda ('aquaguard_kritik') gosterilir ki isletim sistemi bunu
+  /// dusuk oncelikli bildirimlerle AYNI kurallarla (ornegin "Rahatsiz
+  /// Etme" modunda sessize alma) ele almasin -- operator, telefon
+  /// ayarlarindan bu kanala ozel izin verebilir. `groupKey` ayni kanaldaki
+  /// birden fazla bildirimi Android'de tek bir grup altinda ozetler.
   static Future<void> goster({
     required int id,
     required String baslik,
     required String icerik,
+    Oncelik oncelik = Oncelik.orta,
   }) async {
     if (!_hazir) return;
-    const detaylar = NotificationDetails(
+    final kritikMi =
+        oncelik == Oncelik.kritik || oncelik == Oncelik.yuksek;
+    final importance = switch (oncelik) {
+      Oncelik.kritik => Importance.max,
+      Oncelik.yuksek => Importance.high,
+      Oncelik.orta => Importance.defaultImportance,
+      Oncelik.dusuk => Importance.low,
+    };
+    final priority = switch (oncelik) {
+      Oncelik.kritik => Priority.max,
+      Oncelik.yuksek => Priority.high,
+      Oncelik.orta => Priority.defaultPriority,
+      Oncelik.dusuk => Priority.low,
+    };
+    final detaylar = NotificationDetails(
       android: AndroidNotificationDetails(
-        'aquaguard_uyarilar',
-        'AquaGuard Uyarıları',
-        channelDescription:
-            'Tıkanma tespiti, tedavi ve pil durumu bildirimleri',
-        importance: Importance.high,
-        priority: Priority.high,
+        kritikMi ? 'aquaguard_kritik' : 'aquaguard_uyarilar',
+        kritikMi ? 'AquaGuard Kritik Uyarılar' : 'AquaGuard Uyarıları',
+        channelDescription: kritikMi
+            ? 'Tıkanma tespiti ve operatör kontrolü gerektiren acil durumlar'
+            : 'Tedavi tamamlanma ve pil durumu gibi bilgilendirici bildirimler',
+        importance: importance,
+        priority: priority,
+        groupKey: 'aquaguard_bildirimleri',
       ),
-      linux: LinuxNotificationDetails(),
-      windows: WindowsNotificationDetails(),
+      linux: const LinuxNotificationDetails(),
+      windows: const WindowsNotificationDetails(),
     );
     try {
       await _eklenti.show(

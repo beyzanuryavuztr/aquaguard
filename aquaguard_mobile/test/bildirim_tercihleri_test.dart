@@ -49,4 +49,40 @@ void main() {
     expect(tercih.tedaviTamamlanma, isTrue);
     expect(tercih.dusukPil, isTrue);
   });
+
+  group('sessiz saatler (sema v2)', () {
+    test('varsayilan olarak kapali (ikisi de null)', () {
+      const tercih = BildirimTercihleri();
+      expect(tercih.sessizSaatAktif, isFalse);
+    });
+
+    test('her ikisi de ayarlaninca aktif olur', () {
+      const tercih = BildirimTercihleri(
+        sessizBaslangicDakika: 1320,
+        sessizBitisDakika: 420,
+      );
+      expect(tercih.sessizSaatAktif, isTrue);
+    });
+
+    test('kopyalaVeGuncelle: sessizSaatiKaldir ikisini de null yapar', () {
+      const tercih = BildirimTercihleri(
+        sessizBaslangicDakika: 1320,
+        sessizBitisDakika: 420,
+      );
+      final guncel = tercih.kopyalaVeGuncelle(sessizSaatiKaldir: true);
+      expect(guncel.sessizSaatAktif, isFalse);
+      expect(guncel.sessizBaslangicDakika, isNull);
+      expect(guncel.sessizBitisDakika, isNull);
+    });
+
+    test('toJson -> fromJson sessiz saat alanlarini korur', () {
+      const tercih = BildirimTercihleri(
+        sessizBaslangicDakika: 1320,
+        sessizBitisDakika: 420,
+      );
+      final geriYuklenen = BildirimTercihleri.fromJson(tercih.toJson());
+      expect(geriYuklenen.sessizBaslangicDakika, 1320);
+      expect(geriYuklenen.sessizBitisDakika, 420);
+    });
+  });
 }

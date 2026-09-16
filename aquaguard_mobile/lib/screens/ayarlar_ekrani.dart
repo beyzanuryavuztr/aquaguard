@@ -457,6 +457,28 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                           ),
                         ),
                   ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    title: const Text('Sessiz Saatler (22:00–07:00)'),
+                    subtitle: const Text(
+                      'Bu saatler arasında kritik olmayan bildirimler '
+                      'cihazda gösterilmez (tıkanma tespiti her zaman '
+                      'gösterilir).',
+                    ),
+                    value: durum.bildirimTercihleri.sessizSaatAktif,
+                    onChanged: (acik) => context
+                        .read<UygulamaDurumu>()
+                        .bildirimTercihleriniGuncelle(
+                          acik
+                              ? durum.bildirimTercihleri.kopyalaVeGuncelle(
+                                  sessizBaslangicDakika: 22 * 60,
+                                  sessizBitisDakika: 7 * 60,
+                                )
+                              : durum.bildirimTercihleri.kopyalaVeGuncelle(
+                                  sessizSaatiKaldir: true,
+                                ),
+                        ),
+                  ),
                 ],
               ),
             ),

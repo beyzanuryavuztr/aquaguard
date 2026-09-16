@@ -30,6 +30,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/aktivite_kaydi.dart';
+import '../models/bildirim_onceligi.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/bildirim_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -112,14 +113,23 @@ class _AnaKabukState extends State<AnaKabuk> {
           );
           // Yerel bildirim (SnackBar sadece on plandayken gorunur) --
           // BildirimServisi kendi icinde try/catch ile korunur, burada
-          // ek bir hata isleme gerekmez.
-          unawaited(
-            BildirimServisi.goster(
-              id: bildirimIdGetir(kayit),
-              baslik: bildirimBasligiGetir(kayit.tur),
-              icerik: kayit.mesaj,
-            ),
-          );
+          // ek bir hata isleme gerekmez. Sessiz saatte (kritik haric)
+          // OS bildirimi BASTIRILIR -- SnackBar yine de gosterilir
+          // (kullanici zaten uygulamayi acik tutuyor, rahatsiz etmez).
+          final oncelik = oncelikGetir(kayit.tur);
+          if (!sessizSaattaBastirilmaliMi(
+            durum.bildirimTercihleri,
+            oncelik,
+          )) {
+            unawaited(
+              BildirimServisi.goster(
+                id: bildirimIdGetir(kayit),
+                baslik: bildirimBasligiGetir(kayit.tur),
+                icerik: kayit.mesaj,
+                oncelik: oncelik,
+              ),
+            );
+          }
         }
       });
     }
