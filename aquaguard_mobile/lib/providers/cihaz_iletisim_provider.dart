@@ -38,6 +38,7 @@ import '../models/bekleyen_komut.dart';
 import '../models/demo_hizi.dart';
 import '../models/kuyruklanmis_komut.dart';
 import '../models/sensor_okuma.dart';
+import '../repositories/sensor_okuma_repository.dart';
 import '../services/bildirim_servisi.dart';
 import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
@@ -50,6 +51,7 @@ import 'tarla_provider.dart';
 
 class CihazIletisimProvider extends ChangeNotifier {
   final DepolamaServisi _depolama;
+  final SensorOkumaRepository _sensorDepo;
   final TarlaProvider _tarla;
   final AktiviteBildirimProvider _aktivite;
 
@@ -57,7 +59,9 @@ class CihazIletisimProvider extends ChangeNotifier {
     required TarlaProvider tarla,
     required AktiviteBildirimProvider aktivite,
     DepolamaServisi? depolama,
+    SensorOkumaRepository? sensorDepo,
   }) : _depolama = depolama ?? DepolamaServisi(),
+       _sensorDepo = sensorDepo ?? SharedPreferencesSensorOkumaRepository(),
        // ignore: prefer_initializing_formals
        _tarla = tarla,
        // ignore: prefer_initializing_formals
@@ -196,7 +200,7 @@ class CihazIletisimProvider extends ChangeNotifier {
     // Cevrimdisi mod: baglanmadan ONCE son bilinen degerleri yukle,
     // boylece ekran hicbir zaman bomben acilmiyor.
     for (final zon in _tarla.tumZonNumaralari) {
-      var gecmis = await _depolama.gecmisiGetir(zon);
+      var gecmis = await _sensorDepo.gecmisiGetir(zon);
 
       // Bu zon icin HIC gecmis yoksa (gercekten ilk kurulum): sanki sistem
       // gunlerdir sahada calisiyormus gibi GECMISE DONUK sentetik bir
@@ -206,7 +210,7 @@ class CihazIletisimProvider extends ChangeNotifier {
         final kronolojikGecmis = GecmisVeriUreticisi.zonGecmisiUret(zon);
         gecmis = kronolojikGecmis.reversed
             .toList(); // depolama EN YENI ONCE bekler
-        unawaited(_depolama.gecmisiTopluKaydet(zon, gecmis));
+        unawaited(_sensorDepo.gecmisiTopluKaydet(zon, gecmis));
 
         final uretilenAktiviteler = GecmisVeriUreticisi.aktiviteleriTuret(
           kronolojikGecmis,
@@ -215,12 +219,12 @@ class CihazIletisimProvider extends ChangeNotifier {
 
         if (kronolojikGecmis.isNotEmpty) {
           final sonUretilen = kronolojikGecmis.last;
-          unawaited(_depolama.sonOkumayiKaydet(sonUretilen));
+          unawaited(_sensorDepo.sonOkumayiKaydet(sonUretilen));
         }
       }
       _gecmisler[zon] = gecmis;
 
-      final onbellek = await _depolama.sonOkumayiGetir(zon);
+      final onbellek = await _sensorDepo.sonOkumayiGetir(zon);
       if (onbellek != null) {
         _sonOkumalar[zon] = onbellek;
         // Uygulama tedavi surerken kapatilip acilmis olabilir -- bu durumda
@@ -357,8 +361,8 @@ class CihazIletisimProvider extends ChangeNotifier {
     ].take(100).toList();
     _gecmisler[okuma.zone] = guncelGecmis;
 
-    unawaited(_depolama.sonOkumayiKaydet(okuma));
-    unawaited(_depolama.gecmiseEkle(okuma));
+    unawaited(_sensorDepo.sonOkumayiKaydet(okuma));
+    unawaited(_sensorDepo.gecmiseEkle(okuma));
 
     notifyListeners();
   }
@@ -452,7 +456,7 @@ class CihazIletisimProvider extends ChangeNotifier {
       _sonOkumalar.remove(zon);
       _zonCevrimici.remove(zon);
       _gecmisler.remove(zon);
-      unawaited(_depolama.zonVerisiniTemizle(zon));
+      unawaited(_sensorDepo.zonVerisiniTemizle(zon));
     }
     if (_demoModuAktif) {
       _simulasyonuBaslat();

@@ -18,11 +18,13 @@ import 'package:flutter/foundation.dart';
 
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
+import '../repositories/tarla_notu_repository.dart';
 import '../services/depolama_servisi.dart';
 import 'depolama_unawaited.dart';
 
 class TarlaProvider extends ChangeNotifier {
   final DepolamaServisi _depolama;
+  final TarlaNotuRepository _notDepo;
 
   /// Bir tarla eklendiginde/guncellendiginde YENI zon numaralarini
   /// (aktif baglantiya hemen dahil edilmesi icin) bildirir. Tarla
@@ -34,9 +36,11 @@ class TarlaProvider extends ChangeNotifier {
 
   TarlaProvider({
     DepolamaServisi? depolama,
+    TarlaNotuRepository? notDepo,
     this.zonlarEklendiginde,
     this.zonlarYetimKaldiginda,
-  }) : _depolama = depolama ?? DepolamaServisi();
+  }) : _depolama = depolama ?? DepolamaServisi(),
+       _notDepo = notDepo ?? SharedPreferencesTarlaNotuRepository();
 
   List<Tarla> _tarlalar = [];
   final List<TarlaNotu> _tarlaNotlari = [];
@@ -69,7 +73,7 @@ class TarlaProvider extends ChangeNotifier {
     _tarlalar = await _depolama.tarlalariGetir();
     _tarlaNotlari
       ..clear()
-      ..addAll(await _depolama.tarlaNotlariGetir());
+      ..addAll(await _notDepo.tarlaNotlariGetir());
     _zonTakmaAdlari
       ..clear()
       ..addAll(await _depolama.zonTakmaAdlariGetir());
@@ -94,7 +98,7 @@ class TarlaProvider extends ChangeNotifier {
     final notSilindiMi = _tarlaNotlari.any((n) => n.tarlaId == id);
     if (notSilindiMi) {
       _tarlaNotlari.removeWhere((n) => n.tarlaId == id);
-      unawaited(_depolama.tarlaNotlariniKaydet(_tarlaNotlari));
+      unawaited(_notDepo.tarlaNotlariniKaydet(_tarlaNotlari));
     }
 
     // Silinen tarlanin zonlarindan HALA baska bir tarlada kullanilanlari
@@ -133,13 +137,13 @@ class TarlaProvider extends ChangeNotifier {
         zaman: DateTime.now(),
       ),
     );
-    await _depolama.tarlaNotlariniKaydet(_tarlaNotlari);
+    await _notDepo.tarlaNotlariniKaydet(_tarlaNotlari);
     notifyListeners();
   }
 
   Future<void> notSil(String notId) async {
     _tarlaNotlari.removeWhere((n) => n.id == notId);
-    await _depolama.tarlaNotlariniKaydet(_tarlaNotlari);
+    await _notDepo.tarlaNotlariniKaydet(_tarlaNotlari);
     notifyListeners();
   }
 

@@ -7,19 +7,24 @@
 ///   kucuk/izole bir dilim -- eskiden tek bir "Yapıldı" tiklamasi bile tum
 ///   uygulamanin yeniden cizilmesine sebep oluyordu.
 ///
-/// Tarih:  2026-09-16
+///   Kalici depolamaya [BakimGoreviRepository] uzerinden erisir (Faz 12b,
+///   `DepolamaServisi`'ne DOGRUDAN bagimli degildir) -- bkz. o dosyanin
+///   basindaki not, SQLite gecisini (Faz 13) provider kodu degismeden
+///   yapabilmek icindir.
+///
+/// Tarih:  2026-09-16 (ilk yazim) / 2026-09-17 (repository pattern)
 library;
 
 import 'package:flutter/foundation.dart';
 
 import '../models/bakim_gorevi.dart';
-import '../services/depolama_servisi.dart';
+import '../repositories/bakim_gorevi_repository.dart';
 
 class BakimProvider extends ChangeNotifier {
-  final DepolamaServisi _depolama;
+  final BakimGoreviRepository _depo;
 
-  BakimProvider({DepolamaServisi? depolama})
-    : _depolama = depolama ?? DepolamaServisi();
+  BakimProvider({BakimGoreviRepository? depo})
+    : _depo = depo ?? SharedPreferencesBakimGoreviRepository();
 
   List<BakimGorevi> _bakimGorevleri = [];
 
@@ -32,10 +37,10 @@ class BakimProvider extends ChangeNotifier {
       _bakimGorevleri.any((g) => g.durumu() != BakimDurumu.normal);
 
   Future<void> baslat() async {
-    final kayitliBakimGorevleri = await _depolama.bakimGorevleriGetir();
+    final kayitliBakimGorevleri = await _depo.bakimGorevleriGetir();
     if (kayitliBakimGorevleri == null) {
       _bakimGorevleri = varsayilanBakimGorevleri();
-      await _depolama.bakimGorevleriniKaydet(_bakimGorevleri);
+      await _depo.bakimGorevleriniKaydet(_bakimGorevleri);
     } else {
       _bakimGorevleri = kayitliBakimGorevleri;
     }
@@ -49,7 +54,7 @@ class BakimProvider extends ChangeNotifier {
       for (final g in _bakimGorevleri)
         if (g.id == gorevId) g.tamamlandiOlarakIsaretle() else g,
     ];
-    await _depolama.bakimGorevleriniKaydet(_bakimGorevleri);
+    await _depo.bakimGorevleriniKaydet(_bakimGorevleri);
     notifyListeners();
   }
 }

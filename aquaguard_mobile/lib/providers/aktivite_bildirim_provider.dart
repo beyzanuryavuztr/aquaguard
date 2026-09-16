@@ -24,12 +24,12 @@ import 'package:flutter/foundation.dart';
 
 import '../models/aktivite_kaydi.dart';
 import '../models/enerji_durumu.dart';
-import '../services/depolama_servisi.dart';
+import '../repositories/aktivite_bildirim_repository.dart';
 import 'ayarlar_provider.dart';
 import 'depolama_unawaited.dart';
 
 class AktiviteBildirimProvider extends ChangeNotifier {
-  final DepolamaServisi _depolama;
+  final AktiviteBildirimRepository _depo;
   final AyarlarProvider _ayarlar;
 
   // Alan adi (_ayarlar) private oldugu icin parametre adiyla (ayarlar)
@@ -38,8 +38,8 @@ class AktiviteBildirimProvider extends ChangeNotifier {
   // PUBLIC bir isim tasimak zorunda.
   AktiviteBildirimProvider({
     required AyarlarProvider ayarlar,
-    DepolamaServisi? depolama,
-  }) : _depolama = depolama ?? DepolamaServisi(),
+    AktiviteBildirimRepository? depo,
+  }) : _depo = depo ?? SharedPreferencesAktiviteBildirimRepository(),
        // ignore: prefer_initializing_formals
        _ayarlar = ayarlar;
 
@@ -68,21 +68,21 @@ class AktiviteBildirimProvider extends ChangeNotifier {
       _okunmusBildirimIdleri.contains(bildirimIdGetir(kayit));
 
   Future<void> baslat() async {
-    final oncedenKayitliAktiviteler = await _depolama.aktiviteGecmisiGetir();
+    final oncedenKayitliAktiviteler = await _depo.aktiviteGecmisiGetir();
     _aktiviteGecmisi.addAll(oncedenKayitliAktiviteler);
     _aktiviteGecmisi.sort((a, b) => b.zaman.compareTo(a.zaman));
     if (_aktiviteGecmisi.length > 200) {
       _aktiviteGecmisi.removeRange(200, _aktiviteGecmisi.length);
     }
 
-    _bildirimGecmisi.addAll(await _depolama.bildirimGecmisiGetir());
+    _bildirimGecmisi.addAll(await _depo.bildirimGecmisiGetir());
     _bildirimGecmisi.sort((a, b) => b.zaman.compareTo(a.zaman));
     if (_bildirimGecmisi.length > 200) {
       _bildirimGecmisi.removeRange(200, _bildirimGecmisi.length);
     }
 
     _okunmusBildirimIdleri.addAll(
-      await _depolama.okunmusBildirimIdleriGetir(),
+      await _depo.okunmusBildirimIdleriGetir(),
     );
 
     _dusukPilKontroluYap();
@@ -124,8 +124,8 @@ class AktiviteBildirimProvider extends ChangeNotifier {
       _bildirimGecmisi.removeRange(200, _bildirimGecmisi.length);
     }
 
-    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
-    unawaited(_depolama.bildirimGecmisiniKaydet(_bildirimGecmisi));
+    unawaited(_depo.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+    unawaited(_depo.bildirimGecmisiniKaydet(_bildirimGecmisi));
     notifyListeners();
   }
 
@@ -145,7 +145,7 @@ class AktiviteBildirimProvider extends ChangeNotifier {
     _okunmusBildirimIdleri
       ..addAll(guncelIdler)
       ..retainAll(guncelIdler);
-    await _depolama.okunmusBildirimIdleriniKaydet(_okunmusBildirimIdleri);
+    await _depo.okunmusBildirimIdleriniKaydet(_okunmusBildirimIdleri);
     notifyListeners();
   }
 
@@ -159,13 +159,13 @@ class AktiviteBildirimProvider extends ChangeNotifier {
   }) {
     _aktiviteGecmisi.insert(0, kayit);
     if (_aktiviteGecmisi.length > 200) _aktiviteGecmisi.removeLast();
-    unawaited(_depolama.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
+    unawaited(_depo.aktiviteGecmisiniKaydet(_aktiviteGecmisi));
 
     if (bildirimDegerlendir && _bildirimKategoriAcikMi(kayit.tur)) {
       _bildirimKuyrugu.add(kayit);
       _bildirimGecmisi.insert(0, kayit);
       if (_bildirimGecmisi.length > 200) _bildirimGecmisi.removeLast();
-      unawaited(_depolama.bildirimGecmisiniKaydet(_bildirimGecmisi));
+      unawaited(_depo.bildirimGecmisiniKaydet(_bildirimGecmisi));
     }
     notifyListeners();
   }
