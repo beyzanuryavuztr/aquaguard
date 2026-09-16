@@ -32,6 +32,7 @@ import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/manuel_mudahale_paneli.dart';
 import '../widgets/mutex_kilit_gostergesi.dart';
+import '../widgets/sensor_gauge_widget.dart';
 import '../widgets/sensor_karti.dart';
 import '../widgets/sensor_trend_grafigi.dart';
 import '../widgets/sulama_kontrol_karti.dart';
@@ -473,6 +474,49 @@ class _SensorAnaliziBolumuState extends State<_SensorAnaliziBolumu> {
               ),
           ],
         ),
+        const SizedBox(height: 12),
+        if (guncelOkuma != null)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  SensorGaugeWidget(
+                    deger: tanim.secici(guncelOkuma),
+                    minDeger: tanim.minDeger,
+                    maxDeger: tanim.maxDeger,
+                    birim: tanim.birim,
+                    renk: tanim.renk,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${tanim.baslik} — Güncel Değer',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Gösterge aralığı: ${tanim.minDeger.toStringAsFixed(0)}'
+                          '–${tanim.maxDeger.toStringAsFixed(0)}'
+                          '${tanim.birim.isNotEmpty ? ' ${tanim.birim}' : ''}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 12),
         SensorTrendGrafigi(
           key: ValueKey(tanim.baslik),

@@ -30,6 +30,13 @@ class SensorTanimi {
   // BIREBIR ayni -- sensor saglik degerlendirmesi (arıza tespiti) bu
   // sensorun 'normal' sinif std sapmasini burdan bulur.
   final String anahtar;
+  // Gauge gostergesinin (widgets/sensor_gauge_widget.dart) gorsel alt/ust
+  // siniri -- fiziksel olarak MUMKUN olan gercekci bir aralik (dort sinif
+  // imzasinin da rahatca sigdigi, asiri genis olmayan bir bant). Karar
+  // esikleriyle (esikler) KARISTIRILMAMALI -- bu sadece gauge'in cizim
+  // araligidir.
+  final double minDeger;
+  final double maxDeger;
 
   const SensorTanimi({
     required this.baslik,
@@ -38,6 +45,8 @@ class SensorTanimi {
     required this.ikon,
     required this.secici,
     required this.anahtar,
+    required this.minDeger,
+    required this.maxDeger,
     this.esikler = const [],
   });
 }
@@ -50,6 +59,8 @@ final sensorTanimlari = <SensorTanimi>[
     ikon: Icons.science,
     secici: (o) => o.ph,
     anahtar: 'ph',
+    minDeger: 0,
+    maxDeger: 14,
   ),
   SensorTanimi(
     baslik: 'EC',
@@ -58,6 +69,8 @@ final sensorTanimlari = <SensorTanimi>[
     ikon: Icons.bolt,
     secici: (o) => o.ec,
     anahtar: 'ec',
+    minDeger: 0,
+    maxDeger: 5,
   ),
   SensorTanimi(
     baslik: 'ORP',
@@ -66,6 +79,8 @@ final sensorTanimlari = <SensorTanimi>[
     ikon: Icons.swap_vert,
     secici: (o) => o.orp,
     anahtar: 'orp',
+    minDeger: 0,
+    maxDeger: 600,
   ),
   SensorTanimi(
     baslik: 'Türbidite',
@@ -74,6 +89,8 @@ final sensorTanimlari = <SensorTanimi>[
     ikon: Icons.blur_on,
     secici: (o) => o.turbidite,
     anahtar: 'turbidite',
+    minDeger: 0,
+    maxDeger: 50,
     esikler: [
       EsikCizgisi(
         deger: turbiditeEsigi,
@@ -89,6 +106,8 @@ final sensorTanimlari = <SensorTanimi>[
     ikon: Icons.water,
     secici: (o) => o.debi,
     anahtar: 'debi',
+    minDeger: 0,
+    maxDeger: 6,
     esikler: [
       EsikCizgisi(
         deger: referansDebi - debiDususEsigi,
@@ -105,6 +124,8 @@ final sensorTanimlari = <SensorTanimi>[
     ikon: Icons.speed,
     secici: (o) => o.deltaBasinc,
     anahtar: 'delta_basinc',
+    minDeger: 0,
+    maxDeger: 1,
     esikler: [
       EsikCizgisi(
         deger: basincArtisEsigi,
