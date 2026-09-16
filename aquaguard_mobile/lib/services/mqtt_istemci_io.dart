@@ -15,8 +15,13 @@ MqttClient mqttIstemciOlustur({
   required String host,
   required int port,
   required String clientId,
+  required bool guvenli,
 }) {
   final istemci = MqttServerClient(host, clientId);
   istemci.port = port;
+  // guvenli=true ise TLS uzerinden baglanir (mqtt_client'in yerlesik
+  // secure bayragi, isletim sisteminin sertifika deposunu kullanir --
+  // ek bir paket/sertifika dosyasi gerekmez).
+  istemci.secure = guvenli;
   return istemci;
 }

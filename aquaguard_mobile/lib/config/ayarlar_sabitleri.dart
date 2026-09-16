@@ -39,6 +39,22 @@ class AyarlarSabitleri {
   static int get varsayilanPort =>
       kIsWeb ? varsayilanWebSocketPort : varsayilanTcpPort;
 
+  // --- TLS/Guvenli baglanti portlari -- Ayarlar'daki "Guvenli Baglanti
+  //     (TLS)" anahtari acilinca kullanilir. test.mosquitto.org bu iki
+  //     portta da TLS dinler (8883: duz TLS soketi, 8081: WSS). Gercek
+  //     uretimde kendi broker'inizin TLS dinleyici portuyla ESLESMELIDIR. ---
+  static const int varsayilanTcpTlsPort = 8883;
+  static const int varsayilanWebSocketTlsPort = 8081;
+
+  /// guvenli=true ise platforma gore doğru TLS portunu, degilse duz
+  /// baglanti portunu doner -- varsayilanPort ile AYNI platform mantigi.
+  static int varsayilanPortGetir({required bool guvenli}) {
+    if (guvenli) {
+      return kIsWeb ? varsayilanWebSocketTlsPort : varsayilanTcpTlsPort;
+    }
+    return varsayilanPort;
+  }
+
   // --- Konu (topic) sablonlari -- firmware/mqtt_handler.h ile BIREBIR AYNI ---
   static String veriKonusu(int zone) => 'aquaguard/zone$zone/veri';
   static String durumKonusu(int zone) => 'aquaguard/zone$zone/durum';

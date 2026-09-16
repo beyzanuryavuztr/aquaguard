@@ -54,6 +54,7 @@ class MqttServisi {
     required String host,
     required int port,
     required List<int> zonlar,
+    required bool guvenli,
   }) async {
     baglantiDurumuDegistiginde(MqttBaglantiDurumu.baglaniyor);
 
@@ -67,6 +68,7 @@ class MqttServisi {
       host: host,
       port: port,
       clientId: clientId,
+      guvenli: guvenli,
     );
 
     istemci.keepAlivePeriod = 30;

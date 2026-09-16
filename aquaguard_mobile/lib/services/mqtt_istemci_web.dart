@@ -17,8 +17,13 @@ MqttClient mqttIstemciOlustur({
   required String host,
   required int port,
   required String clientId,
+  required bool guvenli,
 }) {
-  final istemci = MqttBrowserClient('ws://$host/mqtt', clientId);
+  // guvenli=true ise wss:// (TLS uzerinden WebSocket) semasi kullanilir --
+  // brokerin WSS dinleyicisi acik olmalidir (ornegin test.mosquitto.org
+  // 8081 portunda WSS destekler).
+  final sema = guvenli ? 'wss' : 'ws';
+  final istemci = MqttBrowserClient('$sema://$host/mqtt', clientId);
   istemci.port = port;
   return istemci;
 }

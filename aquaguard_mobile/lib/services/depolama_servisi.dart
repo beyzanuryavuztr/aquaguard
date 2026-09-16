@@ -37,6 +37,7 @@ class DepolamaServisi {
   static const _tarlalarAnahtari = 'aquaguard_tarlalar';
   static const _mqttHostAnahtari = 'aquaguard_mqtt_host';
   static const _mqttPortAnahtari = 'aquaguard_mqtt_port';
+  static const _mqttGuvenliAnahtari = 'aquaguard_mqtt_guvenli';
   static const _bildirimTercihleriAnahtari = 'aquaguard_bildirim_tercihleri';
   static const _demoModuAnahtari = 'aquaguard_demo_modu_acik';
   static const _demoHiziAnahtari = 'aquaguard_demo_hizi';
@@ -84,23 +85,27 @@ class DepolamaServisi {
   // MQTT BAGLANTI AYARLARI
   // ==========================================================================
 
-  Future<({String host, int port})> mqttAyarlariniGetir() async {
+  Future<({String host, int port, bool guvenli})> mqttAyarlariniGetir() async {
     final tercihler = await _tercihler;
+    final guvenli = tercihler.getBool(_mqttGuvenliAnahtari) ?? false;
     final host =
         tercihler.getString(_mqttHostAnahtari) ??
         AyarlarSabitleri.varsayilanBroker;
     final port =
-        tercihler.getInt(_mqttPortAnahtari) ?? AyarlarSabitleri.varsayilanPort;
-    return (host: host, port: port);
+        tercihler.getInt(_mqttPortAnahtari) ??
+        AyarlarSabitleri.varsayilanPortGetir(guvenli: guvenli);
+    return (host: host, port: port, guvenli: guvenli);
   }
 
   Future<void> mqttAyarlariniKaydet({
     required String host,
     required int port,
+    required bool guvenli,
   }) async {
     final tercihler = await _tercihler;
     await tercihler.setString(_mqttHostAnahtari, host);
     await tercihler.setInt(_mqttPortAnahtari, port);
+    await tercihler.setBool(_mqttGuvenliAnahtari, guvenli);
   }
 
   // ==========================================================================

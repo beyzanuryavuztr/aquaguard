@@ -61,6 +61,7 @@ class UygulamaDurumu extends ChangeNotifier {
 
   String _mqttHost = '';
   int _mqttPort = 0;
+  bool _mqttGuvenli = false;
   MqttBaglantiDurumu _baglantiDurumu = MqttBaglantiDurumu.baglaniyor;
   BildirimTercihleri _bildirimTercihleri = const BildirimTercihleri();
   bool _hazir = false;
@@ -97,6 +98,7 @@ class UygulamaDurumu extends ChangeNotifier {
   bool get hazir => _hazir;
   String get mqttHost => _mqttHost;
   int get mqttPort => _mqttPort;
+  bool get mqttGuvenli => _mqttGuvenli;
   MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
   BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
   List<AktiviteKaydi> get bildirimGecmisi =>
@@ -277,6 +279,7 @@ class UygulamaDurumu extends ChangeNotifier {
     final ayarlar = await _depolama.mqttAyarlariniGetir();
     _mqttHost = ayarlar.host;
     _mqttPort = ayarlar.port;
+    _mqttGuvenli = ayarlar.guvenli;
     _bildirimTercihleri = await _depolama.bildirimTercihleriniGetir();
     _demoModuAktif = await _depolama.demoModuAcikMi();
     _demoHizi = await _depolama.demoHiziGetir();
@@ -401,6 +404,7 @@ class UygulamaDurumu extends ChangeNotifier {
       host: _mqttHost,
       port: _mqttPort,
       zonlar: tumZonNumaralari,
+      guvenli: _mqttGuvenli,
     );
   }
 
@@ -740,10 +744,12 @@ class UygulamaDurumu extends ChangeNotifier {
   Future<void> mqttAyarlariniGuncelle({
     required String host,
     required int port,
+    required bool guvenli,
   }) async {
     _mqttHost = host;
     _mqttPort = port;
-    await _depolama.mqttAyarlariniKaydet(host: host, port: port);
+    _mqttGuvenli = guvenli;
+    await _depolama.mqttAyarlariniKaydet(host: host, port: port, guvenli: guvenli);
     if (!_demoModuAktif) {
       await _mqttyeBaglan();
     }

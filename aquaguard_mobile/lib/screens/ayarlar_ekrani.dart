@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/ayarlar_sabitleri.dart';
 import '../config/kalibrasyon_sabitleri.dart';
 import '../config/sensor_imzalari.dart';
 import '../config/tarih_bicimleri.dart';
@@ -35,6 +36,7 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
   final _hostController = TextEditingController();
   final _portController = TextEditingController();
   final _formAnahtari = GlobalKey<FormState>();
+  bool _mqttGuvenli = false;
   final _profilIsimController = TextEditingController();
   final _profilIsletmeController = TextEditingController();
   final _profilTelefonController = TextEditingController();
@@ -63,6 +65,7 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
     if (!_baslangicDegerleriYuklendi && durum.hazir) {
       _hostController.text = durum.mqttHost;
       _portController.text = durum.mqttPort.toString();
+      _mqttGuvenli = durum.mqttGuvenli;
       _profilIsimController.text = durum.kullaniciProfili.isim;
       _profilIsletmeController.text = durum.kullaniciProfili.isletmeAdi;
       _profilTelefonController.text = durum.kullaniciProfili.telefon;
@@ -279,6 +282,39 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                         },
                       ),
                       const SizedBox(height: 12),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Güvenli Bağlantı (TLS)'),
+                        subtitle: const Text(
+                          'Açıksa port otomatik 8883/8081\'e döner, '
+                          'broker\'ınız TLS desteklemelidir.',
+                        ),
+                        value: _mqttGuvenli,
+                        onChanged: (yeni) {
+                          setState(() {
+                            // Kullanicinin ELLE girdigi bir port varsa
+                            // (varsayilanlardan biri degilse) dokunmayiz --
+                            // sadece hala varsayilan degerdeyse karsi
+                            // varsayilana geciriz.
+                            final mevcutPort = int.tryParse(
+                              _portController.text.trim(),
+                            );
+                            final eskiVarsayilan =
+                                AyarlarSabitleri.varsayilanPortGetir(
+                                  guvenli: _mqttGuvenli,
+                                );
+                            if (mevcutPort == null ||
+                                mevcutPort == eskiVarsayilan) {
+                              _portController.text =
+                                  AyarlarSabitleri.varsayilanPortGetir(
+                                    guvenli: yeni,
+                                  ).toString();
+                            }
+                            _mqttGuvenli = yeni;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 4),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: FilledButton.icon(
@@ -292,6 +328,7 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                                 .mqttAyarlariniGuncelle(
                                   host: _hostController.text.trim(),
                                   port: int.parse(_portController.text.trim()),
+                                  guvenli: _mqttGuvenli,
                                 );
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
