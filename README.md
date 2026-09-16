@@ -1,5 +1,7 @@
 # AquaGuard
 
+[![CI](https://github.com/beyzanuryavuztr/aquaguard/actions/workflows/ci.yml/badge.svg)](https://github.com/beyzanuryavuztr/aquaguard/actions/workflows/ci.yml)
+
 **Toprak altı damla sulama (SDI) sistemlerinde damlatıcı tıkanmasını türüne
 göre (kimyasal / biyolojik / fiziksel) otonom teşhis eden ve tedavi eden bir
 tıkanma yönetim sistemi.**
@@ -83,6 +85,24 @@ pytest                                  # test paketini çalıştırır
 Pin/kalibrasyon sabitleri `config.h` içindedir. Gerçek donanıma flaşlamadan
 önce [`firmware/DONANIM_KONTROL_LISTESI.md`](firmware/DONANIM_KONTROL_LISTESI.md)'ye
 bakın (pin doğrulaması, kalibrasyon adımları, ilk çalıştırma duman testi sırası).
+
+> **CI notu:** `.github/workflows/ci.yml` şu an sadece Flutter ve Python
+> tarafını otomatik doğruluyor. Firmware derlemesi CI'ya bilerek dahil
+> edilmedi — Deneyap Kart, Arduino CLI'nin varsayılan board index'inde
+> yok ve doğrulanmamış bir FQBN ile pipeline eklemek yanıltıcı olurdu.
+> Firmware CI, board-manager URL'i donanım ekibiyle doğrulandıktan sonra
+> eklenecek bir sonraki adımdır.
+
+### Güvenlik notu (MQTT)
+
+Geliştirme/demo ortamında herkese açık bir test broker'ı (`test.mosquitto.org`)
+kullanılır — üretimde **kendi broker'ınızı** (Mosquitto/EMQX) TLS
+sertifikasıyla çalıştırın ve bir ACL dosyasıyla her cihazın **sadece kendi
+zon konusuna** (`aquaguard/zone{N}/veri` vb.) yazabilmesini, mobil
+uygulamanın ise sadece `komut` konusuna yazıp `veri`/`durum` konularını
+okuyabilmesini sağlayın. Ayarlar ekranındaki "Güvenli Bağlantı (TLS)"
+anahtarı açıldığında uygulama TLS (8883) veya WSS (8081) üzerinden
+bağlanır; bu, sunucu tarafında TLS dinleyicisi açık bir broker gerektirir.
 
 ## Durum
 
