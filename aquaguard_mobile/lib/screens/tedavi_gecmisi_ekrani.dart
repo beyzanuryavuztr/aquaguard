@@ -24,6 +24,8 @@ import 'package:provider/provider.dart';
 
 import '../config/tarih_bicimleri.dart';
 import '../models/kullanici_profili.dart';
+import '../models/maliyet_hesabi.dart';
+import '../models/maliyet_parametreleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/su_tuketimi.dart';
 import '../models/tedavi_basari_analizi.dart';
@@ -278,6 +280,13 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
             _BasariOraniKarti(analiz: basariAnalizi),
             const SizedBox(height: 24),
             const _EtkiVeTasarrufKarti(),
+            const SizedBox(height: 24),
+            _MaliyetOzetiKarti(
+              toplamSuTuketimiLitre: toplamSuTuketimiLitre,
+              olaylar: filtreliOlaylar,
+              parametreler: durum.maliyetParametreleri,
+              donemEtiketi: _seciliDonem.etiket,
+            ),
             const SizedBox(height: 24),
             Text(
               'Tespit Günlüğü',
@@ -740,6 +749,124 @@ class _EtkiVeTasarrufKarti extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Su tuketimi GERCEK debi verisinden (suMaliyetiHesapla), kimyasal
+/// maliyeti ISE sabit tedavi suresine dayanan bir TAHMINDEN
+/// (tedaviMaliyetiTahminiHesapla) hesaplanir -- `_EtkiVeTasarrufKarti`'nin
+/// aksine (statik brief rakamlari) bu kart canli/filtrelenmis veriden
+/// TURETILIR, secili zon/tur/donem filtrelerini KULLANIR (bkz. build()
+/// icindeki filtreliOlaylar/toplamSuTuketimiLitre, ikisi de zaten bu
+/// filtreleri uyguluyor -- burada TEKRAR filtrelenmez).
+class _MaliyetOzetiKarti extends StatelessWidget {
+  final double toplamSuTuketimiLitre;
+  final List<TikanmaOlayi> olaylar;
+  final MaliyetParametreleri parametreler;
+  final String donemEtiketi;
+
+  const _MaliyetOzetiKarti({
+    required this.toplamSuTuketimiLitre,
+    required this.olaylar,
+    required this.parametreler,
+    required this.donemEtiketi,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final suMaliyeti = suMaliyetiHesapla(
+      litre: toplamSuTuketimiLitre,
+      birimFiyatTLm3: parametreler.suBirimFiyatiTLm3,
+    );
+    final kimyasalMaliyeti = olaylar.fold<double>(
+      0.0,
+      (toplam, o) =>
+          toplam +
+          tedaviMaliyetiTahminiHesapla(tur: o.tur, parametreler: parametreler),
+    );
+    final toplamMaliyet = suMaliyeti + kimyasalMaliyeti;
+    final renkSemasi = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.payments_outlined, color: renkSemasi.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Maliyet Özeti ($donemEtiketi)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Su tüketimi gerçek debi verisinden, kimyasal maliyeti sabit '
+              'tedavi süresine dayanan bir tahminden hesaplanır. Ayarlar\'dan '
+              'birim fiyatları güncelleyebilirsiniz.',
+              style: TextStyle(
+                fontSize: 11,
+                color: renkSemasi.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _MaliyetSatiri(baslik: 'Su', deger: suMaliyeti),
+            _MaliyetSatiri(
+              baslik: 'Kimyasal (tahmini)',
+              deger: kimyasalMaliyeti,
+            ),
+            const Divider(height: 20),
+            _MaliyetSatiri(
+              baslik: 'Toplam',
+              deger: toplamMaliyet,
+              vurgulu: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MaliyetSatiri extends StatelessWidget {
+  final String baslik;
+  final double deger;
+  final bool vurgulu;
+
+  const _MaliyetSatiri({
+    required this.baslik,
+    required this.deger,
+    this.vurgulu = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            baslik,
+            style: TextStyle(
+              fontWeight: vurgulu ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            '₺${deger.toStringAsFixed(2)}',
+            style: TextStyle(
+              fontWeight: vurgulu ? FontWeight.bold : FontWeight.normal,
+              color: vurgulu ? Theme.of(context).colorScheme.primary : null,
+            ),
+          ),
+        ],
       ),
     );
   }

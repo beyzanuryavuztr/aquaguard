@@ -17,7 +17,7 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   Future<void> pumpUzunYuzeyle(WidgetTester tester, UygulamaDurumu durum) async {
-    await tester.binding.setSurfaceSize(const Size(500, 3200));
+    await tester.binding.setSurfaceSize(const Size(500, 3600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ChangeNotifierProvider.value(

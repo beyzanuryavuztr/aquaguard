@@ -30,6 +30,7 @@ import '../models/bildirim_tercihleri.dart';
 import '../models/demo_hizi.dart';
 import '../models/kullanici_profili.dart';
 import '../models/kuyruklanmis_komut.dart';
+import '../models/maliyet_parametreleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -57,6 +58,7 @@ class DepolamaServisi {
   static const _aksanRengiAnahtari = 'aquaguard_aksan_rengi';
   static const _sahaModuAnahtari = 'aquaguard_saha_modu_acik';
   static const _kuyruklananKomutlarAnahtari = 'aquaguard_kuyruklanan_komutlar';
+  static const _maliyetParametreleriAnahtari = 'aquaguard_maliyet_parametreleri';
   static const _kullaniciProfiliAnahtari = 'aquaguard_kullanici_profili';
   static const _gecmisMaksimumUzunluk = 200;
 
@@ -342,6 +344,29 @@ class DepolamaServisi {
     final tercihler = await _tercihler;
     final ham = jsonEncode(komutlar.map((k) => k.toJson()).toList());
     await tercihler.setString(_kuyruklananKomutlarAnahtari, ham);
+  }
+
+  // ==========================================================================
+  // MALIYET PARAMETRELERI (bkz. models/maliyet_parametreleri.dart)
+  // ==========================================================================
+
+  Future<MaliyetParametreleri> maliyetParametreleriGetir() async {
+    final tercihler = await _tercihler;
+    final ham = tercihler.getString(_maliyetParametreleriAnahtari);
+    if (ham == null) return const MaliyetParametreleri();
+    return MaliyetParametreleri.fromJson(
+      jsonDecode(ham) as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> maliyetParametreleriKaydet(
+    MaliyetParametreleri parametreler,
+  ) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(
+      _maliyetParametreleriAnahtari,
+      jsonEncode(parametreler.toJson()),
+    );
   }
 
   // ==========================================================================

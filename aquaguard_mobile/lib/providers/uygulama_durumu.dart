@@ -32,6 +32,7 @@ import '../models/demo_hizi.dart';
 import '../models/enerji_durumu.dart';
 import '../models/kullanici_profili.dart';
 import '../models/kuyruklanmis_komut.dart';
+import '../models/maliyet_parametreleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
@@ -77,6 +78,7 @@ class UygulamaDurumu extends ChangeNotifier {
   // edilene kadar (asenkron) "bagli" kabul edilir, gereksiz erken banner
   // gosterilmez.
   bool _cihazBagliMi = true;
+  MaliyetParametreleri _maliyetParametreleri = const MaliyetParametreleri();
   final List<KuyruklanmisKomut> _kuyruklananKomutlar = [];
   BildirimTercihleri _bildirimTercihleri = const BildirimTercihleri();
   bool _hazir = false;
@@ -121,6 +123,7 @@ class UygulamaDurumu extends ChangeNotifier {
   bool get mqttGuvenli => _mqttGuvenli;
   MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
   bool get cihazBagliMi => _cihazBagliMi;
+  MaliyetParametreleri get maliyetParametreleri => _maliyetParametreleri;
   BildirimTercihleri get bildirimTercihleri => _bildirimTercihleri;
   List<AktiviteKaydi> get bildirimGecmisi =>
       List.unmodifiable(_bildirimGecmisi);
@@ -316,6 +319,7 @@ class UygulamaDurumu extends ChangeNotifier {
     _temaModu = await _depolama.temaModuGetir();
     _aksanRengi = await _depolama.aksanRengiGetir();
     _sahaModuAktif = await _depolama.sahaModuGetir();
+    _maliyetParametreleri = await _depolama.maliyetParametreleriGetir();
     _kullaniciProfili = await _depolama.kullaniciProfiliGetir();
     final kayitliBakimGorevleri = await _depolama.bakimGorevleriGetir();
     if (kayitliBakimGorevleri == null) {
@@ -569,6 +573,14 @@ class UygulamaDurumu extends ChangeNotifier {
   Future<void> sahaModuAyarla(bool acik) async {
     _sahaModuAktif = acik;
     await _depolama.sahaModuKaydet(acik);
+    notifyListeners();
+  }
+
+  Future<void> maliyetParametreleriniGuncelle(
+    MaliyetParametreleri parametreler,
+  ) async {
+    _maliyetParametreleri = parametreler;
+    await _depolama.maliyetParametreleriKaydet(parametreler);
     notifyListeners();
   }
 

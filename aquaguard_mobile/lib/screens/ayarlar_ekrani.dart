@@ -42,7 +42,17 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
   final _profilIsimController = TextEditingController();
   final _profilIsletmeController = TextEditingController();
   final _profilTelefonController = TextEditingController();
+  final _suFiyatController = TextEditingController();
+  final _asitFiyatController = TextEditingController();
+  final _klorFiyatController = TextEditingController();
+  final _maliyetFormAnahtari = GlobalKey<FormState>();
   bool _baslangicDegerleriYuklendi = false;
+
+  String? _pozitifSayiDogrulayici(String? deger) {
+    final sayi = double.tryParse((deger ?? '').trim());
+    if (sayi == null || sayi < 0) return 'Geçerli bir sayı girin';
+    return null;
+  }
 
   @override
   void dispose() {
@@ -51,6 +61,9 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
     _profilIsimController.dispose();
     _profilIsletmeController.dispose();
     _profilTelefonController.dispose();
+    _suFiyatController.dispose();
+    _asitFiyatController.dispose();
+    _klorFiyatController.dispose();
     super.dispose();
   }
 
@@ -71,6 +84,16 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
       _profilIsimController.text = durum.kullaniciProfili.isim;
       _profilIsletmeController.text = durum.kullaniciProfili.isletmeAdi;
       _profilTelefonController.text = durum.kullaniciProfili.telefon;
+      _suFiyatController.text = durum.maliyetParametreleri.suBirimFiyatiTLm3
+          .toStringAsFixed(2);
+      _asitFiyatController.text = durum
+          .maliyetParametreleri
+          .asitBirimFiyatiTLLitre
+          .toStringAsFixed(2);
+      _klorFiyatController.text = durum
+          .maliyetParametreleri
+          .klorBirimFiyatiTLLitre
+          .toStringAsFixed(2);
       _baslangicDegerleriYuklendi = true;
     }
 
@@ -497,6 +520,99 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                       child: Text('Henüz izlenen zon yok.'),
                     ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            _BolumBasligi(baslik: 'Maliyet Parametreleri'),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _maliyetFormAnahtari,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tedavi Geçmişi\'ndeki tahmini maliyet hesaplaması '
+                        'bu birim fiyatları kullanır -- gerçek piyasa '
+                        'fiyatınıza göre güncelleyin.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _suFiyatController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Su Birim Fiyatı (₺/m³)',
+                        ),
+                        validator: _pozitifSayiDogrulayici,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _asitFiyatController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Asit Birim Fiyatı (₺/litre)',
+                        ),
+                        validator: _pozitifSayiDogrulayici,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _klorFiyatController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Klor Birim Fiyatı (₺/litre)',
+                        ),
+                        validator: _pozitifSayiDogrulayici,
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            if (!(_maliyetFormAnahtari.currentState
+                                    ?.validate() ??
+                                false)) {
+                              return;
+                            }
+                            context
+                                .read<UygulamaDurumu>()
+                                .maliyetParametreleriniGuncelle(
+                                  durum.maliyetParametreleri
+                                      .kopyalaVeGuncelle(
+                                        suBirimFiyatiTLm3: double.parse(
+                                          _suFiyatController.text.trim(),
+                                        ),
+                                        asitBirimFiyatiTLLitre: double.parse(
+                                          _asitFiyatController.text.trim(),
+                                        ),
+                                        klorBirimFiyatiTLLitre: double.parse(
+                                          _klorFiyatController.text.trim(),
+                                        ),
+                                      ),
+                                );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Maliyet parametreleri kaydedildi'),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.save),
+                          label: const Text('Fiyatları Kaydet'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),
