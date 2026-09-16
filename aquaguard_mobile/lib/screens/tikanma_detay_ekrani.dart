@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 
 import '../config/sensor_imzalari.dart';
 import '../config/tarih_bicimleri.dart';
+import '../models/hazne_durumu.dart';
 import '../models/sensor_okuma.dart';
 import '../models/sensor_saglik_durumu.dart';
 import '../models/sensor_tanimi.dart';
@@ -95,6 +96,11 @@ class TikanmaDetayEkrani extends StatelessWidget {
                   ],
                   if (oncesiSonrasi != null) ...[
                     _OncesiSonrasiKarti(oncesiSonrasi: oncesiSonrasi),
+                    const SizedBox(height: 16),
+                  ],
+                  if (okuma.hazneAsitSeviyeYuzde != null ||
+                      okuma.hazneKlorSeviyeYuzde != null) ...[
+                    _HazneDurumuKarti(okuma: okuma),
                     const SizedBox(height: 16),
                   ],
                   Text(
@@ -286,6 +292,97 @@ class _KararKatmaniEtiketi extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Hazne (asit/klor) doluluk kartı. SADECE veri mevcutsa (en az bir alan
+/// null değilse) çağrılır (bkz. build() içindeki koşul) -- gerçek
+/// donanımda henüz bir hazne seviye sensörü yok, bu yüzden sahte bir
+/// varsayılan değer UYDURULMAZ (bkz. models/hazne_durumu.dart).
+class _HazneDurumuKarti extends StatelessWidget {
+  final SensorOkuma okuma;
+  const _HazneDurumuKarti({required this.okuma});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Hazne Durumu',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (okuma.hazneAsitSeviyeYuzde != null)
+              _HazneSatiri(
+                tur: HazneTuru.asit,
+                yuzde: okuma.hazneAsitSeviyeYuzde!,
+              ),
+            if (okuma.hazneAsitSeviyeYuzde != null &&
+                okuma.hazneKlorSeviyeYuzde != null)
+              const SizedBox(height: 10),
+            if (okuma.hazneKlorSeviyeYuzde != null)
+              _HazneSatiri(
+                tur: HazneTuru.klor,
+                yuzde: okuma.hazneKlorSeviyeYuzde!,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HazneSatiri extends StatelessWidget {
+  final HazneTuru tur;
+  final double yuzde;
+  const _HazneSatiri({required this.tur, required this.yuzde});
+
+  @override
+  Widget build(BuildContext context) {
+    final durum = HazneDurumu(tur: tur, dolulukYuzdesi: yuzde);
+    final renk = durum.dusukSeviye
+        ? DurumRenkleri.belirsiz
+        : DurumRenkleri.normal;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(tur.etiket, style: const TextStyle(fontSize: 13)),
+            Text(
+              '%${yuzde.toStringAsFixed(0)}',
+              style: TextStyle(fontWeight: FontWeight.bold, color: renk),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: (yuzde / 100).clamp(0.0, 1.0),
+            minHeight: 6,
+            backgroundColor: renk.izTonu,
+            color: renk,
+          ),
+        ),
+        if (durum.dusukSeviye)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Seviye düşük — yakında doldurulması gerekebilir.',
+              style: TextStyle(fontSize: 11, color: renk),
+            ),
+          ),
+      ],
     );
   }
 }

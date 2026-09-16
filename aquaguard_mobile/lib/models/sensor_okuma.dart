@@ -166,6 +166,13 @@ class SensorOkuma {
   final TedaviTuru tedaviAktif;
   final bool durulamaAktif;
 
+  // HAZNE SEVIYESI (opsiyonel, sema v2): gercek donanimda henuz bir hazne
+  // seviye sensoru YOK -- bu alanlar `null` gelirse UI hazne kartini HIC
+  // GOSTERMEZ (bkz. models/hazne_durumu.dart dosya basi notu). Sadece
+  // Python mock yayinci (demo/gelistirme amacli) bu alanlari doldurur.
+  final double? hazneAsitSeviyeYuzde;
+  final double? hazneKlorSeviyeYuzde;
+
   const SensorOkuma({
     required this.zaman,
     required this.zone,
@@ -183,6 +190,8 @@ class SensorOkuma {
     this.guvenFiziksel = 0.0,
     required this.tedaviAktif,
     required this.durulamaAktif,
+    this.hazneAsitSeviyeYuzde,
+    this.hazneKlorSeviyeYuzde,
   });
 
   /// Ucunun turu icin guven yuzdesini isimle sorgulamak icin yardimci (grafik cizimlerinde kullanislidir).
@@ -197,6 +206,7 @@ class SensorOkuma {
   /// `num` uzerinden guvenli donusum yapilir.
   factory SensorOkuma.fromJson(Map<String, dynamic> json) {
     double sayi(dynamic deger) => (deger as num?)?.toDouble() ?? 0.0;
+    double? sayiNullable(dynamic deger) => (deger as num?)?.toDouble();
 
     return SensorOkuma(
       zaman: _zamanAyristir(json['zaman'] as String?),
@@ -215,6 +225,8 @@ class SensorOkuma {
       guvenFiziksel: sayi(json['guven_fiziksel']),
       tedaviAktif: tedaviAyristir(json['tedavi_aktif'] as String?),
       durulamaAktif: json['durulama_aktif'] as bool? ?? false,
+      hazneAsitSeviyeYuzde: sayiNullable(json['hazne_asit_seviye_yuzde']),
+      hazneKlorSeviyeYuzde: sayiNullable(json['hazne_klor_seviye_yuzde']),
     );
   }
 
@@ -236,12 +248,15 @@ class SensorOkuma {
     'guven_fiziksel': guvenFiziksel,
     'tedavi_aktif': tedaviAktif.name,
     'durulama_aktif': durulamaAktif,
+    'hazne_asit_seviye_yuzde': hazneAsitSeviyeYuzde,
+    'hazne_klor_seviye_yuzde': hazneKlorSeviyeYuzde,
   };
 
   /// toJson() ile kaydedilmis (dolayisiyla Turkce string kodlari degil,
   /// enum.name kodlarini tasiyan) bir haritadan geri yukler.
   factory SensorOkuma.fromCacheJson(Map<String, dynamic> json) {
     double sayi(dynamic deger) => (deger as num?)?.toDouble() ?? 0.0;
+    double? sayiNullable(dynamic deger) => (deger as num?)?.toDouble();
 
     return SensorOkuma(
       zaman:
@@ -270,6 +285,8 @@ class SensorOkuma {
         orElse: () => TedaviTuru.yok,
       ),
       durulamaAktif: json['durulama_aktif'] as bool? ?? false,
+      hazneAsitSeviyeYuzde: sayiNullable(json['hazne_asit_seviye_yuzde']),
+      hazneKlorSeviyeYuzde: sayiNullable(json['hazne_klor_seviye_yuzde']),
     );
   }
 

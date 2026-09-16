@@ -87,6 +87,23 @@ void main() {
     });
   });
 
+  group('hazne_* alanlari (sema v2, opsiyonel/null-safe)', () {
+    test('alanlar hic yoksa null doner (sahte varsayilan UYDURULMAZ)', () {
+      final okuma = SensorOkuma.fromJson({});
+      expect(okuma.hazneAsitSeviyeYuzde, isNull);
+      expect(okuma.hazneKlorSeviyeYuzde, isNull);
+    });
+
+    test('alanlar mevcutsa dogru sayisal deger olarak ayristirilir', () {
+      final okuma = SensorOkuma.fromJson({
+        'hazne_asit_seviye_yuzde': 42.5,
+        'hazne_klor_seviye_yuzde': 8,
+      });
+      expect(okuma.hazneAsitSeviyeYuzde, 42.5);
+      expect(okuma.hazneKlorSeviyeYuzde, 8.0);
+    });
+  });
+
   group('fromCacheJson (kalici depo formatı) - eksik/gecersiz alanlar', () {
     test('bos haritada enum alanlari kendi guvenli varsayilanlarina duser', () {
       final okuma = SensorOkuma.fromCacheJson({});

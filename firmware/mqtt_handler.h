@@ -32,6 +32,18 @@
  *   gordugunu tasir (aciklanabilirlik) -- mobil uygulamadaki "Neden bu
  *   karar?" panelinin veri kaynagidir. Tikanma yoksa (durum=normal) ucu de 0'dir.
  *
+ *   SEMA v2 NOTU (2026-09-16, henuz UYGULANMADI): Flutter tarafi (models/
+ *   sensor_okuma.dart) artik opsiyonel "hazne_asit_seviye_yuzde" ve
+ *   "hazne_klor_seviye_yuzde" alanlarini da OKUYABILIYOR (null-safe --
+ *   alan JSON'da yoksa UI ilgili karti gostermez). Bu firmware HENUZ bu
+ *   alanlari YAYINLAMIYOR cunku gercek donanimda bir hazne seviye sensoru
+ *   YOK (bkz. config.h). Fiziksel bir seviye sensoru (ornegin bir
+ *   ultrasonik veya siamano float switch) eklendiginde, bu iki alan
+ *   `belge["hazne_asit_seviye_yuzde"]`/`belge["hazne_klor_seviye_yuzde"]`
+ *   olarak asagidaki JSON olusturma bolumune eklenmelidir -- python/
+ *   aquaguard_mock_yayinci.py zaten (illustratif/demo amacli) bu alanlari
+ *   yayinliyor, gercek sema BUNUNLA eslesmelidir.
+ *
  * Konu (topic) semasi:
  *   aquaguard/zone{N}/veri   -> yukaridaki JSON, RETAINED (son mesaj brokerda
  *                               saklanir; yeni baglanan istemci -- ornegin

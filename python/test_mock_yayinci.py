@@ -235,14 +235,20 @@ class TestMesajOlustur:
 
         import json
 
-        mesaj = json.loads(_mesaj_olustur(ornek, teshis, zone=1, tedavi_aktif="yok", durulama_aktif=False))
+        mesaj = json.loads(_mesaj_olustur(
+            ornek, teshis, zone=1, tedavi_aktif="yok", durulama_aktif=False,
+            hazne_asit_yuzde=100.0, hazne_klor_yuzde=100.0,
+        ))
 
         beklenen_alanlar = {
             "zaman", "zone", "ph", "ec", "orp", "turbidite", "debi", "delta_basinc",
             "durum", "tikanma_turu", "guven", "guven_kimyasal", "guven_biyolojik",
             "guven_fiziksel", "tedavi_aktif", "durulama_aktif",
+            "hazne_asit_seviye_yuzde", "hazne_klor_seviye_yuzde",
         }
         assert beklenen_alanlar.issubset(mesaj.keys())
         assert mesaj["zone"] == 1
         assert mesaj["tedavi_aktif"] == "yok"
         assert mesaj["durulama_aktif"] is False
+        assert mesaj["hazne_asit_seviye_yuzde"] == 100.0
+        assert mesaj["hazne_klor_seviye_yuzde"] == 100.0

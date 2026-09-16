@@ -241,13 +241,21 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
-                    durulama_aktif: bool) -> str:
+                    durulama_aktif: bool, hazne_asit_yuzde: float,
+                    hazne_klor_yuzde: float) -> str:
     """firmware/mqtt_handler.h basindaki JSON semasiyla BIREBIR AYNI alanlar.
 
     guven_kimyasal/guven_biyolojik/guven_fiziksel alanlari, karar motorunun
     UC turu de nasil degerlendirdigini (aciklanabilirlik) tasir -- sadece
     "kazanan" turu degil, ucunun de guven yuzdesini gosterir. Bu, mobil
     uygulamadaki "Neden bu karar?" panelinin veri kaynagidir.
+
+    hazne_asit_yuzde/hazne_klor_yuzde (SEMA v2): GERCEK donanimda henuz bir
+    hazne seviye sensoru YOK (bkz. firmware/config.h) -- bu mock yayinci
+    SADECE gelistirme/demo amacli, ilgili tedavi aktifken yavasca azalan
+    ILLUSTRATIF degerler uretir (bkz. calisma_durumu["hazne_*_yuzde"]).
+    Gercek firmware bu alanlari YAYINLAMAZ; Dart tarafi alan eksikse
+    `null` olarak okur ve UI hazne kartini gostermez.
     """
     tum_guvenler = teshis.get("tum_guvenler", {})
 
@@ -268,6 +276,8 @@ def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
         "guven_fiziksel": round(tum_guvenler.get("fiziksel", 0.0), 1),
         "tedavi_aktif": tedavi_aktif,
         "durulama_aktif": durulama_aktif,
+        "hazne_asit_seviye_yuzde": round(hazne_asit_yuzde, 1),
+        "hazne_klor_seviye_yuzde": round(hazne_klor_yuzde, 1),
     }
     return json.dumps(mesaj, ensure_ascii=False)
 
@@ -293,6 +303,12 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
         # dongude her adimda guncellenir (bkz. asagida).
         "tedavi_aktif": "yok",
         "durulama_aktif": False,
+        # HAZNE SEVIYESI (SEMA v2, sadece gelistirme/demo amacli -- bkz.
+        # _mesaj_olustur dosya ici notu): %100'den baslar, ilgili tedavi
+        # aktifken yavasca azalir, %0'da kalir (gercek bir dolum akisi
+        # simule edilmiyor, kasitli sinirli kapsam).
+        "hazne_asit_yuzde": 100.0,
+        "hazne_klor_yuzde": 100.0,
     }
 
     def _baglaninca(client, userdata, connect_flags, reason_code, properties):
@@ -358,7 +374,19 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
             teshis = kural_tabanli_teshis(ornek)
             if teshis["tur"]:
                 calisma_durumu["guncel_tur"] = teshis["tur"]
-            mesaj = _mesaj_olustur(ornek, teshis, zone, tedavi_aktif, durulama_aktif)
+            if tedavi_aktif == "asit_dozlama":
+                calisma_durumu["hazne_asit_yuzde"] = max(
+                    0.0, calisma_durumu["hazne_asit_yuzde"] - 0.4
+                )
+            if tedavi_aktif == "klor_enjeksiyon":
+                calisma_durumu["hazne_klor_yuzde"] = max(
+                    0.0, calisma_durumu["hazne_klor_yuzde"] - 0.4
+                )
+            mesaj = _mesaj_olustur(
+                ornek, teshis, zone, tedavi_aktif, durulama_aktif,
+                calisma_durumu["hazne_asit_yuzde"],
+                calisma_durumu["hazne_klor_yuzde"],
+            )
 
             istemci.publish(veri_konusu, mesaj, qos=1, retain=True)
 
