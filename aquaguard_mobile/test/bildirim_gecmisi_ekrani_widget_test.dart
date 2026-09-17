@@ -18,10 +18,17 @@ void main() {
   // NOT: UygulamaDurumu.baslat() gercek bir Timer.periodic (demo tikeri)
   // baslatir -- bkz. tedavi_gecmisi_ekrani_widget_test.dart'taki ayni
   // gerekce: pumpAndSettle() yerine pump() kullanilir.
+  //
+  // BildirimGecmisiEkrani, Faz 14 (performans) kapsaminda facade yerine
+  // dogrudan AktiviteBildirimProvider'i izler -- test agacinda da
+  // (main.dart'ta oldugu gibi) AYRICA saglanmasi gerekir.
   Future<void> pumpEkran(WidgetTester tester, UygulamaDurumu durum) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.aktiviteProvider),
+        ],
         child: const MaterialApp(home: BildirimGecmisiEkrani()),
       ),
     );

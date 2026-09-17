@@ -24,7 +24,7 @@ import 'package:provider/provider.dart';
 
 import '../config/tarih_bicimleri.dart';
 import '../models/aktivite_kaydi.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/aktivite_bildirim_provider.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 
@@ -41,20 +41,20 @@ class _BildirimGecmisiEkraniState extends State<BildirimGecmisiEkrani> {
   @override
   void initState() {
     super.initState();
-    final durum = context.read<UygulamaDurumu>();
+    final durum = context.read<AktiviteBildirimProvider>();
     _acilistaOkunmamisIdler = durum.bildirimGecmisi
         .where((k) => !durum.bildirimOkunmusMu(k))
         .map(bildirimIdGetir)
         .toSet();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<UygulamaDurumu>().bildirimleriOkunduIsaretle();
+      context.read<AktiviteBildirimProvider>().bildirimleriOkunduIsaretle();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final bildirimler = context.watch<UygulamaDurumu>().bildirimGecmisi;
+    final bildirimler = context.watch<AktiviteBildirimProvider>().bildirimGecmisi;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bildirim Geçmişi')),

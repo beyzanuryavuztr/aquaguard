@@ -18,7 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/tema.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/guvenlik_provider.dart';
 import '../services/pin_servisi.dart';
 import '../widgets/aquaguard_logosu.dart';
 
@@ -57,11 +57,11 @@ class _PinKilitEkraniState extends State<PinKilitEkrani> {
   Future<void> _biyometrikDeneyin() async {
     final basarili = await PinServisi.biyometrikDogrula();
     if (!mounted || !basarili) return;
-    context.read<UygulamaDurumu>().pinKilidiniBiyometrikIleAc();
+    context.read<GuvenlikProvider>().pinKilidiniBiyometrikIleAc();
   }
 
   Future<void> _hanEkle(String hane) async {
-    final durum = context.read<UygulamaDurumu>();
+    final durum = context.read<GuvenlikProvider>();
     if (durum.pinGirisiKilitliMi || _girilenPin.length >= 4) return;
     setState(() {
       _girilenPin += hane;
@@ -88,7 +88,7 @@ class _PinKilitEkraniState extends State<PinKilitEkrani> {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
+    final durum = context.watch<GuvenlikProvider>();
     final kilitli = durum.pinGirisiKilitliMi;
     final kalanSaniye = durum.pinKilidiKalanSure?.inSeconds ?? 0;
 

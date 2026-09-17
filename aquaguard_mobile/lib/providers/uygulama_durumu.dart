@@ -108,6 +108,24 @@ class UygulamaDurumu extends ChangeNotifier {
     _cihaz.addListener(notifyListeners);
   }
 
+  // ============================================================================
+  // ALT PROVIDER ERISIMI (Faz 14 -- performans/context.select gecisi)
+  // ============================================================================
+  //
+  // main.dart, bunlari MultiProvider ile AYRICA agaca ekler -- boylece
+  // SADECE dar bir alani ilgilendiren ekranlar (orn. PinKilitEkrani sadece
+  // PIN'i ilgilendirir, TarlaNotlariEkrani sadece tarla notlarini) artik
+  // TUM facade'i (`context.watch<UygulamaDurumu>()`) DEGIL, dogrudan
+  // ilgili tek provider'i izleyebilir -- boylece CihazIletisimProvider'in
+  // her ~1.5 saniyede bir tetikledigi sensor guncellemesi (Demo Modu),
+  // bu ekranlarin GEREKSIZ YERE yeniden cizilmesine artik sebep OLMAZ.
+  AyarlarProvider get ayarlarProvider => _ayarlar;
+  TarlaProvider get tarlaProvider => _tarla;
+  GuvenlikProvider get guvenlikProvider => _guvenlik;
+  BakimProvider get bakimProvider => _bakim;
+  AktiviteBildirimProvider get aktiviteProvider => _aktivite;
+  CihazIletisimProvider get cihazProvider => _cihaz;
+
   /// Once (SharedPreferences'tan SQLite'a) tek seferlik veri migrasyonunu,
   /// SONRA alti alt provider'i dogru bagimlilik sirasiyla baslatir
   /// (main.dart'ta tek tek cagirmak yerine, gecis suresince tek bir giris

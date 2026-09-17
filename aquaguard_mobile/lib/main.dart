@@ -42,39 +42,57 @@ class AquaGuardUygulamasi extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => UygulamaDurumu()..baslat(),
       child: Consumer<UygulamaDurumu>(
-        builder: (context, durum, _) => MaterialApp(
-          title: 'AquaGuard',
-          debugShowCheckedModeBanner: false,
-          theme: AquaGuardTema.acikTema(
-            aksan: durum.aksanRengi,
-            sahaModu: durum.sahaModuAktif,
-          ),
-          darkTheme: AquaGuardTema.koyuTema(
-            aksan: durum.aksanRengi,
-            sahaModu: durum.sahaModuAktif,
-          ),
-          // Varsayilan Koyu (bkz. TemaModu.koyu) -- "tarla gunesinde ekran
-          // okunabilirligi" ve profesyonel bir "kontrol merkezi" hissi icin
-          // kullanicinin ilk talebi. Artik operator Ayarlar'dan Açık/Sistem'e
-          // de gecebilir (Oncelik 14) -- tek-tema garantisi kaldirildi, ama
-          // varsayilan davranis degismedi.
-          themeMode: durum.temaModu.flutterModu,
-          // i18n (kisitli kapsam -- bkz. lib/l10n/app_tr.arb dosya basi
-          // notu): SADECE Ayarlar'daki Görünüm bolumu bu locale'e tepki
-          // verir, uygulamanin geri kalani hala sabit Turkce metin
-          // kullanir. `locale` acikca UygulamaDurumu.uygulamaDili'nden
-          // gelir (sistem dilini OTOMATIK algilamaz) -- boylece Turkce
-          // bir cihazda operator YANLISLIKLA Ingilizce gormez, secim
-          // her zaman bilincli bir Ayarlar eylemidir.
-          locale: durum.uygulamaDili.locale,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
+        builder: (context, durum, _) => MultiProvider(
+          // Faz 14 (performans): alt provider'lar burada AYRICA agaca
+          // eklenir -- boylece dar bir alani ilgilendiren ekranlar
+          // (bkz. PinKilitEkrani, BildirimGecmisiEkrani, TarlaNotlariEkrani)
+          // TUM facade'i degil, dogrudan ilgili TEK provider'i izleyebilir
+          // (bkz. UygulamaDurumu'nun "ALT PROVIDER ERISIMI" bolumu).
+          // `.value` kullanilir -- bu provider'lar UygulamaDurumu
+          // TARAFINDAN sahiplenilir/dispose edilir, burada YENIDEN
+          // olusturulmaz.
+          providers: [
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+            ChangeNotifierProvider.value(value: durum.tarlaProvider),
+            ChangeNotifierProvider.value(value: durum.guvenlikProvider),
+            ChangeNotifierProvider.value(value: durum.bakimProvider),
+            ChangeNotifierProvider.value(value: durum.aktiviteProvider),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
           ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: const _BaslangicYonlendirici(),
+          child: MaterialApp(
+            title: 'AquaGuard',
+            debugShowCheckedModeBanner: false,
+            theme: AquaGuardTema.acikTema(
+              aksan: durum.aksanRengi,
+              sahaModu: durum.sahaModuAktif,
+            ),
+            darkTheme: AquaGuardTema.koyuTema(
+              aksan: durum.aksanRengi,
+              sahaModu: durum.sahaModuAktif,
+            ),
+            // Varsayilan Koyu (bkz. TemaModu.koyu) -- "tarla gunesinde ekran
+            // okunabilirligi" ve profesyonel bir "kontrol merkezi" hissi icin
+            // kullanicinin ilk talebi. Artik operator Ayarlar'dan Açık/Sistem'e
+            // de gecebilir (Oncelik 14) -- tek-tema garantisi kaldirildi, ama
+            // varsayilan davranis degismedi.
+            themeMode: durum.temaModu.flutterModu,
+            // i18n (kisitli kapsam -- bkz. lib/l10n/app_tr.arb dosya basi
+            // notu): SADECE Ayarlar'daki Görünüm bolumu bu locale'e tepki
+            // verir, uygulamanin geri kalani hala sabit Turkce metin
+            // kullanir. `locale` acikca UygulamaDurumu.uygulamaDili'nden
+            // gelir (sistem dilini OTOMATIK algilamaz) -- boylece Turkce
+            // bir cihazda operator YANLISLIKLA Ingilizce gormez, secim
+            // her zaman bilincli bir Ayarlar eylemidir.
+            locale: durum.uygulamaDili.locale,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const _BaslangicYonlendirici(),
+          ),
         ),
       ),
     );

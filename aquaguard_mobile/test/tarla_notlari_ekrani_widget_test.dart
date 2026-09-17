@@ -13,9 +13,15 @@ import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/screens/tarla_notlari_ekrani.dart';
 import 'package:aquaguard_mobile/widgets/tarla_profil_karti.dart';
 
+// TarlaNotlariEkrani, Faz 14 (performans) kapsaminda facade yerine
+// dogrudan TarlaProvider'i izler -- bu yuzden test agacinda da (main.dart'ta
+// oldugu gibi) AYRICA saglanmasi gerekir.
 Widget _sarmala(UygulamaDurumu durum, Widget child) {
-  return ChangeNotifierProvider.value(
-    value: durum,
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: durum),
+      ChangeNotifierProvider.value(value: durum.tarlaProvider),
+    ],
     child: MaterialApp(home: child),
   );
 }

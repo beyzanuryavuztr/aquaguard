@@ -16,7 +16,7 @@ import 'package:provider/provider.dart';
 
 import '../config/tarih_bicimleri.dart';
 import '../models/tarla.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/tarla_provider.dart';
 import '../widgets/duyarli_icerik.dart';
 
 class TarlaNotlariEkrani extends StatefulWidget {
@@ -37,7 +37,7 @@ class _TarlaNotlariEkraniState extends State<TarlaNotlariEkrani> {
   }
 
   void _notEkle() {
-    final durum = context.read<UygulamaDurumu>();
+    final durum = context.read<TarlaProvider>();
     durum.notEkle(widget.tarla.id, _notController.text);
     _notController.clear();
     FocusScope.of(context).unfocus();
@@ -45,7 +45,7 @@ class _TarlaNotlariEkraniState extends State<TarlaNotlariEkrani> {
 
   @override
   Widget build(BuildContext context) {
-    final notlar = context.watch<UygulamaDurumu>().tarlaNotlari(
+    final notlar = context.watch<TarlaProvider>().tarlaNotlari(
       widget.tarla.id,
     );
 
@@ -101,7 +101,7 @@ class _TarlaNotlariEkraniState extends State<TarlaNotlariEkrani> {
                             icon: const Icon(Icons.delete_outline),
                             tooltip: 'Notu Sil',
                             onPressed: () => context
-                                .read<UygulamaDurumu>()
+                                .read<TarlaProvider>()
                                 .notSil(not.id),
                           ),
                         );

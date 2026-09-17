@@ -37,10 +37,16 @@ void main() {
     return durum;
   }
 
+  // PinKilitEkrani, Faz 14 (performans) kapsaminda facade yerine dogrudan
+  // GuvenlikProvider'i izler -- test agacinda da (main.dart'ta oldugu gibi)
+  // AYRICA saglanmasi gerekir.
   Future<void> pinKilidiniCiz(WidgetTester tester, UygulamaDurumu durum) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.guvenlikProvider),
+        ],
         child: const MaterialApp(home: PinKilitEkrani()),
       ),
     );
