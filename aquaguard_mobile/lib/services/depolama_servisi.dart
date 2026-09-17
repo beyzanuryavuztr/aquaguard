@@ -62,6 +62,13 @@ class DepolamaServisi {
   static const _maliyetParametreleriAnahtari = 'aquaguard_maliyet_parametreleri';
   static const _uygulamaDiliAnahtari = 'aquaguard_uygulama_dili';
   static const _kullaniciProfiliAnahtari = 'aquaguard_kullanici_profili';
+  // Uretimde ARTIK cagrilmiyor (Faz 13 sonrasi sensor gecmisi SQLite'ta,
+  // bkz. DriftSensorOkumaRepository) -- bu sinir SADECE SharedPreferences
+  // yedek/ikinci uygulamasinda (SharedPreferencesSensorOkumaRepository)
+  // hala gecerlidir. 200'de BILEREK birakildi (10.000'e CIKARILMADI):
+  // SharedPreferences buyuk JSON blob'lari icin tasarlanmamistir, bu
+  // dusuk sinir o backend icin hala DOGRU karar -- SQLite'in 10.000/7-gunluk
+  // sinirini buraya kopyalamak yanlis olurdu.
   static const _gecmisMaksimumUzunluk = 200;
 
   Future<SharedPreferences> get _tercihler async =>

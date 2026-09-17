@@ -22,7 +22,20 @@ import 'sensor_okuma_repository.dart';
 
 class DriftSensorOkumaRepository implements SensorOkumaRepository {
   final AquaGuardVeritabani _db;
-  static const _gecmisMaksimumUzunluk = 200;
+
+  // SQLite'a gecisin (Faz 13) asil amaci SharedPreferences'in 200 kayitlik
+  // pratik sinirindan kurtulmakti -- bu sinir SQLite'ta artik yapay,
+  // kaldirildi. Yerine iki BAGIMSIZ sinir konur, HANGISI ONCE DOLARSA
+  // devreye girer: 10.000 kayit (disk/bellek sisirilmesin) VE 7 gun
+  // (eski veri analitik acidan giderek daha az anlamli olur).
+  //
+  // NOT: zaman siniri SADECE gecmiseEkle()'de (canli/surekli buyuyen
+  // veri) uygulanir -- gecmisiTopluKaydet() (ilk kurulumda GEREYE DONUK
+  // uretilen 12 GUNLUK sentetik demo gecmisi, bkz. GecmisVeriUreticisi)
+  // BILEREK bu sinirdan MUAF: aksi halde taze uretilen demo gecmisinin
+  // en eski 5 gunu, kaydedildigi ANDA silinirdi.
+  static const _gecmisMaksimumUzunluk = 10000;
+  static const _gecmisMaksimumSure = Duration(days: 7);
 
   DriftSensorOkumaRepository(this._db);
 
@@ -77,9 +90,22 @@ class DriftSensorOkumaRepository implements SensorOkumaRepository {
             ),
           );
 
-      // _gecmisMaksimumUzunluk'u asan EN ESKI satirlari sil (cihaz
-      // depolamasi sisirilmesin diye) -- SharedPreferences uygulamasinin
-      // "yeni ekle, en yeni N'i tut" davranisiyla AYNI.
+      // 1) _gecmisMaksimumSure'den ESKI satirlari sil -- zon bazinda,
+      // dogrudan bir WHERE ile (ayri bir ID sorgusuna gerek yok).
+      final zamanEsigiMillis = DateTime.now()
+          .subtract(_gecmisMaksimumSure)
+          .millisecondsSinceEpoch;
+      await (_db.delete(_db.sensorOkumalari)..where(
+            (t) =>
+                t.zone.equals(okuma.zone) &
+                t.zamanMillis.isSmallerThanValue(zamanEsigiMillis),
+          ))
+          .go();
+
+      // 2) Zaman sinirindan sonra KALAN satirlar hala _gecmisMaksimumUzunluk'u
+      // asiyorsa, EN ESKI fazlaligi sil -- SharedPreferences uygulamasinin
+      // "yeni ekle, en yeni N'i tut" davranisiyla AYNI, sadece N artik cok
+      // daha buyuk.
       final fazlalikIdler =
           await (_db.select(_db.sensorOkumalari)
                 ..where((t) => t.zone.equals(okuma.zone))
