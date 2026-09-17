@@ -32,10 +32,18 @@ jobs:
       - run: flutter test --coverage
       - name: Coverage ozeti (satir bazli, esik DEGIL -- sadece raporlama)
         run: |
-          awk -F: '/^LH:/{hit+=$2} /^LF:/{found+=$2} END{
-            pct = (found > 0) ? 100*hit/found : 0
-            printf "Toplam kapsam: %.1f%% (%d/%d satir)\n", pct, hit, found
-          }' coverage/lcov.info
+          # *.g.dart (drift/build_runner uretimi) HARIC TUTULUR -- elle
+          # yazilmayan, kimsenin dogrudan cagirmadigi Companion/toColumns
+          # gibi otomatik kod, kapsam olcumunu anlamsizca sulandirirdi.
+          awk -F: '
+            /^SF:/ { skip = ($0 ~ /\.g\.dart$/) }
+            /^LH:/ { if (!skip) hit += $2 }
+            /^LF:/ { if (!skip) found += $2 }
+            END {
+              pct = (found > 0) ? 100*hit/found : 0
+              printf "Toplam kapsam (uretilen kod haric): %.1f%% (%d/%d satir)\n", pct, hit, found
+            }
+          ' coverage/lcov.info
       - run: flutter build web --release
 
   python:
