@@ -4,10 +4,12 @@
 // kalici depoya yazildigini ve bir tarla silindiginde yetim notlarin da
 // temizlendigini dogrular.
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
+import 'package:aquaguard_mobile/services/veritabani.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -65,15 +67,22 @@ void main() {
   });
 
   test('notlar kalici depodan yeniden acilista geri yuklenir', () async {
-    final durum1 = UygulamaDurumu();
+    // "Uygulamayi kapat/yeniden ac" senaryosu: iki ayri UygulamaDurumu
+    // ornegi AYNI kalici SQLite veritabanini PAYLASMALIDIR (SharedPreferences
+    // mock'un davranisiyla ayni -- bkz. veritabani.dart test notu). Bu
+    // yuzden veritabani BURADA acikca olusturulup HER IKI orneğe de
+    // enjekte edilir.
+    final veritabani = AquaGuardVeritabani.test(NativeDatabase.memory());
+    final durum1 = UygulamaDurumu(veritabani: veritabani);
     await durum1.baslat();
     await durum1.notEkle('tarla-1', 'Kalici not');
     durum1.dispose();
 
-    final durum2 = UygulamaDurumu();
+    final durum2 = UygulamaDurumu(veritabani: veritabani);
     await durum2.baslat();
     expect(durum2.tarlaNotlari('tarla-1').single.metin, 'Kalici not');
     durum2.dispose();
+    await veritabani.close();
   });
 
   test('tarlaSil: silinen tarlanin notlari da temizlenir', () async {

@@ -42,11 +42,17 @@ import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
 import '../models/tema_modu.dart';
 import '../models/uygulama_dili.dart';
+import '../repositories/drift_aktivite_bildirim_repository.dart';
+import '../repositories/drift_sensor_okuma_repository.dart';
+import '../repositories/drift_tarla_notu_repository.dart';
 import '../services/mqtt_servisi.dart';
+import '../services/veri_migrasyon_servisi.dart';
+import '../services/veritabani.dart';
 import 'aktivite_bildirim_provider.dart';
 import 'ayarlar_provider.dart';
 import 'bakim_provider.dart';
 import 'cihaz_iletisim_provider.dart';
+import 'depolama_unawaited.dart';
 import 'guvenlik_provider.dart';
 import 'tarla_provider.dart';
 
@@ -62,8 +68,20 @@ class UygulamaDurumu extends ChangeNotifier {
   // verir -- callback'ler ancak tarlaEkle/tarlaSil cagrildiginda (yani
   // baslat() TAMAMLANDIKTAN sonra) TETIKLENDIGI icin bu guvenlidir,
   // gercek bir dongusel bagimlilik OLUSTURMAZ.
+  // SQLite (drift, Faz 13): surekli buyuyen 4 koleksiyon (sensor gecmisi,
+  // aktivite/bildirim gecmisi, tarla notlari) icin TEK veritabani baglantisi --
+  // bkz. veritabani.dart dosya basi notu. Ilgili 3 provider'a Drift tabanli
+  // repository'ler olarak enjekte edilir (bkz. asagisi). Opsiyonel olarak
+  // DISARIDAN enjekte edilebilir -- SADECE testlerin "uygulamayi kapat/
+  // yeniden ac" senaryosunu (iki ayri UygulamaDurumu ornegi, AYNI kalici
+  // depoyu paylasmali) simule edebilmesi icin; 74/76 cagiran dosya bunu
+  // KULLANMAZ, parametresiz `UygulamaDurumu()` DEGISMEDEN calismaya devam eder.
+  final AquaGuardVeritabani _veritabani;
+  final bool _veritabaniSahibi;
+
   final AyarlarProvider _ayarlar = AyarlarProvider();
   late final TarlaProvider _tarla = TarlaProvider(
+    notDepo: DriftTarlaNotuRepository(_veritabani),
     zonlarEklendiginde: (zonlar) => _cihaz.zonlarEklendi(zonlar),
     zonlarYetimKaldiginda: (zonlar) => _cihaz.zonlarYetimKaldi(zonlar),
   );
@@ -71,13 +89,17 @@ class UygulamaDurumu extends ChangeNotifier {
   final BakimProvider _bakim = BakimProvider();
   late final AktiviteBildirimProvider _aktivite = AktiviteBildirimProvider(
     ayarlar: _ayarlar,
+    depo: DriftAktiviteBildirimRepository(_veritabani),
   );
   late final CihazIletisimProvider _cihaz = CihazIletisimProvider(
     tarla: _tarla,
     aktivite: _aktivite,
+    sensorDepo: DriftSensorOkumaRepository(_veritabani),
   );
 
-  UygulamaDurumu() {
+  UygulamaDurumu({AquaGuardVeritabani? veritabani})
+    : _veritabani = veritabani ?? AquaGuardVeritabani(),
+      _veritabaniSahibi = veritabani == null {
     _ayarlar.addListener(notifyListeners);
     _tarla.addListener(notifyListeners);
     _guvenlik.addListener(notifyListeners);
@@ -86,9 +108,12 @@ class UygulamaDurumu extends ChangeNotifier {
     _cihaz.addListener(notifyListeners);
   }
 
-  /// Altı alt provider'ı doğru bağımlılık sırasıyla başlatır (main.dart'ta
-  /// tek tek çağırmak yerine, geçiş süresince tek bir giriş noktası).
+  /// Once (SharedPreferences'tan SQLite'a) tek seferlik veri migrasyonunu,
+  /// SONRA alti alt provider'i dogru bagimlilik sirasiyla baslatir
+  /// (main.dart'ta tek tek cagirmak yerine, gecis suresince tek bir giris
+  /// noktasi).
   Future<void> baslat() async {
+    await VeriMigrasyonServisi(_veritabani).gerekirseMigrateEt();
     await _ayarlar.baslat();
     await _tarla.baslat();
     await _guvenlik.baslat();
@@ -259,6 +284,12 @@ class UygulamaDurumu extends ChangeNotifier {
     _bakim.dispose();
     _aktivite.dispose();
     _cihaz.dispose();
+    // Enjekte edilmis (paylasilan) bir veritabani BASKA bir sahibin --
+    // kapatmak, o sahibin altindaki veriyi de kapatirdi (bkz. yukaridaki
+    // constructor notu).
+    if (_veritabaniSahibi) {
+      unawaited(_veritabani.close());
+    }
     super.dispose();
   }
 }

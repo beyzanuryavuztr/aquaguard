@@ -7,12 +7,14 @@
 // sifirladigini ve DepolamaServisi araciligiyla kalicilik round-trip'inin
 // calistigini dogrular.
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:aquaguard_mobile/models/aktivite_kaydi.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/services/depolama_servisi.dart';
+import 'package:aquaguard_mobile/services/veritabani.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -108,7 +110,11 @@ void main() {
   test(
     'bildirim gecmisi ve okunmus ID kumesi kalici depodan geri yuklenir',
     () async {
-      final ilkOturum = UygulamaDurumu();
+      // "Uygulamayi kapat/yeniden ac" senaryosu: iki ayri UygulamaDurumu
+      // ornegi AYNI kalici SQLite veritabanini PAYLASMALIDIR (SharedPreferences
+      // mock'un davranisiyla ayni -- bkz. veritabani.dart test notu).
+      final veritabani = AquaGuardVeritabani.test(NativeDatabase.memory());
+      final ilkOturum = UygulamaDurumu(veritabani: veritabani);
       await ilkOturum.baslat();
       ilkOturum.bildirimleriAlVeTemizle();
       await ilkOturum.manuelNormaleDondur(1);
@@ -116,7 +122,7 @@ void main() {
       final oncekiMesaj = ilkOturum.bildirimGecmisi.first.mesaj;
       ilkOturum.dispose();
 
-      final ikinciOturum = UygulamaDurumu();
+      final ikinciOturum = UygulamaDurumu(veritabani: veritabani);
       await ikinciOturum.baslat();
 
       expect(ikinciOturum.bildirimGecmisi, isNotEmpty);
@@ -127,6 +133,7 @@ void main() {
       );
 
       ikinciOturum.dispose();
+      await veritabani.close();
     },
   );
 
