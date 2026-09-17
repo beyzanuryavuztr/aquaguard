@@ -40,7 +40,7 @@ import 'tarla_secim_ekrani.dart';
 /// pubspec.yaml'daki `version:` alanıyla BİREBİR AYNI tutulmalıdır --
 /// package_info_plus bağımlılığı eklenmediği için (tek bir sabit sürüm
 /// metni için ekstra bir paket gerekmez) elle senkronize edilir.
-const String aquaGuardSurumMetni = 'v1.0.0';
+const String aquaGuardSurumMetni = 'v0.9.0-beta.1';
 
 class GirisEkrani extends StatefulWidget {
   const GirisEkrani({super.key});

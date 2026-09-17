@@ -73,7 +73,7 @@ void main() {
       expect(find.text('1 çiftlik, 4 zon izleniyor'), findsOneWidget);
       // Yarışma/takım markalaması BİLEREK yok (kullanıcının kesin talebi).
       expect(find.text('Arge-T HydroLab • TEKNOFEST 2026'), findsNothing);
-      expect(find.text('v1.0.0'), findsOneWidget);
+      expect(find.text('v0.9.0-beta.1'), findsOneWidget);
       expect(find.text('Devam Et'), findsOneWidget);
 
       durum.dispose();
