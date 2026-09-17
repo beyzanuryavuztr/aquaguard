@@ -13,9 +13,19 @@
 ///   bagli -- bu yuzden MaterialApp bir `Consumer<UygulamaDurumu>` icinde
 ///   kurulur (UygulamaDurumu.temaModu degisince MaterialApp yeniden cizilir).
 ///
-/// Tarih:  2026-09-01 (Giris Ekrani: 2026-09-05, Onboarding: 2026-09-05, Tema Modu: 2026-09-05)
+///   GLOBAL HATA YAKALAMA (2026-09-18): `main()`, `runZonedGuarded` ile
+///   sarilir -- hem Flutter framework hatalarini (`FlutterError.onError`)
+///   hem de yakalanmamis async hatalari (`runZonedGuarded`'in onError'u)
+///   `HataGunluguServisi`'ne kaydeder. Boylece bir cokme yasandiginda
+///   NE OLDUGUNU bilebiliriz (bkz. o servisin dosya basi notu -- ucuncu
+///   parti bir servise BILEREK baglanmiyoruz).
+///
+/// Tarih:  2026-09-01 (Giris Ekrani: 2026-09-05, Onboarding: 2026-09-05, Tema Modu: 2026-09-05,
+///         Global hata yakalama: 2026-09-18)
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -29,9 +39,33 @@ import 'providers/uygulama_durumu.dart';
 import 'screens/giris_ekrani.dart';
 import 'screens/onboarding_ekrani.dart';
 import 'screens/pin_kilit_ekrani.dart';
+import 'services/hata_gunlugu_servisi.dart';
 
 void main() {
-  runApp(const AquaGuardUygulamasi());
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      await HataGunluguServisi.baslat();
+
+      final onceki = FlutterError.onError;
+      FlutterError.onError = (details) {
+        HataGunluguServisi.logla(
+          details.exception,
+          details.stack,
+          baglam: 'FlutterError',
+        );
+        // Onceki handler'i (varsa, orn. Flutter'in kendi konsol
+        // ciktisi/DevTools entegrasyonu) DA cagir -- gelistirme
+        // deneyimini bozmayalim, sadece EKLE.
+        onceki?.call(details);
+      };
+
+      runApp(const AquaGuardUygulamasi());
+    },
+    (hata, yigin) {
+      HataGunluguServisi.logla(hata, yigin, baglam: 'Yakalanmamis');
+    },
+  );
 }
 
 class AquaGuardUygulamasi extends StatelessWidget {

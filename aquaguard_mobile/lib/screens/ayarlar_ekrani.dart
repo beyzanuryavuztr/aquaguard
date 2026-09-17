@@ -24,6 +24,8 @@ import '../models/kullanici_profili.dart';
 import '../models/tema_modu.dart';
 import '../models/uygulama_dili.dart';
 import '../providers/uygulama_durumu.dart';
+import '../services/disa_aktarma_factory.dart';
+import '../services/hata_gunlugu_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/yardim_butonu.dart';
 import 'hakkinda_ekrani.dart';
@@ -730,6 +732,19 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
               ),
             ),
             const SizedBox(height: 24),
+            _BolumBasligi(baslik: 'Tanılama'),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.bug_report_outlined),
+                title: const Text('Hata Günlüğünü Dışa Aktar'),
+                subtitle: const Text(
+                  'Uygulama içinde yakalanan hatalar cihazınızda saklanır, '
+                  'hiçbir sunucuya gönderilmez',
+                ),
+                onTap: () => _hataGunlugunuDisaAktar(context),
+              ),
+            ),
+            const SizedBox(height: 24),
             Card(
               child: ListTile(
                 leading: const Icon(Icons.info_outline),
@@ -743,6 +758,28 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
           ],
         ),
       ),
+    );
+  }
+
+  /// [DisaAktarmaServisi]'nin CSV disa aktarma mekanizmasini (platforma
+  /// gore dosya sistemi/tarayici indirmesi) YENIDEN KULLANIR -- hata
+  /// gunlugu CSV formatinda olmasa da, "metni platforma uygun bir konuma
+  /// yaz/indir" islemi BIREBIR ayni; ikinci bir platform-kosullu ithalat
+  /// cifti (io/web) yazmak gereksiz tekrar olurdu.
+  Future<void> _hataGunlugunuDisaAktar(BuildContext context) async {
+    final icerik = HataGunluguServisi.metinOlarakBirlestir();
+    if (icerik.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Hata günlüğü boş')));
+      return;
+    }
+    final zamanDamgasi = TarihBicimleri.dosyaAdi.format(DateTime.now());
+    final dosyaAdi = 'aquaguard_hata_gunlugu_$zamanDamgasi.log';
+    final konum = await csvKaydet(dosyaAdi, icerik);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Hata günlüğü dışa aktarıldı: $konum')),
     );
   }
 }
