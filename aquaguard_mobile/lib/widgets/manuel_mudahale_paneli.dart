@@ -17,6 +17,8 @@
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -168,8 +170,15 @@ class _SecimKarti extends StatelessWidget {
                       baslik: 'Tedaviyi Manuel Başlat',
                       icerik:
                           'Zon $zonNumarasi için "${tedaviEtiketi(tedavi)}" '
-                          'tedavisini manuel olarak başlatmak istediğinize emin misiniz?',
+                          'tedavisini manuel olarak başlatmak istediğinize emin misiniz? '
+                          'Bu işlem geri alınamaz.',
                       onayEtiketi: 'Başlat',
+                      // Kimyasal dozlama (asit/klor) GERI ALINAMAZ bir
+                      // saha eylemidir -- yanlislikla dokunmayi zorlastirmak
+                      // icin 3 saniyelik bir geri sayim eklenir. Tedaviyi
+                      // DURDURMAK veya yanlis alarmi normale dondurmek
+                      // kimyasal baslatmaz, bu geri sayima ihtiyac duymaz.
+                      geriSayimSaniye: 3,
                       onOnay: () => context
                           .read<UygulamaDurumu>()
                           .manuelTedaviBaslat(zonNumarasi, tedavi),
@@ -212,44 +221,114 @@ class _SecimKarti extends StatelessWidget {
 /// gelene kadar BEKLEYEN gercek MQTT modunda 3. bir durumu (zamanAsimi)
 /// da ayirt edebiliyor -- bir "REDDEDİLDİ" mesaji artik SADECE mutex
 /// kilidi anlamina gelir, "cihazla iletisim sorunlu" ile KARISTIRILMAZ.
+///
+/// [geriSayimSaniye] > 0 ise (2026-09-18, guvenlik sertlestirme): onay
+/// butonu o kadar saniye DEVRE DISI kalir ve uzerinde geri sayim gosterir --
+/// GERI ALINAMAZ kimyasal dozlama eylemlerinde (bkz. cagiran yer) yanlislikla
+/// dokunmayi zorlastirmak icin. Varsayilan 0 -- diger (durdur/yanlis alarm)
+/// dialoglarin davranisini DEGISTIRMEZ.
 void _onayDiyaloguGoster(
   BuildContext context, {
   required String baslik,
   required String icerik,
   required String onayEtiketi,
   required Future<KomutSonucu> Function() onOnay,
+  int geriSayimSaniye = 0,
 }) {
   showDialog<void>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(baslik),
-      content: Text(icerik),
+    builder: (dialogContext) => _OnayDiyalogu(
+      disKontext: context,
+      baslik: baslik,
+      icerik: icerik,
+      onayEtiketi: onayEtiketi,
+      onOnay: onOnay,
+      geriSayimSaniye: geriSayimSaniye,
+    ),
+  );
+}
+
+class _OnayDiyalogu extends StatefulWidget {
+  final BuildContext disKontext;
+  final String baslik;
+  final String icerik;
+  final String onayEtiketi;
+  final Future<KomutSonucu> Function() onOnay;
+  final int geriSayimSaniye;
+
+  const _OnayDiyalogu({
+    required this.disKontext,
+    required this.baslik,
+    required this.icerik,
+    required this.onayEtiketi,
+    required this.onOnay,
+    required this.geriSayimSaniye,
+  });
+
+  @override
+  State<_OnayDiyalogu> createState() => _OnayDiyaloguState();
+}
+
+class _OnayDiyaloguState extends State<_OnayDiyalogu> {
+  late int _kalanSaniye = widget.geriSayimSaniye;
+  Timer? _sayac;
+  bool _gonderiliyor = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_kalanSaniye > 0) {
+      _sayac = Timer.periodic(const Duration(seconds: 1), (_) {
+        setState(() => _kalanSaniye--);
+        if (_kalanSaniye <= 0) _sayac?.cancel();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _sayac?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _onayla() async {
+    setState(() => _gonderiliyor = true);
+    final sonuc = await widget.onOnay();
+    if (mounted) Navigator.of(context).pop();
+    if (!widget.disKontext.mounted) return;
+    final mesaj = switch (sonuc) {
+      KomutSonucu.uygulandi => '${widget.baslik} uygulandı',
+      KomutSonucu.reddedildi =>
+        '${widget.baslik} REDDEDİLDİ (mutex kilidi — zon zaten '
+            'bir tedavi/durulama sürdürüyor)',
+      KomutSonucu.zamanAsimi =>
+        '${widget.baslik} için cihazdan yanıt alınamadı (zaman aşımı) — '
+            'bağlantıyı kontrol edin',
+    };
+    ScaffoldMessenger.of(
+      widget.disKontext,
+    ).showSnackBar(SnackBar(content: Text(mesaj)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final devreDisi = _kalanSaniye > 0 || _gonderiliyor;
+    final butonMetni = _kalanSaniye > 0
+        ? '${widget.onayEtiketi} ($_kalanSaniye)'
+        : widget.onayEtiketi;
+    return AlertDialog(
+      title: Text(widget.baslik),
+      content: Text(widget.icerik),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
+          onPressed: () => Navigator.of(context).pop(),
           child: const Text('Vazgeç'),
         ),
         FilledButton(
-          onPressed: () async {
-            final sonuc = await onOnay();
-            if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-            if (!context.mounted) return;
-            final mesaj = switch (sonuc) {
-              KomutSonucu.uygulandi => '$baslik uygulandı',
-              KomutSonucu.reddedildi =>
-                '$baslik REDDEDİLDİ (mutex kilidi — zon zaten '
-                    'bir tedavi/durulama sürdürüyor)',
-              KomutSonucu.zamanAsimi =>
-                '$baslik için cihazdan yanıt alınamadı (zaman aşımı) — '
-                    'bağlantıyı kontrol edin',
-            };
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(mesaj)));
-          },
-          child: Text(onayEtiketi),
+          onPressed: devreDisi ? null : _onayla,
+          child: Text(butonMetni),
         ),
       ],
-    ),
-  );
+    );
+  }
 }

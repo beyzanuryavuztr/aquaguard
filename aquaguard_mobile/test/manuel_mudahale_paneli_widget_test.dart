@@ -127,4 +127,66 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(find.text('Vazgeç'), findsOneWidget);
   });
+
+  testWidgets(
+    'kimyasal tedavi baslatma onayinda 3 saniyelik geri sayim var, '
+    'buton sure dolana kadar devre disi kalir',
+    (tester) async {
+      await tester.pumpWidget(
+        _sarmala(
+          ManuelMudahalePaneli(
+            zonNumarasi: 1,
+            okuma: _okuma(durum: TeshisDurumu.belirsiz),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Asit Dozlama'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      // Geri sayim BASLAT metniyle birlikte gosterilmeli, buton devre disi.
+      expect(find.text('Başlat (3)'), findsOneWidget);
+      var buton = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(buton.onPressed, isNull);
+
+      // Her saniye tik: sayac azalmali, buton HALA devre disi.
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Başlat (2)'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Başlat (1)'), findsOneWidget);
+
+      // 3. saniye dolunca buton ETKINLESMELI, metin sade "Başlat" olmali.
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Başlat'), findsOneWidget);
+      buton = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(buton.onPressed, isNotNull);
+    },
+  );
+
+  testWidgets(
+    'Tedaviyi Durdur onayinda geri sayim YOK, buton hemen etkin',
+    (tester) async {
+      await tester.pumpWidget(
+        _sarmala(
+          ManuelMudahalePaneli(
+            zonNumarasi: 1,
+            okuma: _okuma(
+              durum: TeshisDurumu.tespitEdildi,
+              tedaviAktif: TedaviTuru.asitDozlama,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Tedaviyi Durdur'));
+      await tester.pumpAndSettle();
+
+      final buton = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(buton.onPressed, isNotNull);
+      expect(find.text('Durdur'), findsOneWidget);
+    },
+  );
 }
