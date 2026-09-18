@@ -26,7 +26,7 @@ import 'package:provider/provider.dart';
 import '../models/bekleyen_komut.dart';
 import '../models/sensor_okuma.dart';
 import '../providers/ayarlar_provider.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
 
 class ManuelMudahalePaneli extends StatelessWidget {
   final int zonNumarasi;
@@ -116,9 +116,9 @@ class _DurdurKarti extends StatelessWidget {
                     'istediğinize emin misiniz? Sistem zorunlu durulama adımına geçecektir.',
                 onayEtiketi: 'Durdur',
                 onOnay: () async {
-                  await context.read<UygulamaDurumu>().manuelTedaviDurdur(
-                    zonNumarasi,
-                  );
+                  await context
+                      .read<CihazIletisimProvider>()
+                      .manuelTedaviDurdur(zonNumarasi);
                   return KomutSonucu.uygulandi;
                 },
               ),
@@ -182,7 +182,7 @@ class _SecimKarti extends StatelessWidget {
                       // kimyasal baslatmaz, bu geri sayima ihtiyac duymaz.
                       geriSayimSaniye: 3,
                       onOnay: () => context
-                          .read<UygulamaDurumu>()
+                          .read<CihazIletisimProvider>()
                           .manuelTedaviBaslat(zonNumarasi, tedavi),
                     ),
                     child: Text(tedaviEtiketi(tedavi)),
@@ -202,9 +202,9 @@ class _SecimKarti extends StatelessWidget {
                     'dönmek istediğinize emin misiniz?',
                 onayEtiketi: 'Normale Döndür',
                 onOnay: () async {
-                  await context.read<UygulamaDurumu>().manuelNormaleDondur(
-                    zonNumarasi,
-                  );
+                  await context
+                      .read<CihazIletisimProvider>()
+                      .manuelNormaleDondur(zonNumarasi);
                   return KomutSonucu.uygulandi;
                 },
               ),

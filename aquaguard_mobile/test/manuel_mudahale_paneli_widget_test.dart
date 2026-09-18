@@ -41,31 +41,34 @@ SensorOkuma _okuma({
 Widget _sarmala(Widget child) {
   return ChangeNotifierProvider(
     create: (_) => UygulamaDurumu(),
-    child: MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child))),
+    child: MaterialApp(
+      home: Scaffold(body: SingleChildScrollView(child: child)),
+    ),
   );
 }
 
 void main() {
-  testWidgets('belirsiz durumda 3 tedavi secenegi ve yanlis alarm butonu tasmadan gosterilir', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _sarmala(
-        ManuelMudahalePaneli(
-          zonNumarasi: 1,
-          okuma: _okuma(durum: TeshisDurumu.belirsiz),
+  testWidgets(
+    'belirsiz durumda 3 tedavi secenegi ve yanlis alarm butonu tasmadan gosterilir',
+    (tester) async {
+      await tester.pumpWidget(
+        _sarmala(
+          ManuelMudahalePaneli(
+            zonNumarasi: 1,
+            okuma: _okuma(durum: TeshisDurumu.belirsiz),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('Operatör Kontrolü Gerekiyor'), findsOneWidget);
-    expect(find.text('Asit Dozlama'), findsOneWidget);
-    expect(find.text('Klor Enjeksiyonu'), findsOneWidget);
-    expect(find.text('Yüksek Basınçlı Yıkama'), findsOneWidget);
-    expect(find.textContaining('Yanlış Alarm'), findsOneWidget);
-  });
+      expect(tester.takeException(), isNull);
+      expect(find.text('Operatör Kontrolü Gerekiyor'), findsOneWidget);
+      expect(find.text('Asit Dozlama'), findsOneWidget);
+      expect(find.text('Klor Enjeksiyonu'), findsOneWidget);
+      expect(find.text('Yüksek Basınçlı Yıkama'), findsOneWidget);
+      expect(find.textContaining('Yanlış Alarm'), findsOneWidget);
+    },
+  );
 
   testWidgets('aktif tedavide sadece durdurma karti gosterilir, tasma olmaz', (
     tester,
@@ -130,67 +133,63 @@ void main() {
     expect(find.text('Vazgeç'), findsOneWidget);
   });
 
-  testWidgets(
-    'kimyasal tedavi baslatma onayinda 3 saniyelik geri sayim var, '
-    'buton sure dolana kadar devre disi kalir',
-    (tester) async {
-      await tester.pumpWidget(
-        _sarmala(
-          ManuelMudahalePaneli(
-            zonNumarasi: 1,
-            okuma: _okuma(durum: TeshisDurumu.belirsiz),
+  testWidgets('kimyasal tedavi baslatma onayinda 3 saniyelik geri sayim var, '
+      'buton sure dolana kadar devre disi kalir', (tester) async {
+    await tester.pumpWidget(
+      _sarmala(
+        ManuelMudahalePaneli(
+          zonNumarasi: 1,
+          okuma: _okuma(durum: TeshisDurumu.belirsiz),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Asit Dozlama'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    // Geri sayim BASLAT metniyle birlikte gosterilmeli, buton devre disi.
+    expect(find.text('Başlat (3)'), findsOneWidget);
+    var buton = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(buton.onPressed, isNull);
+
+    // Her saniye tik: sayac azalmali, buton HALA devre disi.
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Başlat (2)'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Başlat (1)'), findsOneWidget);
+
+    // 3. saniye dolunca buton ETKINLESMELI, metin sade "Başlat" olmali.
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Başlat'), findsOneWidget);
+    buton = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(buton.onPressed, isNotNull);
+  });
+
+  testWidgets('Tedaviyi Durdur onayinda geri sayim YOK, buton hemen etkin', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _sarmala(
+        ManuelMudahalePaneli(
+          zonNumarasi: 1,
+          okuma: _okuma(
+            durum: TeshisDurumu.tespitEdildi,
+            tedaviAktif: TedaviTuru.asitDozlama,
           ),
         ),
-      );
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Asit Dozlama'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Tedaviyi Durdur'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
-      // Geri sayim BASLAT metniyle birlikte gosterilmeli, buton devre disi.
-      expect(find.text('Başlat (3)'), findsOneWidget);
-      var buton = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(buton.onPressed, isNull);
-
-      // Her saniye tik: sayac azalmali, buton HALA devre disi.
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Başlat (2)'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Başlat (1)'), findsOneWidget);
-
-      // 3. saniye dolunca buton ETKINLESMELI, metin sade "Başlat" olmali.
-      await tester.pump(const Duration(seconds: 1));
-      expect(find.text('Başlat'), findsOneWidget);
-      buton = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(buton.onPressed, isNotNull);
-    },
-  );
-
-  testWidgets(
-    'Tedaviyi Durdur onayinda geri sayim YOK, buton hemen etkin',
-    (tester) async {
-      await tester.pumpWidget(
-        _sarmala(
-          ManuelMudahalePaneli(
-            zonNumarasi: 1,
-            okuma: _okuma(
-              durum: TeshisDurumu.tespitEdildi,
-              tedaviAktif: TedaviTuru.asitDozlama,
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Tedaviyi Durdur'));
-      await tester.pumpAndSettle();
-
-      final buton = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(buton.onPressed, isNotNull);
-      expect(find.text('Durdur'), findsOneWidget);
-    },
-  );
+    final buton = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(buton.onPressed, isNotNull);
+    expect(find.text('Durdur'), findsOneWidget);
+  });
 
   group('Titreşim geri bildirimi (Ayarlar > Titreşim Geri Bildirimi)', () {
     // Bu iki test, diger testlerin kullandigi _sarmala()'yi BILEREK
@@ -225,6 +224,7 @@ void main() {
           providers: [
             ChangeNotifierProvider.value(value: durum),
             ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -262,18 +262,17 @@ void main() {
       },
     );
 
-    testWidgets(
-      'titresim KAPATILINCA kimyasal onay HICBIR haptic tetiklemez',
-      (tester) async {
-        final durum = UygulamaDurumu();
-        await durum.ayarlarProvider.titresimGeriBildirimiAyarla(false);
+    testWidgets('titresim KAPATILINCA kimyasal onay HICBIR haptic tetiklemez', (
+      tester,
+    ) async {
+      final durum = UygulamaDurumu();
+      await durum.ayarlarProvider.titresimGeriBildirimiAyarla(false);
 
-        final yakalananlar = await haptikleriYakala(tester, durum);
+      final yakalananlar = await haptikleriYakala(tester, durum);
 
-        expect(yakalananlar, isEmpty);
+      expect(yakalananlar, isEmpty);
 
-        durum.dispose();
-      },
-    );
+      durum.dispose();
+    });
   });
 }
