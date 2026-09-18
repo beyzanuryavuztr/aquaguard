@@ -23,8 +23,12 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(500, 3600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.tarlaProvider),
+        ],
         child: const MaterialApp(home: TrendAnaliziEkrani()),
       ),
     );

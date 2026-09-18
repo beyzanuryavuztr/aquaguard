@@ -25,7 +25,8 @@ import 'package:provider/provider.dart';
 
 import '../models/sensor_okuma.dart';
 import '../models/sensor_tanimi.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
+import '../providers/tarla_provider.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/sensor_trend_grafigi.dart';
 import '../widgets/yardim_butonu.dart';
@@ -43,14 +44,15 @@ class _TrendAnaliziEkraniState extends State<TrendAnaliziEkrani> {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
-    final tumZonlar = durum.tumZonNumaralari;
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final tarla = context.watch<TarlaProvider>();
+    final tumZonlar = tarla.tumZonNumaralari;
     final zon = _seciliZon != null && tumZonlar.contains(_seciliZon)
         ? _seciliZon!
         : (tumZonlar.isEmpty ? null : tumZonlar.first);
     final gecmisEnYeniOnce = zon == null
         ? const <SensorOkuma>[]
-        : durum.gecmis(zon);
+        : cihaz.gecmis(zon);
 
     return Scaffold(
       appBar: AppBar(
@@ -75,7 +77,7 @@ class _TrendAnaliziEkraniState extends State<TrendAnaliziEkrani> {
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: ChoiceChip(
-                              label: Text(durum.zonAdiGetir(z)),
+                              label: Text(tarla.zonAdiGetir(z)),
                               selected: zon == z,
                               onSelected: (_) =>
                                   setState(() => _seciliZon = z),
