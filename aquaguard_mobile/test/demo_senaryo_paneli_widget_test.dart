@@ -23,11 +23,12 @@ void main() {
     await durum.baslat();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
-        child: const MaterialApp(
-          home: Scaffold(body: DemoSenaryoPaneli()),
-        ),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+        ],
+        child: const MaterialApp(home: Scaffold(body: DemoSenaryoPaneli())),
       ),
     );
     await tester.pumpAndSettle();
@@ -54,11 +55,12 @@ void main() {
     expect(durum.demoHizi, DemoHizi.normal);
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
-        child: const MaterialApp(
-          home: Scaffold(body: DemoSenaryoPaneli()),
-        ),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+        ],
+        child: const MaterialApp(home: Scaffold(body: DemoSenaryoPaneli())),
       ),
     );
     await tester.pumpAndSettle();
@@ -80,11 +82,12 @@ void main() {
     final oncekiUzunluk = durum.aktiviteGecmisi.length;
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
-        child: const MaterialApp(
-          home: Scaffold(body: DemoSenaryoPaneli()),
-        ),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+        ],
+        child: const MaterialApp(home: Scaffold(body: DemoSenaryoPaneli())),
       ),
     );
     await tester.pumpAndSettle();
@@ -93,10 +96,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(durum.aktiviteGecmisi.length, oncekiUzunluk + 1);
-    expect(
-      durum.aktiviteGecmisi.first.mesaj,
-      contains('Fiziksel Tıkanma'),
-    );
+    expect(durum.aktiviteGecmisi.first.mesaj, contains('Fiziksel Tıkanma'));
     expect(tester.takeException(), isNull);
 
     durum.dispose();

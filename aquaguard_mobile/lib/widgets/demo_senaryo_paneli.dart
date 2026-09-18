@@ -6,7 +6,7 @@
 ///   yerine, TEK DOKUNUŞLA istenen senaryoyu (sağlıklı / kimyasal /
 ///   biyolojik / fiziksel / mutex kilidi gösterimi) hemen tetiklemeyi
 ///   sağlar. Mevcut operatör-müdahalesi altyapısını (bkz.
-///   providers/uygulama_durumu.dart demoSenaryosuTetikle) kullanır.
+///   providers/cihaz_iletisim_provider.dart demoSenaryosuTetikle) kullanır.
 ///
 ///   Ayrıca veri üretim HIZINI (bkz. models/demo_hizi.dart) ayarlayan bir
 ///   seçici içerir -- varsayılan "Normal" (1.5sn) jüri sunumu için sabit
@@ -16,7 +16,7 @@
 ///   tetikleme" diye bir şey yoktur — cihaz gerçek sensör okur); bu yüzden
 ///   bu widget'ı gösterip göstermeyeceğine karar vermek çağıran ekranın
 ///   sorumluluğundadır (bkz. genel_bakis_ekrani.dart, sadece
-///   durum.demoModuAktif iken eklenir).
+///   cihaz.demoModuAktif iken eklenir).
 ///
 /// Tarih:  2026-09-05
 library;
@@ -25,7 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/demo_hizi.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
 
 class DemoSenaryoPaneli extends StatelessWidget {
   const DemoSenaryoPaneli({super.key});
@@ -65,7 +65,7 @@ class DemoSenaryoPaneli extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
+    final cihaz = context.watch<CihazIletisimProvider>();
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Container(
@@ -108,7 +108,7 @@ class DemoSenaryoPaneli extends StatelessWidget {
                       child: ActionChip(
                         avatar: Icon(s.$3, size: 16),
                         label: Text(s.$2),
-                        onPressed: () => durum.demoSenaryosuTetikle(s.$1),
+                        onPressed: () => cihaz.demoSenaryosuTetikle(s.$1),
                       ),
                     ),
                   ),
@@ -135,10 +135,9 @@ class DemoSenaryoPaneli extends StatelessWidget {
             segments: DemoHizi.values
                 .map((h) => ButtonSegment(value: h, label: Text(h.etiket)))
                 .toList(),
-            selected: {durum.demoHizi},
+            selected: {cihaz.demoHizi},
             showSelectedIcon: false,
-            onSelectionChanged: (secim) =>
-                durum.demoHiziniAyarla(secim.first),
+            onSelectionChanged: (secim) => cihaz.demoHiziniAyarla(secim.first),
           ),
         ],
       ),
