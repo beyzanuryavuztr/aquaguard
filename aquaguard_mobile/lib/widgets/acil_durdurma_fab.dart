@@ -29,16 +29,24 @@ class AcilDurdurmaFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton.extended(
-      heroTag: 'acil_durdurma_fab',
-      backgroundColor: DurumRenkleri.tespitEdildi,
-      foregroundColor: Colors.white,
-      icon: const Icon(Icons.warning_amber_rounded),
-      label: const Text(
-        'ACİL DURDUR',
-        style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.3),
+    return Semantics(
+      button: true,
+      label:
+          'Acil durdur. Tüm zonlardaki tedavileri ve sulamayı durdurur, '
+          'onay gerektirir.',
+      onTap: () => _onayDiyaloguGoster(context),
+      excludeSemantics: true,
+      child: FloatingActionButton.extended(
+        heroTag: 'acil_durdurma_fab',
+        backgroundColor: DurumRenkleri.tespitEdildi,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.warning_amber_rounded),
+        label: const Text(
+          'ACİL DURDUR',
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.3),
+        ),
+        onPressed: () => _onayDiyaloguGoster(context),
       ),
-      onPressed: () => _onayDiyaloguGoster(context),
     );
   }
 

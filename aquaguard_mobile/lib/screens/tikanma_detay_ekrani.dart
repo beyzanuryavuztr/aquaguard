@@ -584,6 +584,7 @@ class _SensorAnaliziBolumuState extends State<_SensorAnaliziBolumu> {
                     maxDeger: tanim.maxDeger,
                     birim: tanim.birim,
                     renk: tanim.renk,
+                    etiket: '${tanim.baslik} güncel değer',
                   ),
                   const SizedBox(width: 16),
                   Expanded(

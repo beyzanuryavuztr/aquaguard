@@ -189,7 +189,8 @@ class _ZonDugumu extends StatefulWidget {
   State<_ZonDugumu> createState() => _ZonDugumuState();
 }
 
-class _ZonDugumuState extends State<_ZonDugumu> with SingleTickerProviderStateMixin {
+class _ZonDugumuState extends State<_ZonDugumu>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _nabizDenetci;
 
   @override
@@ -227,64 +228,80 @@ class _ZonDugumuState extends State<_ZonDugumu> with SingleTickerProviderStateMi
       cevrimici: widget.cevrimici,
     );
     final nabizAtsinMi = oncelik == ZonOnceligi.tespitEdildi;
+    final durumMetni = DurumRenkleri.ozetMetniGetir(
+      okuma: widget.okuma,
+      cevrimici: widget.cevrimici,
+    );
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
+    return Semantics(
+      button: true,
+      label: '${widget.zonAdi}, $durumMetni',
       onTap: widget.onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        child: Column(
-          children: [
-            AnimatedBuilder(
-              animation: _nabizDenetci,
-              builder: (context, child) {
-                final nabiz = nabizAtsinMi ? _nabizDenetci.value : 0.0;
-                return Container(
-                  width: 44 + nabiz * 10,
-                  height: 44 + nabiz * 10,
-                  decoration: BoxDecoration(
-                    color: renk.withValues(alpha: 0.15 + nabiz * 0.1),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: renk, width: 2),
-                    boxShadow: nabizAtsinMi
-                        ? [
-                            BoxShadow(
-                              color: renk.withValues(alpha: 0.35 * nabiz),
-                              blurRadius: 10 * nabiz,
-                              spreadRadius: 2 * nabiz,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: child,
-                );
-              },
-              child: Icon(ikon, color: renk, size: 22),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.zonAdi,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            if (gosterilecekOkuma != null) ...[
-              _MiniDeger(
-                etiket: 'Debi',
-                deger: '${gosterilecekOkuma.debi.toStringAsFixed(1)} LPM',
-                renk: onSurfaceVariant,
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          child: Column(
+            children: [
+              AnimatedBuilder(
+                animation: _nabizDenetci,
+                builder: (context, child) {
+                  final nabiz = nabizAtsinMi ? _nabizDenetci.value : 0.0;
+                  return Container(
+                    width: 44 + nabiz * 10,
+                    height: 44 + nabiz * 10,
+                    decoration: BoxDecoration(
+                      color: renk.withValues(alpha: 0.15 + nabiz * 0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: renk, width: 2),
+                      boxShadow: nabizAtsinMi
+                          ? [
+                              BoxShadow(
+                                color: renk.withValues(alpha: 0.35 * nabiz),
+                                blurRadius: 10 * nabiz,
+                                spreadRadius: 2 * nabiz,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: child,
+                  );
+                },
+                child: Icon(ikon, color: renk, size: 22),
               ),
-              _MiniDeger(
-                etiket: 'ΔP',
-                deger:
-                    '${gosterilecekOkuma.deltaBasinc.toStringAsFixed(2)} bar',
-                renk: onSurfaceVariant,
+              const SizedBox(height: 6),
+              Text(
+                widget.zonAdi,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ] else
-              Text('—', style: TextStyle(color: onSurfaceVariant, fontSize: 11)),
-          ],
+              const SizedBox(height: 4),
+              if (gosterilecekOkuma != null) ...[
+                _MiniDeger(
+                  etiket: 'Debi',
+                  deger: '${gosterilecekOkuma.debi.toStringAsFixed(1)} LPM',
+                  renk: onSurfaceVariant,
+                ),
+                _MiniDeger(
+                  etiket: 'ΔP',
+                  deger:
+                      '${gosterilecekOkuma.deltaBasinc.toStringAsFixed(2)} bar',
+                  renk: onSurfaceVariant,
+                ),
+              ] else
+                Text(
+                  '—',
+                  style: TextStyle(color: onSurfaceVariant, fontSize: 11),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -326,14 +343,14 @@ class _ToprakKatmaniRessami extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final yuzeyBandi = Paint()..color = const Color(0xFF3E4A3A).withValues(alpha: 0.10);
-    final toprakBandi1 = Paint()..color = const Color(0xFF5D4A36).withValues(alpha: 0.14);
-    final toprakBandi2 = Paint()..color = const Color(0xFF4A3826).withValues(alpha: 0.18);
+    final yuzeyBandi = Paint()
+      ..color = const Color(0xFF3E4A3A).withValues(alpha: 0.10);
+    final toprakBandi1 = Paint()
+      ..color = const Color(0xFF5D4A36).withValues(alpha: 0.14);
+    final toprakBandi2 = Paint()
+      ..color = const Color(0xFF4A3826).withValues(alpha: 0.18);
 
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, dropBitisY),
-      yuzeyBandi,
-    );
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, dropBitisY), yuzeyBandi);
     final kalanYukseklik = size.height - dropBitisY;
     final bant1Yukseklik = kalanYukseklik * 0.45;
     canvas.drawRect(

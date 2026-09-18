@@ -48,85 +48,108 @@ class ZonDurumKarti extends StatelessWidget {
       cevrimici: cevrimici,
     );
     const gecisSuresi = Duration(milliseconds: 400);
+    final semantikEtiket = StringBuffer(
+      '${zonAdi ?? 'Zon $zonNumarasi'}, $ozet',
+    );
+    if (okuma != null &&
+        okuma!.durum == TeshisDurumu.tespitEdildi &&
+        cevrimici) {
+      semantikEtiket.write(', güven yüzde ${okuma!.guven.toStringAsFixed(0)}');
+    }
+    if (sulamaDurdurulduMu) {
+      semantikEtiket.write(', sulama manuel olarak durduruldu');
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Card(
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
+        child: Semantics(
+          button: true,
+          label: semantikEtiket.toString(),
           onTap: onTap,
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: gecisSuresi,
-                width: 6,
-                height: 96,
-                color: renk,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      AnimatedContainer(
-                        duration: gecisSuresi,
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: renk.rozetTonu,
-                          shape: BoxShape.circle,
+          excludeSemantics: true,
+          child: InkWell(
+            onTap: onTap,
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: gecisSuresi,
+                  width: 6,
+                  height: 96,
+                  color: renk,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        AnimatedContainer(
+                          duration: gecisSuresi,
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: renk.rozetTonu,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(ikon, color: renk, size: 26),
                         ),
-                        child: Icon(ikon, color: renk, size: 26),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  zonAdi ?? 'Zon $zonNumarasi',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    zonAdi ?? 'Zon $zonNumarasi',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  if (okuma != null &&
+                                      okuma!.durum ==
+                                          TeshisDurumu.tespitEdildi &&
+                                      cevrimici) ...[
+                                    const SizedBox(width: 8),
+                                    _GuvenRozeti(
+                                      guven: okuma!.guven,
+                                      renk: renk,
+                                    ),
+                                  ],
+                                  if (sulamaDurdurulduMu) ...[
+                                    const SizedBox(width: 8),
+                                    const _SulamaDurdurulduRozeti(),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              AnimatedDefaultTextStyle(
+                                duration: gecisSuresi,
+                                style: TextStyle(
+                                  color: renk,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                if (okuma != null &&
-                                    okuma!.durum == TeshisDurumu.tespitEdildi &&
-                                    cevrimici) ...[
-                                  const SizedBox(width: 8),
-                                  _GuvenRozeti(guven: okuma!.guven, renk: renk),
-                                ],
-                                if (sulamaDurdurulduMu) ...[
-                                  const SizedBox(width: 8),
-                                  const _SulamaDurdurulduRozeti(),
-                                ],
+                                child: Text(ozet),
+                              ),
+                              if (okuma != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Son güncelleme: ${TarihBicimleri.sadeceSaat.format(okuma!.zaman)}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
                               ],
-                            ),
-                            const SizedBox(height: 4),
-                            AnimatedDefaultTextStyle(
-                              duration: gecisSuresi,
-                              style: TextStyle(
-                                color: renk,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              child: Text(ozet),
-                            ),
-                            if (okuma != null) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                'Son güncelleme: ${TarihBicimleri.sadeceSaat.format(okuma!.zaman)}',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                      const Icon(Icons.chevron_right),
-                    ],
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

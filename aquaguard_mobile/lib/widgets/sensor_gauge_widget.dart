@@ -23,6 +23,7 @@ class SensorGaugeWidget extends StatelessWidget {
   final String birim;
   final Color renk;
   final double boyut;
+  final String? etiket;
 
   const SensorGaugeWidget({
     super.key,
@@ -32,6 +33,7 @@ class SensorGaugeWidget extends StatelessWidget {
     required this.birim,
     required this.renk,
     this.boyut = 96,
+    this.etiket,
   });
 
   @override
@@ -40,51 +42,57 @@ class SensorGaugeWidget extends StatelessWidget {
     final oran = aralik == 0
         ? 0.0
         : ((deger - minDeger) / aralik).clamp(0.0, 1.0);
+    final degerMetni = deger.toStringAsFixed(deger.abs() < 10 ? 2 : 0);
 
-    return SizedBox(
-      width: boyut,
-      height: boyut,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: boyut,
-            height: boyut,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: oran),
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOut,
-              builder: (context, v, _) => CircularProgressIndicator(
-                value: v,
-                strokeWidth: 8,
-                backgroundColor: renk.izTonu,
-                color: renk,
-                strokeCap: StrokeCap.round,
+    return Semantics(
+      label: etiket ?? 'Sensör göstergesi',
+      value: birim.isEmpty ? degerMetni : '$degerMetni $birim',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: boyut,
+        height: boyut,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: boyut,
+              height: boyut,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: oran),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOut,
+                builder: (context, v, _) => CircularProgressIndicator(
+                  value: v,
+                  strokeWidth: 8,
+                  backgroundColor: renk.izTonu,
+                  color: renk,
+                  strokeCap: StrokeCap.round,
+                ),
               ),
             ),
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                deger.toStringAsFixed(deger.abs() < 10 ? 2 : 0),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: renk,
-                ),
-              ),
-              if (birim.isNotEmpty)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Text(
-                  birim,
+                  deger.toStringAsFixed(deger.abs() < 10 ? 2 : 0),
                   style: TextStyle(
-                    fontSize: 10,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: renk,
                   ),
                 ),
-            ],
-          ),
-        ],
+                if (birim.isNotEmpty)
+                  Text(
+                    birim,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

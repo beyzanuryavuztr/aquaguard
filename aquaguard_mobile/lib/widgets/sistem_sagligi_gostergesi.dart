@@ -60,52 +60,60 @@ class SistemSagligiGostergesi extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            SizedBox(
-              width: 108,
-              height: 108,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 108,
-                    height: 108,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(
-                        begin: 0,
-                        end: (yuzde / 100).clamp(0.0, 1.0),
-                      ),
-                      duration: const Duration(milliseconds: 700),
-                      curve: Curves.easeOut,
-                      builder: (context, deger, _) => CircularProgressIndicator(
-                        value: deger,
-                        strokeWidth: 10,
-                        backgroundColor: renk.izTonu,
-                        color: renk,
-                        strokeCap: StrokeCap.round,
+            Semantics(
+              label: 'Sistem sağlığı göstergesi',
+              value: '%${yuzde.toStringAsFixed(0)} sağlıklı, $durumMetni',
+              excludeSemantics: true,
+              child: SizedBox(
+                width: 108,
+                height: 108,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 108,
+                      height: 108,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(
+                          begin: 0,
+                          end: (yuzde / 100).clamp(0.0, 1.0),
+                        ),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOut,
+                        builder: (context, deger, _) =>
+                            CircularProgressIndicator(
+                              value: deger,
+                              strokeWidth: 10,
+                              backgroundColor: renk.izTonu,
+                              color: renk,
+                              strokeCap: StrokeCap.round,
+                            ),
                       ),
                     ),
-                  ),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '%${yuzde.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: renk,
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '%${yuzde.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: renk,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'sağlıklı',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        Text(
+                          'sağlıklı',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(width: 20),
