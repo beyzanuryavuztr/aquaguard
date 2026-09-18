@@ -17,7 +17,10 @@ import 'package:provider/provider.dart';
 
 import '../config/tarih_bicimleri.dart';
 import '../models/aktivite_kaydi.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/aktivite_bildirim_provider.dart';
+import '../providers/bakim_provider.dart';
+import '../providers/cihaz_iletisim_provider.dart';
+import '../providers/tarla_provider.dart';
 import '../widgets/acil_durdurma_fab.dart';
 import '../widgets/aktif_tedaviler_bolumu.dart';
 import '../widgets/bakim_uyari_karti.dart';
@@ -43,11 +46,18 @@ class GenelBakisEkrani extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
+    // Facade yerine dogrudan ilgili 4 provider'i izler (Faz "ekran
+    // migrasyonu") -- bu ekran GERCEKTEN 4'unun de verisini kullaniyor
+    // (Cihaz/Tarla/Bakim/Aktivite), ama ARTIK diger 2 provider'daki
+    // (Ayarlar, Guvenlik) degisikliklerde GEREKSIZ YERE yeniden cizilmiyor.
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final tarla = context.watch<TarlaProvider>();
+    final bakim = context.watch<BakimProvider>();
+    final aktivite = context.watch<AktiviteBildirimProvider>();
 
-    final tumZonlar = durum.tumZonNumaralari;
-    final ozet = durum.durumOzetiHesapla(tumZonlar);
-    final sonAktiviteler = durum.aktiviteGecmisi.take(6).toList();
+    final tumZonlar = tarla.tumZonNumaralari;
+    final ozet = cihaz.durumOzetiHesapla(tumZonlar);
+    final sonAktiviteler = aktivite.aktiviteGecmisi.take(6).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -64,8 +74,8 @@ class GenelBakisEkrani extends StatelessWidget {
         actions: [
           const YardimButonu(ekranAnahtari: 'genel_bakis', baslik: 'Genel Bakış'),
           Badge(
-            label: Text('${durum.okunmamisBildirimSayisi}'),
-            isLabelVisible: durum.okunmamisBildirimSayisi > 0,
+            label: Text('${aktivite.okunmamisBildirimSayisi}'),
+            isLabelVisible: aktivite.okunmamisBildirimSayisi > 0,
             child: IconButton(
               icon: const Icon(Icons.notifications_outlined),
               tooltip: 'Bildirim Geçmişi',
@@ -74,7 +84,7 @@ class GenelBakisEkrani extends StatelessWidget {
               ),
             ),
           ),
-          if (durum.demoModuAktif)
+          if (cihaz.demoModuAktif)
             IconButton(
               icon: const Icon(Icons.co_present_outlined),
               tooltip: 'Jüri Sunum Modu',
@@ -91,7 +101,7 @@ class GenelBakisEkrani extends StatelessWidget {
           ),
         ],
       ),
-      body: !durum.hazir
+      body: !cihaz.hazir
           ? const Center(child: CircularProgressIndicator())
           : DuyarliIcerik(
               // NOT: ListView yerine bilerek SingleChildScrollView+Column --
@@ -111,7 +121,7 @@ class GenelBakisEkrani extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (durum.demoModuAktif) ...[
+                    if (cihaz.demoModuAktif) ...[
                       DemoModuBanner(
                         onAyarlaraGit: () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -123,7 +133,7 @@ class GenelBakisEkrani extends StatelessWidget {
                         padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
                         child: DemoSenaryoPaneli(),
                       ),
-                    ] else if (!durum.cihazBagliMi) ...[
+                    ] else if (!cihaz.cihazBagliMi) ...[
                       const CevrimdisiBanner(),
                     ],
                     Padding(
@@ -137,11 +147,11 @@ class GenelBakisEkrani extends StatelessWidget {
                         child: const EnerjiGostergesi(),
                       ),
                     ),
-                    if (durum.bakimUyarisiVarMi)
+                    if (bakim.bakimUyarisiVarMi)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                         child: BakimUyariKarti(
-                          gorevler: durum.bakimGorevleri,
+                          gorevler: bakim.bakimGorevleri,
                           onAyarlaraGit: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const AyarlarEkrani(),
@@ -162,7 +172,7 @@ class GenelBakisEkrani extends StatelessWidget {
                       child: Row(
                         children: [
                           _IstatistikKarti(
-                            deger: durum.tarlalar.length,
+                            deger: tarla.tarlalar.length,
                             etiket: 'Tarla',
                             ikon: Icons.grass,
                           ),
@@ -230,9 +240,9 @@ class GenelBakisEkrani extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: ZonSemasi(
                         zonlar: tumZonlar,
-                        okumaGetir: durum.sonOkuma,
-                        cevrimiciMi: durum.zonCevrimiciMi,
-                        adGetir: durum.zonAdiGetir,
+                        okumaGetir: cihaz.sonOkuma,
+                        cevrimiciMi: cihaz.zonCevrimiciMi,
+                        adGetir: tarla.zonAdiGetir,
                         onZonSecildi: (zon) => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => TikanmaDetayEkrani(zonNumarasi: zon),
@@ -267,10 +277,10 @@ class GenelBakisEkrani extends StatelessWidget {
                       ...tumZonlar.map(
                         (zon) => ZonDurumKarti(
                           zonNumarasi: zon,
-                          zonAdi: durum.zonAdiGetir(zon),
-                          okuma: durum.sonOkuma(zon),
-                          cevrimici: durum.zonCevrimiciMi(zon),
-                          sulamaDurdurulduMu: durum.sulamasiDurduruldu(zon),
+                          zonAdi: tarla.zonAdiGetir(zon),
+                          okuma: cihaz.sonOkuma(zon),
+                          cevrimici: cihaz.zonCevrimiciMi(zon),
+                          sulamaDurdurulduMu: cihaz.sulamasiDurduruldu(zon),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) =>
@@ -292,9 +302,9 @@ class GenelBakisEkrani extends StatelessWidget {
                       const SizedBox(height: 4),
                       AktifTedavilerBolumu(
                         zonlar: tumZonlar,
-                        okumaGetir: durum.sonOkuma,
-                        baslangicGetir: durum.tedaviBaslangicZamani,
-                        adGetir: durum.zonAdiGetir,
+                        okumaGetir: cihaz.sonOkuma,
+                        baslangicGetir: cihaz.tedaviBaslangicZamani,
+                        adGetir: tarla.zonAdiGetir,
                         onZonSecildi: (zon) => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => TikanmaDetayEkrani(zonNumarasi: zon),
@@ -345,7 +355,7 @@ class GenelBakisEkrani extends StatelessWidget {
                 ),
               ),
             ),
-      floatingActionButton: durum.hazir && tumZonlar.isNotEmpty
+      floatingActionButton: cihaz.hazir && tumZonlar.isNotEmpty
           ? const AcilDurdurmaFab()
           : null,
     );

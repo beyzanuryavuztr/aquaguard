@@ -86,9 +86,18 @@ void main() {
     final durum = UygulamaDurumu();
     await durum.baslat();
 
+    // AnaKabuk'un varsayilan sekmesi GenelBakisEkrani -- facade yerine
+    // dogrudan 4 alt provider'i izliyor (bkz. o dosyanin dosya basi notu),
+    // test agacinda da saglanmasi gerekir.
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.tarlaProvider),
+          ChangeNotifierProvider.value(value: durum.bakimProvider),
+          ChangeNotifierProvider.value(value: durum.aktiviteProvider),
+        ],
         child: _uygulamaSarici(const GirisEkrani()),
       ),
     );
