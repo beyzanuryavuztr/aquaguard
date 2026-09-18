@@ -28,8 +28,12 @@ void main() {
     final durum = await _hazirDurum();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+        ],
         child: const MaterialApp(home: OnboardingEkrani()),
       ),
     );
@@ -49,8 +53,12 @@ void main() {
     final durum = await _hazirDurum();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+        ],
         child: const MaterialApp(home: OnboardingEkrani()),
       ),
     );
@@ -82,8 +90,12 @@ void main() {
       expect(durum.onboardingGoruldu, isFalse);
 
       await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: durum,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ],
           child: const MaterialApp(home: OnboardingEkrani()),
         ),
       );
@@ -115,8 +127,12 @@ void main() {
       await durum.gizlilikOnayiniAyarla(true);
 
       await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: durum,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ],
           child: const MaterialApp(home: OnboardingEkrani()),
         ),
       );
@@ -133,36 +149,39 @@ void main() {
     },
   );
 
-  testWidgets(
-    'son sayfada Basla, gizlilik onayi verilmeden DEVRE DISI kalir',
-    (tester) async {
-      final durum = await _hazirDurum();
+  testWidgets('son sayfada Basla, gizlilik onayi verilmeden DEVRE DISI kalir', (
+    tester,
+  ) async {
+    final durum = await _hazirDurum();
 
-      await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: durum,
-          child: const MaterialApp(home: OnboardingEkrani()),
-        ),
-      );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+        ],
+        child: const MaterialApp(home: OnboardingEkrani()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.text('İleri'));
       await tester.pumpAndSettle();
+    }
 
-      for (var i = 0; i < 3; i++) {
-        await tester.tap(find.text('İleri'));
-        await tester.pumpAndSettle();
-      }
+    final buton = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(buton.onPressed, isNull);
 
-      final buton = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(buton.onPressed, isNull);
+    await tester.tap(find.text('Başla'), warnIfMissed: false);
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Başla'), warnIfMissed: false);
-      await tester.pumpAndSettle();
+    expect(durum.onboardingGoruldu, isFalse);
+    expect(find.byType(GirisEkrani), findsNothing);
 
-      expect(durum.onboardingGoruldu, isFalse);
-      expect(find.byType(GirisEkrani), findsNothing);
-
-      durum.dispose();
-    },
-  );
+    durum.dispose();
+  });
 
   testWidgets(
     'onay kutusu isaretlenince son sayfadaki Basla ETKINLESIR ve onboardingi tamamlar',
@@ -170,8 +189,12 @@ void main() {
       final durum = await _hazirDurum();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: durum,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ],
           child: const MaterialApp(home: OnboardingEkrani()),
         ),
       );

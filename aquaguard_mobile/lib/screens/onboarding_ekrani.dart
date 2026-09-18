@@ -7,7 +7,7 @@
 ///   ne olduğu, nasıl çalıştığı, tıkanma türleri ve Demo Modu seçimiyle
 ///   başlangıç. Nokta göstergeli bir `PageView` ile gezilir; "Atla" veya
 ///   son sayfadaki "Başla" ile bir daha GÖSTERİLMEZ (bkz.
-///   UygulamaDurumu.onboardingiTamamla).
+///   AyarlarProvider.onboardingiTamamla).
 ///
 /// Tarih:  2026-09-05
 library;
@@ -16,7 +16,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/sensor_okuma.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/ayarlar_provider.dart';
+import '../providers/cihaz_iletisim_provider.dart';
 import '../widgets/aquaguard_logosu.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -46,7 +47,7 @@ class _OnboardingEkraniState extends State<OnboardingEkrani> {
   /// (onay kutusu SON sayfada) turu tamamlatmak yerine oraya yonlendirir,
   /// boylece "Atla" onay adimini BYPASS EDEMEZ.
   Future<void> _tamamlaVeDevamEt() async {
-    if (!context.read<UygulamaDurumu>().gizlilikOnaylandi) {
+    if (!context.read<AyarlarProvider>().gizlilikOnaylandi) {
       await _controller.animateToPage(
         _toplamSayfa - 1,
         duration: const Duration(milliseconds: 300),
@@ -60,11 +61,11 @@ class _OnboardingEkraniState extends State<OnboardingEkrani> {
       );
       return;
     }
-    await context.read<UygulamaDurumu>().onboardingiTamamla();
+    await context.read<AyarlarProvider>().onboardingiTamamla();
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const GirisEkrani()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const GirisEkrani()));
   }
 
   void _ileriGit() {
@@ -84,7 +85,7 @@ class _OnboardingEkraniState extends State<OnboardingEkrani> {
     // "Baslat" butonunu onay verilmeden devre disi birakmak icin.
     final sonSayfadaMi = _sayfa == _toplamSayfa - 1;
     final gizlilikOnaylandi = sonSayfadaMi
-        ? context.watch<UygulamaDurumu>().gizlilikOnaylandi
+        ? context.watch<AyarlarProvider>().gizlilikOnaylandi
         : true;
 
     return Scaffold(
@@ -158,7 +159,9 @@ class _NoktaGostergesi extends StatelessWidget {
             width: i == sayfa ? 22 : 8,
             height: 8,
             decoration: BoxDecoration(
-              color: i == sayfa ? primary : onSurfaceVariant.withValues(alpha: 0.3),
+              color: i == sayfa
+                  ? primary
+                  : onSurfaceVariant.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -210,10 +213,7 @@ class _SayfaIskeleti extends StatelessWidget {
               height: 1.4,
             ),
           ),
-          if (altIcerik != null) ...[
-            const SizedBox(height: 24),
-            altIcerik!,
-          ],
+          if (altIcerik != null) ...[const SizedBox(height: 24), altIcerik!],
         ],
       ),
     );
@@ -344,7 +344,8 @@ class _TikanmaTurleriSayfasi extends StatelessWidget {
         color: Theme.of(context).colorScheme.primary,
       ),
       baslik: 'Tıkanma Türleri',
-      aciklama: 'AquaGuard 3 farklı tıkanma türünü ayırt edip birbirinden '
+      aciklama:
+          'AquaGuard 3 farklı tıkanma türünü ayırt edip birbirinden '
           'farklı bir tedaviyle müdahale eder.',
       altIcerik: const Column(
         children: [
@@ -355,12 +356,14 @@ class _TikanmaTurleriSayfasi extends StatelessWidget {
           SizedBox(height: 14),
           _TikanmaTuruSatiri(
             tur: TikanmaTuru.biyolojik,
-            aciklama: 'Bakteri/biyofilm oluşumu — klor enjeksiyonuyla tedavi edilir.',
+            aciklama:
+                'Bakteri/biyofilm oluşumu — klor enjeksiyonuyla tedavi edilir.',
           ),
           SizedBox(height: 14),
           _TikanmaTuruSatiri(
             tur: TikanmaTuru.fiziksel,
-            aciklama: 'Partikül/sediman birikimi — yüksek basınçlı yıkamayla tedavi edilir.',
+            aciklama:
+                'Partikül/sediman birikimi — yüksek basınçlı yıkamayla tedavi edilir.',
           ),
         ],
       ),
@@ -407,7 +410,8 @@ class _BaslaSayfasi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final ayarlar = context.watch<AyarlarProvider>();
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return _SayfaIskeleti(
@@ -417,7 +421,8 @@ class _BaslaSayfasi extends StatelessWidget {
         color: Theme.of(context).colorScheme.primary,
       ),
       baslik: 'Haydi Başlayalım',
-      aciklama: 'Demo Modu ile gerçek donanım olmadan hemen deneyebilir, '
+      aciklama:
+          'Demo Modu ile gerçek donanım olmadan hemen deneyebilir, '
           'hazır olduğunuzda gerçek Deneyap Kart cihazına bağlanabilirsiniz.',
       altIcerik: Column(
         children: [
@@ -441,13 +446,14 @@ class _BaslaSayfasi extends StatelessWidget {
                     ),
                   ),
                   Switch(
-                    value: durum.demoModuAktif,
+                    value: cihaz.demoModuAktif,
                     onChanged: (acik) {
-                      final durumOkuyucu = context.read<UygulamaDurumu>();
+                      final cihazOkuyucu = context
+                          .read<CihazIletisimProvider>();
                       if (acik) {
-                        durumOkuyucu.demoModunuAc();
+                        cihazOkuyucu.demoModunuAc();
                       } else {
-                        durumOkuyucu.demoModunuKapat();
+                        cihazOkuyucu.demoModunuKapat();
                       }
                     },
                   ),
@@ -459,9 +465,9 @@ class _BaslaSayfasi extends StatelessWidget {
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
-            value: durum.gizlilikOnaylandi,
+            value: ayarlar.gizlilikOnaylandi,
             onChanged: (deger) => context
-                .read<UygulamaDurumu>()
+                .read<AyarlarProvider>()
                 .gizlilikOnayiniAyarla(deger ?? false),
             title: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
