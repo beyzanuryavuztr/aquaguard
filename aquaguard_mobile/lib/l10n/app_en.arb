@@ -10,6 +10,8 @@
   "aksanToprak": "Earth",
   "sahaModuBaslik": "Field Mode",
   "sahaModuAciklama": "Bolder text and more visible borders for readability in bright sunlight.",
+  "titresimBaslik": "Haptic Feedback",
+  "titresimAciklama": "Vibrate on critical actions (emergency stop, starting treatment).",
   "dilBolumBasligi": "Language",
   "dilTurkce": "Turkish",
   "dilIngilizce": "English"

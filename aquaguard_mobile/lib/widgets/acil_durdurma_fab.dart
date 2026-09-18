@@ -17,8 +17,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/ayarlar_provider.dart';
 import '../providers/uygulama_durumu.dart';
 import 'durum_renkleri.dart';
 
@@ -67,7 +69,14 @@ class AcilDurdurmaFab extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: DurumRenkleri.tespitEdildi,
             ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
+            onPressed: () {
+              // Sistemin en yuksek riskli tek-tuslu eylemi -- EN YOGUN
+              // dokunsal geri bildirim (heavyImpact) burada.
+              if (context.read<AyarlarProvider>().titresimAktif) {
+                HapticFeedback.heavyImpact();
+              }
+              Navigator.of(dialogContext).pop(true);
+            },
             child: const Text('ACİL DURDUR'),
           ),
         ],

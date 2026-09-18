@@ -264,6 +264,15 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                                   .read<UygulamaDurumu>()
                                   .sahaModuAyarla(yeni),
                             ),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.titresimBaslik),
+                              subtitle: Text(l10n.titresimAciklama),
+                              value: durum.titresimAktif,
+                              onChanged: (yeni) => context
+                                  .read<UygulamaDurumu>()
+                                  .titresimGeriBildirimiAyarla(yeni),
+                            ),
                           ],
                         ),
                       ),

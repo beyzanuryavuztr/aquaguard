@@ -11,9 +11,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/widgets/sulama_kontrol_karti.dart';
 
+// SulamaKontrolKarti, Faz "haptic feedback" kapsaminda AyarlarProvider'i
+// da okur (titresim tercihi) -- test agacinda da saglanmasi gerekir.
 Widget _sarmala(UygulamaDurumu durum, Widget child) {
-  return ChangeNotifierProvider.value(
-    value: durum,
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: durum),
+      ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+    ],
     child: MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child))),
   );
 }

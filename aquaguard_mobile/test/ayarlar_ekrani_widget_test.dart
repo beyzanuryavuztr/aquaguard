@@ -26,8 +26,13 @@ void main() {
         value: durum,
         // AyarlarEkrani'nin Görünüm bolumu AppLocalizations kullanir (i18n
         // pilotu, bkz. lib/l10n/app_tr.arb) -- delegate'ler verilmezse
-        // "No AppLocalizations found" istisnasiyla cokerdi.
+        // "No AppLocalizations found" istisnasiyla cokerdi. `locale`
+        // ACIKCA 'tr' verilir -- main.dart'ta HER ZAMAN durum.uygulamaDili
+        // uzerinden acikca verilir (bkz. o dosyanin dosya basi notu),
+        // ACIK verilmezse test ortami varsayilani (Ingilizce) kullanilir
+        // ve bu kartin metinleri BEKLENMEDIK sekilde Ingilizce cikardi.
         child: const MaterialApp(
+          locale: Locale('tr'),
           localizationsDelegates: [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -138,4 +143,27 @@ void main() {
 
     durum.dispose();
   });
+
+  testWidgets(
+    'Titreşim Geri Bildirimi anahtari varsayilan ACIK, dokununca kapanir',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
+
+      await pumpUzunYuzeyle(tester, durum);
+
+      expect(durum.titresimAktif, isTrue);
+      expect(find.text('Titreşim Geri Bildirimi'), findsOneWidget);
+
+      await tester.tap(
+        find.widgetWithText(SwitchListTile, 'Titreşim Geri Bildirimi'),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(durum.titresimAktif, isFalse);
+
+      durum.dispose();
+    },
+  );
 }

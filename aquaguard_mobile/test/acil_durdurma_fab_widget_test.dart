@@ -13,9 +13,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/widgets/acil_durdurma_fab.dart';
 
+// AcilDurdurmaFab, Faz "haptic feedback" kapsaminda AyarlarProvider'i da
+// okur (titresim tercihi) -- test agacinda da saglanmasi gerekir.
 Widget _sarmala(UygulamaDurumu durum) {
-  return ChangeNotifierProvider.value(
-    value: durum,
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: durum),
+      ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+    ],
     child: const MaterialApp(
       home: Scaffold(
         floatingActionButton: AcilDurdurmaFab(),

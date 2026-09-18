@@ -20,10 +20,12 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/bekleyen_komut.dart';
 import '../models/sensor_okuma.dart';
+import '../providers/ayarlar_provider.dart';
 import '../providers/uygulama_durumu.dart';
 
 class ManuelMudahalePaneli extends StatelessWidget {
@@ -291,7 +293,21 @@ class _OnayDiyaloguState extends State<_OnayDiyalogu> {
     super.dispose();
   }
 
+  void _hapticTetikle() {
+    if (!widget.disKontext.mounted) return;
+    if (!widget.disKontext.read<AyarlarProvider>().titresimAktif) return;
+    // Kimyasal dozlama baslatma (geri sayimli) ORTA yogunlukta, digerleri
+    // (tedaviyi durdur/yanlis alarm) HAFIF yogunlukta titresir -- eylemin
+    // geri alinabilirligiyle orantili bir dokunsal ayrim.
+    if (widget.geriSayimSaniye > 0) {
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.lightImpact();
+    }
+  }
+
   Future<void> _onayla() async {
+    _hapticTetikle();
     setState(() => _gonderiliyor = true);
     final sonuc = await widget.onOnay();
     if (mounted) Navigator.of(context).pop();

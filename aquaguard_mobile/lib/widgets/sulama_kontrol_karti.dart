@@ -14,8 +14,10 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/ayarlar_provider.dart';
 import '../providers/uygulama_durumu.dart';
 
 class SulamaKontrolKarti extends StatelessWidget {
@@ -139,6 +141,10 @@ void _sulamaOnayDiyalogu(
         ),
         FilledButton(
           onPressed: () {
+            // "Normal" (kimyasal baslatmayan) bir onay -- HAFIF titresim.
+            if (context.read<AyarlarProvider>().titresimAktif) {
+              HapticFeedback.lightImpact();
+            }
             onOnay();
             Navigator.of(dialogContext).pop();
           },

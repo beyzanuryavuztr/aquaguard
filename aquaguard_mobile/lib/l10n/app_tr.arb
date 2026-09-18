@@ -11,6 +11,8 @@
   "aksanToprak": "Toprak",
   "sahaModuBaslik": "Saha Modu",
   "sahaModuAciklama": "Parlak güneş altında okunabilirlik için daha kalın metin ve belirgin kenarlıklar.",
+  "titresimBaslik": "Titreşim Geri Bildirimi",
+  "titresimAciklama": "Kritik eylemlerde (acil durdurma, tedavi başlatma) cihazınız titresin.",
   "dilBolumBasligi": "Dil",
   "dilTurkce": "Türkçe",
   "dilIngilizce": "İngilizce"

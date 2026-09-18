@@ -7,8 +7,10 @@
 // butonlari gosterdigini dogrudan dogrular.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:aquaguard_mobile/models/sensor_okuma.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
@@ -189,4 +191,89 @@ void main() {
       expect(find.text('Durdur'), findsOneWidget);
     },
   );
+
+  group('Titreşim geri bildirimi (Ayarlar > Titreşim Geri Bildirimi)', () {
+    // Bu iki test, diger testlerin kullandigi _sarmala()'yi BILEREK
+    // kullanmaz -- AyarlarProvider'a ihtiyac duyarlar (haptic kontrolu
+    // icin), digerleri duymaz; mevcut 6 testi riske atmamak icin ayri
+    // bir saracak fonksiyon.
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    Future<List<String>> haptikleriYakala(
+      WidgetTester tester,
+      UygulamaDurumu durum,
+    ) async {
+      final yakalananlar = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'HapticFeedback.vibrate') {
+            yakalananlar.add(call.arguments as String);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: ManuelMudahalePaneli(
+                zonNumarasi: 1,
+                okuma: _okuma(durum: TeshisDurumu.belirsiz),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Asit Dozlama'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 3));
+
+      await tester.tap(find.text('Başlat'));
+      await tester.pump();
+      await tester.pump();
+
+      return yakalananlar;
+    }
+
+    testWidgets(
+      'titresim ACIKKEN (varsayilan) kimyasal onay mediumImpact tetikler',
+      (tester) async {
+        final durum = UygulamaDurumu();
+
+        final yakalananlar = await haptikleriYakala(tester, durum);
+
+        expect(yakalananlar, contains('HapticFeedbackType.mediumImpact'));
+
+        durum.dispose();
+      },
+    );
+
+    testWidgets(
+      'titresim KAPATILINCA kimyasal onay HICBIR haptic tetiklemez',
+      (tester) async {
+        final durum = UygulamaDurumu();
+        await durum.ayarlarProvider.titresimGeriBildirimiAyarla(false);
+
+        final yakalananlar = await haptikleriYakala(tester, durum);
+
+        expect(yakalananlar, isEmpty);
+
+        durum.dispose();
+      },
+    );
+  });
 }

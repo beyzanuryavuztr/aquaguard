@@ -157,6 +157,10 @@ class UygulamaDurumu extends ChangeNotifier {
   bool get sahaModuAktif => _ayarlar.sahaModuAktif;
   Future<void> sahaModuAyarla(bool acik) => _ayarlar.sahaModuAyarla(acik);
 
+  bool get titresimAktif => _ayarlar.titresimAktif;
+  Future<void> titresimGeriBildirimiAyarla(bool acik) =>
+      _ayarlar.titresimGeriBildirimiAyarla(acik);
+
   KullaniciProfili get kullaniciProfili => _ayarlar.kullaniciProfili;
   Future<void> kullaniciProfiliniGuncelle(KullaniciProfili profil) =>
       _ayarlar.kullaniciProfiliniGuncelle(profil);

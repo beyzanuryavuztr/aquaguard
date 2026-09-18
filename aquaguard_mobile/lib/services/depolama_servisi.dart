@@ -58,6 +58,7 @@ class DepolamaServisi {
   static const _temaModuAnahtari = 'aquaguard_tema_modu';
   static const _aksanRengiAnahtari = 'aquaguard_aksan_rengi';
   static const _sahaModuAnahtari = 'aquaguard_saha_modu_acik';
+  static const _titresimAnahtari = 'aquaguard_titresim_geri_bildirimi_acik';
   static const _kuyruklananKomutlarAnahtari = 'aquaguard_kuyruklanan_komutlar';
   static const _maliyetParametreleriAnahtari = 'aquaguard_maliyet_parametreleri';
   static const _uygulamaDiliAnahtari = 'aquaguard_uygulama_dili';
@@ -331,6 +332,19 @@ class DepolamaServisi {
   Future<void> sahaModuKaydet(bool acik) async {
     final tercihler = await _tercihler;
     await tercihler.setBool(_sahaModuAnahtari, acik);
+  }
+
+  /// Varsayilan TRUE'dur -- kritik eylemlerde (acil durdurma, tedavi
+  /// baslatma) dokunsal geri bildirim varsayilan olarak ACIKTIR, operator
+  /// isterse Ayarlar'dan kapatabilir.
+  Future<bool> titresimAktifMi() async {
+    final tercihler = await _tercihler;
+    return tercihler.getBool(_titresimAnahtari) ?? true;
+  }
+
+  Future<void> titresimAyarlaKaydet(bool acik) async {
+    final tercihler = await _tercihler;
+    await tercihler.setBool(_titresimAnahtari, acik);
   }
 
   // ==========================================================================
