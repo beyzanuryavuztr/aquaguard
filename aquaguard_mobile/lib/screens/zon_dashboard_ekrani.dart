@@ -13,7 +13,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/tarla.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
+import '../providers/tarla_provider.dart';
+import '../services/mqtt_servisi.dart';
 import '../widgets/demo_modu_banner.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -31,14 +33,15 @@ class ZonDashboardEkrani extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final tarlaProvider = context.watch<TarlaProvider>();
     // NOT: widget'a gecirilen `tarla` navigasyon ANINDAKI bir anlik goruntudur
     // -- profil (fotograf/konum/aciklama) sonradan guncellenirse (bkz.
     // TarlaProfilKarti) provider'daki GUNCEL halini yansitmasi icin id'ye
     // gore YENIDEN bulunur. Silinmis olma ihtimaline karsi eski degere doner.
-    final guncelTarla = durum.tarlalar
-        .where((t) => t.id == tarla.id)
-        .firstOrNull ?? tarla;
+    final guncelTarla =
+        tarlaProvider.tarlalar.where((t) => t.id == tarla.id).firstOrNull ??
+        tarla;
 
     // NOT: Bildirimler artik AnaKabuk seviyesinde (kabugun kendisi) drenaj
     // ediliyor -- kullanici hangi sekmede olursa olsun gorunmesi icin.
@@ -48,13 +51,13 @@ class ZonDashboardEkrani extends StatelessWidget {
       appBar: AppBar(
         title: Text(guncelTarla.ad),
         actions: [
-          if (durum.demoModuAktif)
+          if (cihaz.demoModuAktif)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8),
               child: _DemoRozeti(),
             )
           else
-            _BaglantiRozeti(durum: durum.baglantiDurumu),
+            _BaglantiRozeti(durum: cihaz.baglantiDurumu),
           IconButton(
             icon: const Icon(Icons.sticky_note_2_outlined),
             tooltip: 'Notlar',
@@ -77,7 +80,7 @@ class ZonDashboardEkrani extends StatelessWidget {
       ),
       body: Column(
         children: [
-          if (durum.demoModuAktif)
+          if (cihaz.demoModuAktif)
             DemoModuBanner(
               onAyarlaraGit: () => Navigator.of(
                 context,
@@ -91,16 +94,16 @@ class ZonDashboardEkrani extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     child: TarlaProfilKarti(tarla: guncelTarla),
                   ),
-                  _OzetSatiri(tarla: guncelTarla, durum: durum),
+                  _OzetSatiri(tarla: guncelTarla, cihaz: cihaz),
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.only(bottom: 24),
                       children: guncelTarla.zonNumaralari.map((zon) {
                         return ZonDurumKarti(
                           zonNumarasi: zon,
-                          okuma: durum.sonOkuma(zon),
-                          cevrimici: durum.zonCevrimiciMi(zon),
-                          sulamaDurdurulduMu: durum.sulamasiDurduruldu(zon),
+                          okuma: cihaz.sonOkuma(zon),
+                          cevrimici: cihaz.zonCevrimiciMi(zon),
+                          sulamaDurdurulduMu: cihaz.sulamasiDurduruldu(zon),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) =>
@@ -123,13 +126,13 @@ class ZonDashboardEkrani extends StatelessWidget {
 
 class _OzetSatiri extends StatelessWidget {
   final Tarla tarla;
-  final UygulamaDurumu durum;
+  final CihazIletisimProvider cihaz;
 
-  const _OzetSatiri({required this.tarla, required this.durum});
+  const _OzetSatiri({required this.tarla, required this.cihaz});
 
   @override
   Widget build(BuildContext context) {
-    final ozet = durum.durumOzetiHesapla(tarla.zonNumaralari);
+    final ozet = cihaz.durumOzetiHesapla(tarla.zonNumaralari);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
