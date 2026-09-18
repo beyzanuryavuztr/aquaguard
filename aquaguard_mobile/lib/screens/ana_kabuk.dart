@@ -31,8 +31,9 @@ import 'package:provider/provider.dart';
 
 import '../models/aktivite_kaydi.dart';
 import '../models/bildirim_onceligi.dart';
+import '../providers/aktivite_bildirim_provider.dart';
+import '../providers/ayarlar_provider.dart';
 import '../providers/depolama_unawaited.dart';
-import '../providers/uygulama_durumu.dart';
 import '../services/bildirim_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
 import 'ayarlar_ekrani.dart';
@@ -100,8 +101,9 @@ class _AnaKabukState extends State<AnaKabuk> {
     // canli tikanma/tedavi uyarisi GORMEZ (veri Aktivite Gecmisi'ne
     // kaydedilir ama aninda haber verilmez). Kabuk her zaman monte
     // oldugu icin, hangi sekmede olursa olsun bildirimler burada gosterilir.
-    final durum = context.watch<UygulamaDurumu>();
-    final bildirimler = durum.bildirimleriAlVeTemizle();
+    final aktivite = context.watch<AktiviteBildirimProvider>();
+    final ayarlar = context.watch<AyarlarProvider>();
+    final bildirimler = aktivite.bildirimleriAlVeTemizle();
     if (bildirimler.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         for (final kayit in bildirimler) {
@@ -119,7 +121,7 @@ class _AnaKabukState extends State<AnaKabuk> {
           // (kullanici zaten uygulamayi acik tutuyor, rahatsiz etmez).
           final oncelik = oncelikGetir(kayit.tur);
           if (!sessizSaattaBastirilmaliMi(
-            durum.bildirimTercihleri,
+            ayarlar.bildirimTercihleri,
             oncelik,
           )) {
             unawaited(
