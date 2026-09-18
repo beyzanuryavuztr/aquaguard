@@ -28,7 +28,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../models/tarla.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/tarla_provider.dart';
 import 'tarla_gps_haritasi.dart';
 
 class TarlaProfilKarti extends StatelessWidget {
@@ -49,19 +49,19 @@ class TarlaProfilKarti extends StatelessWidget {
       final base64Metin = base64Encode(baytlar);
 
       if (!context.mounted) return;
-      await context.read<UygulamaDurumu>().tarlaGuncelle(
+      await context.read<TarlaProvider>().tarlaGuncelle(
         tarla.kopyalaVeGuncelle(fotografBase64: base64Metin),
       );
     } catch (hata) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fotoğraf seçilemedi: $hata')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Fotoğraf seçilemedi: $hata')));
     }
   }
 
   Future<void> _fotografiKaldir(BuildContext context) async {
-    await context.read<UygulamaDurumu>().tarlaGuncelle(
+    await context.read<TarlaProvider>().tarlaGuncelle(
       tarla.kopyalaVeGuncelle(fotografiKaldir: true),
     );
   }
@@ -86,7 +86,7 @@ class TarlaProfilKarti extends StatelessWidget {
       } else {
         final konum = await Geolocator.getCurrentPosition();
         if (!context.mounted) return;
-        await context.read<UygulamaDurumu>().tarlaGuncelle(
+        await context.read<TarlaProvider>().tarlaGuncelle(
           tarla.kopyalaVeGuncelle(
             enlem: konum.latitude,
             boylam: konum.longitude,
@@ -155,14 +155,18 @@ class TarlaProfilKarti extends StatelessWidget {
                           Icon(
                             Icons.add_photo_alternate_outlined,
                             size: 32,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'Tarla Fotoğrafı Ekle',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
