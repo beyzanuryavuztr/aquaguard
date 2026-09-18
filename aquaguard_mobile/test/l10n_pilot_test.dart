@@ -18,8 +18,15 @@ import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/screens/ayarlar_ekrani.dart';
 
 Widget _sar(UygulamaDurumu durum, Locale locale) {
-  return ChangeNotifierProvider.value(
-    value: durum,
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: durum),
+      ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+      ChangeNotifierProvider.value(value: durum.cihazProvider),
+      ChangeNotifierProvider.value(value: durum.tarlaProvider),
+      ChangeNotifierProvider.value(value: durum.bakimProvider),
+      ChangeNotifierProvider.value(value: durum.guvenlikProvider),
+    ],
     child: MaterialApp(
       locale: locale,
       localizationsDelegates: const [
@@ -96,8 +103,15 @@ void main() {
     // (bkz. main.dart) -- bu test bunu dogrudan simule etmek icin
     // Consumer benzeri bir sarmalayici kullanir (gercek main.dart akisi).
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.tarlaProvider),
+          ChangeNotifierProvider.value(value: durum.bakimProvider),
+          ChangeNotifierProvider.value(value: durum.guvenlikProvider),
+        ],
         child: Consumer<UygulamaDurumu>(
           builder: (context, d, _) => MaterialApp(
             locale: d.uygulamaDili.locale,

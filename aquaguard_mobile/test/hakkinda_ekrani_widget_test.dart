@@ -26,9 +26,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(500, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      const MaterialApp(home: HakkindaEkrani()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: HakkindaEkrani()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
@@ -119,8 +117,15 @@ void main() {
     await durum.baslat();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.tarlaProvider),
+          ChangeNotifierProvider.value(value: durum.bakimProvider),
+          ChangeNotifierProvider.value(value: durum.guvenlikProvider),
+        ],
         child: const MaterialApp(
           localizationsDelegates: [
             AppLocalizations.delegate,

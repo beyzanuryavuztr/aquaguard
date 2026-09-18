@@ -19,7 +19,10 @@ import 'package:aquaguard_mobile/screens/ayarlar_ekrani.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  Future<void> pumpUzunYuzeyle(WidgetTester tester, UygulamaDurumu durum) async {
+  Future<void> pumpUzunYuzeyle(
+    WidgetTester tester,
+    UygulamaDurumu durum,
+  ) async {
     // 4200 (once 3900'du): Titresim Geri Bildirimi anahtari + Yazi Boyutu
     // segmenti eklenince Gorunum karti buyudu, ListView'in sliver lazy
     // layout'u (RenderSliverList) yuzeyin altina tasan icerigi (orn.
@@ -28,8 +31,15 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(500, 4200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.tarlaProvider),
+          ChangeNotifierProvider.value(value: durum.bakimProvider),
+          ChangeNotifierProvider.value(value: durum.guvenlikProvider),
+        ],
         // AyarlarEkrani'nin Görünüm bolumu AppLocalizations kullanir (i18n
         // pilotu, bkz. lib/l10n/app_tr.arb) -- delegate'ler verilmezse
         // "No AppLocalizations found" istisnasiyla cokerdi. `locale`
@@ -87,7 +97,10 @@ void main() {
 
       await pumpUzunYuzeyle(tester, durum);
 
-      await tester.enterText(find.widgetWithText(TextFormField, 'İsim'), 'Beyzanur');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'İsim'),
+        'Beyzanur',
+      );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'İşletme / Çiftlik Adı'),
         'Ana Çiftlik',

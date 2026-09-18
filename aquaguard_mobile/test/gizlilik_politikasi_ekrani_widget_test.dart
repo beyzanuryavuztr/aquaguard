@@ -31,39 +31,47 @@ void main() {
     expect(find.text('Ağ üzerinden neler gidip geliyor?'), findsOneWidget);
   });
 
-  testWidgets('Ayarlar ekranindaki Gizlilik Politikası satiri bu ekrana gecer', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(500, 6000));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'Ayarlar ekranindaki Gizlilik Politikası satiri bu ekrana gecer',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(500, 6000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    final durum = UygulamaDurumu();
-    await durum.baslat();
+      final durum = UygulamaDurumu();
+      await durum.baslat();
 
-    await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
-        child: const MaterialApp(
-          locale: Locale('tr'),
-          localizationsDelegates: [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+            ChangeNotifierProvider.value(value: durum.tarlaProvider),
+            ChangeNotifierProvider.value(value: durum.bakimProvider),
+            ChangeNotifierProvider.value(value: durum.guvenlikProvider),
           ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: AyarlarEkrani(),
+          child: const MaterialApp(
+            locale: Locale('tr'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AyarlarEkrani(),
+          ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    await tester.tap(find.text('Gizlilik Politikası'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Gizlilik Politikası'));
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    expect(find.byType(GizlilikPolitikasiEkrani), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(GizlilikPolitikasiEkrani), findsOneWidget);
 
-    durum.dispose();
-  });
+      durum.dispose();
+    },
+  );
 }
