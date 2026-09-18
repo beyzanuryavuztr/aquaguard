@@ -17,7 +17,7 @@ import 'package:provider/provider.dart';
 import '../config/tarih_bicimleri.dart';
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
 import '../services/disa_aktarma_factory.dart';
 import '../services/disa_aktarma_servisi.dart';
 import '../widgets/durum_renkleri.dart';
@@ -43,8 +43,8 @@ class _GecmisLoglarEkraniState extends State<GecmisLoglarEkrani> {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
-    final gecmis = durum.gecmis(_seciliZon);
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final gecmis = cihaz.gecmis(_seciliZon);
 
     return Scaffold(
       appBar: AppBar(
@@ -81,16 +81,16 @@ class _GecmisLoglarEkraniState extends State<GecmisLoglarEkrani> {
   }
 
   Future<void> _disaAktar(BuildContext context) async {
-    final gecmis = context.read<UygulamaDurumu>().gecmis(_seciliZon);
+    final gecmis = context.read<CihazIletisimProvider>().gecmis(_seciliZon);
     final csv = DisaAktarmaServisi.csvOlustur(gecmis);
     final dosyaAdi = DisaAktarmaServisi.dosyaAdiUret(
       '${widget.tarla.ad}_zon$_seciliZon',
     );
     final konum = await csvKaydet(dosyaAdi, csv);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('CSV dışa aktarıldı: $konum')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('CSV dışa aktarıldı: $konum')));
   }
 }
 
