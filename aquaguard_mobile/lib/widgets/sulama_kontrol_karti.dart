@@ -18,7 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/ayarlar_provider.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
 
 class SulamaKontrolKarti extends StatelessWidget {
   final int zonNumarasi;
@@ -27,7 +27,7 @@ class SulamaKontrolKarti extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durdurulduMu = context.select<UygulamaDurumu, bool>(
+    final durdurulduMu = context.select<CihazIletisimProvider, bool>(
       (d) => d.sulamasiDurduruldu(zonNumarasi),
     );
 
@@ -53,8 +53,9 @@ class SulamaKontrolKarti extends StatelessWidget {
                     'emin misiniz? Tıkanma teşhisinden bağımsız olarak sulama '
                     'tamamen duracak; siz yeniden başlatana kadar devam etmez.',
                 onayEtiketi: 'Durdur',
-                onOnay: () =>
-                    context.read<UygulamaDurumu>().sulamayiDurdur(zonNumarasi),
+                onOnay: () => context
+                    .read<CihazIletisimProvider>()
+                    .sulamayiDurdur(zonNumarasi),
               ),
             ),
           ),
@@ -83,7 +84,9 @@ class SulamaKontrolKarti extends StatelessWidget {
                       'Sulama Manuel Olarak Durduruldu',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onTertiaryContainer,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onTertiaryContainer,
                       ),
                     ),
                   ),
@@ -109,9 +112,9 @@ class SulamaKontrolKarti extends StatelessWidget {
                       'Zon $zonNumarasi için ana vanayı yeniden açmak '
                       'istediğinize emin misiniz?',
                   onayEtiketi: 'Başlat',
-                  onOnay: () => context.read<UygulamaDurumu>().sulamayiBaslat(
-                    zonNumarasi,
-                  ),
+                  onOnay: () => context
+                      .read<CihazIletisimProvider>()
+                      .sulamayiBaslat(zonNumarasi),
                 ),
               ),
             ],

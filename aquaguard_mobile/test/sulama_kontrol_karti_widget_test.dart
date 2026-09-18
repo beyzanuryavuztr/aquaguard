@@ -18,8 +18,11 @@ Widget _sarmala(UygulamaDurumu durum, Widget child) {
     providers: [
       ChangeNotifierProvider.value(value: durum),
       ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+      ChangeNotifierProvider.value(value: durum.cihazProvider),
     ],
-    child: MaterialApp(home: Scaffold(body: SingleChildScrollView(child: child))),
+    child: MaterialApp(
+      home: Scaffold(body: SingleChildScrollView(child: child)),
+    ),
   );
 }
 
@@ -63,26 +66,27 @@ void main() {
     durum.dispose();
   });
 
-  testWidgets('Durdur butonuna basinca onay diyalogu acilir ve onaylaninca durum degisir', (
-    tester,
-  ) async {
-    final durum = UygulamaDurumu();
-    await durum.baslat();
+  testWidgets(
+    'Durdur butonuna basinca onay diyalogu acilir ve onaylaninca durum degisir',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
 
-    await tester.pumpWidget(
-      _sarmala(durum, const SulamaKontrolKarti(zonNumarasi: 1)),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _sarmala(durum, const SulamaKontrolKarti(zonNumarasi: 1)),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Durdur'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.text('Durdur'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
 
-    await tester.tap(find.text('Durdur').last);
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Durdur').last);
+      await tester.pumpAndSettle();
 
-    expect(durum.sulamasiDurduruldu(1), isTrue);
+      expect(durum.sulamasiDurduruldu(1), isTrue);
 
-    durum.dispose();
-  });
+      durum.dispose();
+    },
+  );
 }
