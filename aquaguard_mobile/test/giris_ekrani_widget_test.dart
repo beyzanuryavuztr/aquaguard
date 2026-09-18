@@ -40,8 +40,12 @@ void main() {
     final durum = UygulamaDurumu();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ChangeNotifierProvider.value(value: durum.tarlaProvider),
+        ],
         child: _uygulamaSarici(const GirisEkrani()),
       ),
     );
@@ -59,8 +63,12 @@ void main() {
       await durum.baslat();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: durum,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+            ChangeNotifierProvider.value(value: durum.tarlaProvider),
+          ],
           child: _uygulamaSarici(const GirisEkrani()),
         ),
       );

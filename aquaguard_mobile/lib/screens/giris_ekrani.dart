@@ -31,7 +31,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/tema.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
+import '../providers/tarla_provider.dart';
 import '../widgets/aquaguard_logosu.dart';
 import '../widgets/duyarli_icerik.dart';
 import 'ana_kabuk.dart';
@@ -70,7 +71,8 @@ class _GirisEkraniState extends State<GirisEkrani>
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final tarla = context.watch<TarlaProvider>();
 
     return Scaffold(
       body: DecoratedBox(
@@ -82,7 +84,7 @@ class _GirisEkraniState extends State<GirisEkrani>
           ),
         ),
         child: SafeArea(
-          child: !durum.hazir
+          child: !cihaz.hazir
               ? const Center(child: CircularProgressIndicator())
               : Stack(
                   children: [
@@ -94,14 +96,12 @@ class _GirisEkraniState extends State<GirisEkrani>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _AnimasyonluMarkaBasligi(
-                                animasyon: _animasyon,
-                              ),
+                              _AnimasyonluMarkaBasligi(animasyon: _animasyon),
                               const SizedBox(height: 40),
-                              _DemoModuKarti(durum: durum),
-                              if (durum.tarlalar.isNotEmpty) ...[
+                              _DemoModuKarti(cihaz: cihaz),
+                              if (tarla.tarlalar.isNotEmpty) ...[
                                 const SizedBox(height: 16),
-                                _CiftlikOzetKarti(durum: durum),
+                                _CiftlikOzetKarti(tarla: tarla),
                               ],
                               const SizedBox(height: 32),
                               SizedBox(
@@ -114,9 +114,7 @@ class _GirisEkraniState extends State<GirisEkrani>
                                         ),
                                       ),
                                   child: const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 4,
-                                    ),
+                                    padding: EdgeInsets.symmetric(vertical: 4),
                                     child: Text('Devam Et'),
                                   ),
                                 ),
@@ -229,8 +227,8 @@ class _AnimasyonluMarkaBasligi extends StatelessWidget {
 }
 
 class _DemoModuKarti extends StatelessWidget {
-  final UygulamaDurumu durum;
-  const _DemoModuKarti({required this.durum});
+  final CihazIletisimProvider cihaz;
+  const _DemoModuKarti({required this.cihaz});
 
   @override
   Widget build(BuildContext context) {
@@ -255,13 +253,13 @@ class _DemoModuKarti extends StatelessWidget {
                   ),
                 ),
                 Switch(
-                  value: durum.demoModuAktif,
+                  value: cihaz.demoModuAktif,
                   onChanged: (acik) {
-                    final durumOkuyucu = context.read<UygulamaDurumu>();
+                    final cihazOkuyucu = context.read<CihazIletisimProvider>();
                     if (acik) {
-                      durumOkuyucu.demoModunuAc();
+                      cihazOkuyucu.demoModunuAc();
                     } else {
-                      durumOkuyucu.demoModunuKapat();
+                      cihazOkuyucu.demoModunuKapat();
                     }
                   },
                 ),
@@ -269,7 +267,7 @@ class _DemoModuKarti extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              durum.demoModuAktif
+              cihaz.demoModuAktif
                   ? 'Gerçekçi simüle edilmiş sensör verisiyle çalışılıyor. Ağ/donanım gerekmez.'
                   : 'Gerçek Deneyap Kart donanımına MQTT üzerinden bağlanılacak.',
               style: TextStyle(color: onSurfaceVariant, fontSize: 12),
@@ -282,13 +280,13 @@ class _DemoModuKarti extends StatelessWidget {
 }
 
 class _CiftlikOzetKarti extends StatelessWidget {
-  final UygulamaDurumu durum;
-  const _CiftlikOzetKarti({required this.durum});
+  final TarlaProvider tarla;
+  const _CiftlikOzetKarti({required this.tarla});
 
   @override
   Widget build(BuildContext context) {
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
-    final toplamZon = durum.tumZonNumaralari.length;
+    final toplamZon = tarla.tumZonNumaralari.length;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -297,11 +295,14 @@ class _CiftlikOzetKarti extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.grass_outlined, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.grass_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '${durum.tarlalar.length} çiftlik, $toplamZon zon izleniyor',
+                    '${tarla.tarlalar.length} çiftlik, $toplamZon zon izleniyor',
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
@@ -309,7 +310,7 @@ class _CiftlikOzetKarti extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              durum.tarlalar.map((t) => t.ad).join(' • '),
+              tarla.tarlalar.map((t) => t.ad).join(' • '),
               style: TextStyle(color: onSurfaceVariant, fontSize: 12),
             ),
             Align(
