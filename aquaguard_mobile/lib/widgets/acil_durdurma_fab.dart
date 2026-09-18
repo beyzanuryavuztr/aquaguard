@@ -6,7 +6,7 @@
 ///   bir güvenlik supabı: TEK dokunuşla (onay alarak) TÜM zonlardaki
 ///   aktif tedavileri güvenlik gereği zorunlu durulamadan geçirerek
 ///   durdurur VE tüm ana vanaları kapatır (bkz.
-///   providers/uygulama_durumu.dart acilDurdurmaTetikle).
+///   providers/cihaz_iletisim_provider.dart acilDurdurmaTetikle).
 ///
 ///   Yanlışlıkla tetiklenmeyi önlemek için EXPLICIT bir onay diyaloğu
 ///   gerekir; onaylandıktan sonra sadece bu eylemle kapatılan vanalar
@@ -21,7 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/ayarlar_provider.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
 import 'durum_renkleri.dart';
 
 class AcilDurdurmaFab extends StatelessWidget {
@@ -51,7 +51,7 @@ class AcilDurdurmaFab extends StatelessWidget {
   }
 
   Future<void> _onayDiyaloguGoster(BuildContext context) async {
-    final durum = context.read<UygulamaDurumu>();
+    final cihaz = context.read<CihazIletisimProvider>();
 
     final onay = await showDialog<bool>(
       context: context,
@@ -93,7 +93,7 @@ class AcilDurdurmaFab extends StatelessWidget {
 
     if (onay != true || !context.mounted) return;
 
-    final vanasiYeniKapatilanlar = await durum.acilDurdurmaTetikle();
+    final vanasiYeniKapatilanlar = await cihaz.acilDurdurmaTetikle();
     if (!context.mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -108,7 +108,7 @@ class AcilDurdurmaFab extends StatelessWidget {
                 label: 'Geri Al',
                 onPressed: () {
                   for (final zon in vanasiYeniKapatilanlar) {
-                    durum.sulamayiBaslat(zon);
+                    cihaz.sulamayiBaslat(zon);
                   }
                 },
               ),
