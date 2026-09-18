@@ -99,6 +99,23 @@ class AquaGuardVeritabani extends _$AquaGuardVeritabani {
   @override
   int get schemaVersion => 1;
 
+  // Su an schemaVersion HALA 1 -- semaya HENUZ hicbir sutun/tablo
+  // eklenmedi, bu yuzden `onUpgrade` asagida bos/no-op. Iskelet BILEREK
+  // simdiden eklendi: ileride bir sutun eklenirse (orn. E1 -- sensor
+  // semasina sicaklik alani eklenmesi, kalibrasyon_sabitleri.dart'taki
+  // sicaklik kompanzasyonu icin) `schemaVersion`'i artirip BURAYA
+  // (m.addColumn(...) gibi) gercek bir ALTER TABLE adimi eklemek yeterli
+  // olacak -- aksi halde kullanicinin CIHAZINDAKI mevcut veritabani
+  // dosyasi, yeni sutunu BEKLEYEN yeni kod surumuyle UYUSMAZ ve
+  // kullanici verisi kaybi riski dogar.
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, eskiSurum, yeniSurum) async {
+      // Henuz gercek bir migrasyon adimi YOK -- schemaVersion hala 1.
+    },
+  );
+
   /// SADECE testler icin: `driftDatabase()`'in gercek (native) yolu
   /// `path_provider` platform kanalini kullanir -- bu kanal duz
   /// `flutter test` host'unda MOCK'LANMADIGI icin `MissingPluginException`
