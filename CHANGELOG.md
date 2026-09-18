@@ -63,7 +63,7 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - CI/CD: GitHub Actions üzerinde `flutter analyze --fatal-infos`,
   `flutter test --coverage`, `flutter build web --release`; Python
   katmanı için ayrı `pytest` işi.
-- Test paketi: 357 Flutter testi + Python `pytest` paketi.
+- Test paketi: 369 Flutter testi + Python `pytest` paketi.
 
 ### Güvenlik
 
@@ -82,3 +82,5 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - Firmware (`firmware/`) bu geliştirme ortamında derlenip gerçek
   donanımda doğrulanamamıştır — sadece kod incelemesiyle yazılmıştır.
 - Erişilebilirlik (ekran okuyucu desteği) henüz kapsamlı değildir.
+- README'deki ekran görüntüleri bölümü henüz gerçek görsellerle
+  doldurulmadı (`docs/screenshots/` — manuel olarak eklenecek).
