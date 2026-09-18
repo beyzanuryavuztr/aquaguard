@@ -14,7 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/tarih_bicimleri.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/aktivite_bildirim_provider.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 
@@ -23,7 +23,9 @@ class AktiviteGecmisiEkrani extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aktiviteler = context.watch<UygulamaDurumu>().aktiviteGecmisi;
+    final aktiviteler = context
+        .watch<AktiviteBildirimProvider>()
+        .aktiviteGecmisi;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Aktivite Geçmişi')),
