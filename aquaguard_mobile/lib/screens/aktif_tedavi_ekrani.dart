@@ -8,9 +8,9 @@
 ///
 ///   ONEMLI: Ilerleme yuzdesi TAHMINIDIR. Cihaz, tedavinin tam olarak
 ///   ne zaman basladigini MQTT mesajinda GONDERMEZ (sadece o an aktif
-///   olan tedavinin ADINI gonderir). Bu yuzden UygulamaDurumu, "tedavi_aktif"
+///   olan tedavinin ADINI gonderir). Bu yuzden CihazIletisimProvider, "tedavi_aktif"
 ///   alaninin YOK'tan bir tedavi adina ilk gectigi ani kendi tarafinda
-///   zaman damgasi olarak kaydeder (bkz. providers/uygulama_durumu.dart)
+///   zaman damgasi olarak kaydeder (bkz. providers/cihaz_iletisim_provider.dart)
 ///   ve ilerleme, firmware/config.h'deki YAPILANDIRILMIS sureye (ornegin
 ///   asit icin 30 saniye) gore hesaplanir. Cihaz farkli bir surede
 ///   tamamlarsa (ornegin manuel mudahale), bu ilerleme cubugu hafif
@@ -27,7 +27,8 @@ import 'package:provider/provider.dart';
 
 import '../models/sensor_okuma.dart';
 import '../models/tedavi_ilerlemesi.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
+import '../providers/tarla_provider.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/manuel_mudahale_paneli.dart';
@@ -61,12 +62,13 @@ class _AktifTedaviEkraniState extends State<AktifTedaviEkrani> {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
-    final okuma = durum.sonOkuma(widget.zonNumarasi);
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final tarla = context.watch<TarlaProvider>();
+    final okuma = cihaz.sonOkuma(widget.zonNumarasi);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${durum.zonAdiGetir(widget.zonNumarasi)} - Aktif Tedavi'),
+        title: Text('${tarla.zonAdiGetir(widget.zonNumarasi)} - Aktif Tedavi'),
       ),
       body: okuma == null
           ? const Center(child: Text('Veri bulunamadı'))
@@ -78,7 +80,7 @@ class _AktifTedaviEkraniState extends State<AktifTedaviEkrani> {
                     ? _TedaviIlerlemeGorunumu(
                         zonNumarasi: widget.zonNumarasi,
                         okuma: okuma,
-                        baslangic: durum.tedaviBaslangicZamani(
+                        baslangic: cihaz.tedaviBaslangicZamani(
                           widget.zonNumarasi,
                         ),
                       )
