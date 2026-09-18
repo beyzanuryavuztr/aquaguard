@@ -109,8 +109,10 @@ void main() {
     // Yukseklik 2600 -> 3800: yeni "Bakım Takvimi" karti (4 gorev satiri,
     // her biri isThreeLine) eklendi, Hakkında satiri artik daha asagida
     // (bkz. Oncelik 12). 3800 -> 4300: yeni "Kullanıcı Profili" karti (3
-    // metin alani + kaydet butonu) en basa eklendi (Faz 3).
-    await tester.binding.setSurfaceSize(const Size(500, 5400));
+    // metin alani + kaydet butonu) en basa eklendi (Faz 3). 5400 -> 5800:
+    // Görünüm kartina "Titreşim Geri Bildirimi" anahtari + "Yazı Boyutu"
+    // segmenti eklendi, Hakkında satiri daha da asagida kaldi.
+    await tester.binding.setSurfaceSize(const Size(500, 5800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final durum = UygulamaDurumu();

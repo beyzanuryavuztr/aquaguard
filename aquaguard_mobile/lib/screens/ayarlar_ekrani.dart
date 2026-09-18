@@ -23,6 +23,7 @@ import '../models/bakim_gorevi.dart';
 import '../models/kullanici_profili.dart';
 import '../models/tema_modu.dart';
 import '../models/uygulama_dili.dart';
+import '../models/yazi_boyutu.dart';
 import '../providers/uygulama_durumu.dart';
 import '../services/disa_aktarma_factory.dart';
 import '../services/hata_gunlugu_servisi.dart';
@@ -272,6 +273,37 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                               onChanged: (yeni) => context
                                   .read<UygulamaDurumu>()
                                   .titresimGeriBildirimiAyarla(yeni),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              l10n.yaziBoyutuEtiketi,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 8),
+                            SegmentedButton<YaziBoyutu>(
+                              segments: [
+                                ButtonSegment(
+                                  value: YaziBoyutu.kucuk,
+                                  label: Text(l10n.yaziBoyutuKucuk),
+                                ),
+                                ButtonSegment(
+                                  value: YaziBoyutu.normal,
+                                  label: Text(l10n.yaziBoyutuNormal),
+                                ),
+                                ButtonSegment(
+                                  value: YaziBoyutu.buyuk,
+                                  label: Text(l10n.yaziBoyutuBuyuk),
+                                ),
+                                ButtonSegment(
+                                  value: YaziBoyutu.cokBuyuk,
+                                  label: Text(l10n.yaziBoyutuCokBuyuk),
+                                ),
+                              ],
+                              selected: {durum.yaziBoyutu},
+                              showSelectedIcon: false,
+                              onSelectionChanged: (secim) => context
+                                  .read<UygulamaDurumu>()
+                                  .yaziBoyutuAyarla(secim.first),
                             ),
                           ],
                         ),

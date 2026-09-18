@@ -36,6 +36,7 @@ import '../models/uygulama_dili.dart';
 import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
 import '../models/tema_modu.dart';
+import '../models/yazi_boyutu.dart';
 
 class DepolamaServisi {
   static const _tarlalarAnahtari = 'aquaguard_tarlalar';
@@ -59,6 +60,7 @@ class DepolamaServisi {
   static const _aksanRengiAnahtari = 'aquaguard_aksan_rengi';
   static const _sahaModuAnahtari = 'aquaguard_saha_modu_acik';
   static const _titresimAnahtari = 'aquaguard_titresim_geri_bildirimi_acik';
+  static const _yaziBoyutuAnahtari = 'aquaguard_yazi_boyutu';
   static const _kuyruklananKomutlarAnahtari = 'aquaguard_kuyruklanan_komutlar';
   static const _maliyetParametreleriAnahtari = 'aquaguard_maliyet_parametreleri';
   static const _uygulamaDiliAnahtari = 'aquaguard_uygulama_dili';
@@ -345,6 +347,22 @@ class DepolamaServisi {
   Future<void> titresimAyarlaKaydet(bool acik) async {
     final tercihler = await _tercihler;
     await tercihler.setBool(_titresimAnahtari, acik);
+  }
+
+  /// Sahada gunes altinda okunabilirlik icin (bkz. models/yazi_boyutu.dart).
+  /// Varsayilan "Normal" (%100).
+  Future<YaziBoyutu> yaziBoyutuGetir() async {
+    final tercihler = await _tercihler;
+    final ad = tercihler.getString(_yaziBoyutuAnahtari);
+    return YaziBoyutu.values.firstWhere(
+      (b) => b.name == ad,
+      orElse: () => YaziBoyutu.normal,
+    );
+  }
+
+  Future<void> yaziBoyutuKaydet(YaziBoyutu boyut) async {
+    final tercihler = await _tercihler;
+    await tercihler.setString(_yaziBoyutuAnahtari, boyut.name);
   }
 
   // ==========================================================================

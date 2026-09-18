@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:aquaguard_mobile/l10n/app_localizations.dart';
+import 'package:aquaguard_mobile/models/yazi_boyutu.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/screens/ayarlar_ekrani.dart';
 
@@ -19,7 +20,12 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   Future<void> pumpUzunYuzeyle(WidgetTester tester, UygulamaDurumu durum) async {
-    await tester.binding.setSurfaceSize(const Size(500, 3900));
+    // 4200 (once 3900'du): Titresim Geri Bildirimi anahtari + Yazi Boyutu
+    // segmenti eklenince Gorunum karti buyudu, ListView'in sliver lazy
+    // layout'u (RenderSliverList) yuzeyin altina tasan icerigi (orn.
+    // "Referans debi") ARTIK LAYOUT ETMIYORDU -- bu yuzden yukseklik
+    // ARTIRILDI, sadece kirpma/tasma alani buyutulmedi.
+    await tester.binding.setSurfaceSize(const Size(500, 4200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
@@ -162,6 +168,27 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(durum.titresimAktif, isFalse);
+
+      durum.dispose();
+    },
+  );
+
+  testWidgets(
+    'Yazı Boyutu segmenti varsayilan Normal, Büyük secilince guncellenir',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
+
+      await pumpUzunYuzeyle(tester, durum);
+
+      expect(durum.yaziBoyutu, YaziBoyutu.normal);
+      expect(find.text('Yazı Boyutu'), findsOneWidget);
+
+      await tester.tap(find.text('Büyük'));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(durum.yaziBoyutu, YaziBoyutu.buyuk);
 
       durum.dispose();
     },

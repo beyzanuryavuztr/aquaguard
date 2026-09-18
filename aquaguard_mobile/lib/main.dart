@@ -35,6 +35,7 @@ import 'config/tema.dart';
 import 'l10n/app_localizations.dart';
 import 'models/tema_modu.dart';
 import 'models/uygulama_dili.dart';
+import 'models/yazi_boyutu.dart';
 import 'providers/uygulama_durumu.dart';
 import 'screens/giris_ekrani.dart';
 import 'screens/onboarding_ekrani.dart';
@@ -125,6 +126,20 @@ class AquaGuardUygulamasi extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
+            // Yazi boyutu (erisilebilirlik, bkz. models/yazi_boyutu.dart):
+            // `builder` TUM navigator/route agacini (dialoglar dahil) sarar --
+            // tek noktadan uygulanir, her ekranda ayri ayri font boyutu
+            // yonetmeye gerek kalmaz. Cihazin KENDI erisilebilirlik yazi
+            // olcegini (isletim sistemi ayari) DEGIL, operatorun Ayarlar'dan
+            // sectigi orani kullanir -- ikisini CARPMAK (ör. sistem zaten
+            // %130 + operator %130 = %169) sahada asiri buyumus, kullanilamaz
+            // bir arayuze yol acardi.
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(durum.yaziBoyutu.oran)),
+              child: child!,
+            ),
             home: const _BaslangicYonlendirici(),
           ),
         ),

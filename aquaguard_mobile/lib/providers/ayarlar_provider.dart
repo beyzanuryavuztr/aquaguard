@@ -27,6 +27,7 @@ import '../models/kullanici_profili.dart';
 import '../models/maliyet_parametreleri.dart';
 import '../models/tema_modu.dart';
 import '../models/uygulama_dili.dart';
+import '../models/yazi_boyutu.dart';
 import '../services/depolama_servisi.dart';
 
 class AyarlarProvider extends ChangeNotifier {
@@ -40,6 +41,7 @@ class AyarlarProvider extends ChangeNotifier {
   AksanRengi _aksanRengi = AksanRengi.teal;
   bool _sahaModuAktif = false;
   bool _titresimAktif = true;
+  YaziBoyutu _yaziBoyutu = YaziBoyutu.normal;
   KullaniciProfili _kullaniciProfili = const KullaniciProfili();
   MaliyetParametreleri _maliyetParametreleri = const MaliyetParametreleri();
   UygulamaDili _uygulamaDili = UygulamaDili.turkce;
@@ -50,6 +52,7 @@ class AyarlarProvider extends ChangeNotifier {
   AksanRengi get aksanRengi => _aksanRengi;
   bool get sahaModuAktif => _sahaModuAktif;
   bool get titresimAktif => _titresimAktif;
+  YaziBoyutu get yaziBoyutu => _yaziBoyutu;
   KullaniciProfili get kullaniciProfili => _kullaniciProfili;
   MaliyetParametreleri get maliyetParametreleri => _maliyetParametreleri;
   UygulamaDili get uygulamaDili => _uygulamaDili;
@@ -61,6 +64,7 @@ class AyarlarProvider extends ChangeNotifier {
     _aksanRengi = await _depolama.aksanRengiGetir();
     _sahaModuAktif = await _depolama.sahaModuGetir();
     _titresimAktif = await _depolama.titresimAktifMi();
+    _yaziBoyutu = await _depolama.yaziBoyutuGetir();
     _maliyetParametreleri = await _depolama.maliyetParametreleriGetir();
     _uygulamaDili = await _depolama.uygulamaDiliGetir();
     _kullaniciProfili = await _depolama.kullaniciProfiliGetir();
@@ -96,6 +100,12 @@ class AyarlarProvider extends ChangeNotifier {
   Future<void> titresimGeriBildirimiAyarla(bool acik) async {
     _titresimAktif = acik;
     await _depolama.titresimAyarlaKaydet(acik);
+    notifyListeners();
+  }
+
+  Future<void> yaziBoyutuAyarla(YaziBoyutu boyut) async {
+    _yaziBoyutu = boyut;
+    await _depolama.yaziBoyutuKaydet(boyut);
     notifyListeners();
   }
 

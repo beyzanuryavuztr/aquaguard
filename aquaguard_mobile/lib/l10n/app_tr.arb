@@ -13,6 +13,11 @@
   "sahaModuAciklama": "Parlak güneş altında okunabilirlik için daha kalın metin ve belirgin kenarlıklar.",
   "titresimBaslik": "Titreşim Geri Bildirimi",
   "titresimAciklama": "Kritik eylemlerde (acil durdurma, tedavi başlatma) cihazınız titresin.",
+  "yaziBoyutuEtiketi": "Yazı Boyutu",
+  "yaziBoyutuKucuk": "Küçük",
+  "yaziBoyutuNormal": "Normal",
+  "yaziBoyutuBuyuk": "Büyük",
+  "yaziBoyutuCokBuyuk": "Çok Büyük",
   "dilBolumBasligi": "Dil",
   "dilTurkce": "Türkçe",
   "dilIngilizce": "İngilizce"

@@ -42,6 +42,7 @@ import '../models/tarla.dart';
 import '../models/tarla_notu.dart';
 import '../models/tema_modu.dart';
 import '../models/uygulama_dili.dart';
+import '../models/yazi_boyutu.dart';
 import '../repositories/drift_aktivite_bildirim_repository.dart';
 import '../repositories/drift_sensor_okuma_repository.dart';
 import '../repositories/drift_tarla_notu_repository.dart';
@@ -160,6 +161,10 @@ class UygulamaDurumu extends ChangeNotifier {
   bool get titresimAktif => _ayarlar.titresimAktif;
   Future<void> titresimGeriBildirimiAyarla(bool acik) =>
       _ayarlar.titresimGeriBildirimiAyarla(acik);
+
+  YaziBoyutu get yaziBoyutu => _ayarlar.yaziBoyutu;
+  Future<void> yaziBoyutuAyarla(YaziBoyutu boyut) =>
+      _ayarlar.yaziBoyutuAyarla(boyut);
 
   KullaniciProfili get kullaniciProfili => _ayarlar.kullaniciProfili;
   Future<void> kullaniciProfiliniGuncelle(KullaniciProfili profil) =>
