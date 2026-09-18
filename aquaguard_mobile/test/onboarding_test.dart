@@ -39,4 +39,22 @@ void main() {
     expect(() => durum.onboardingiTamamla(), returnsNormally);
     durum.dispose();
   });
+
+  test(
+    'gizlilik onayi varsayilan olarak FALSE, onayiniAyarla ile kalici olarak true yapar',
+    () async {
+      final durum1 = UygulamaDurumu();
+      await durum1.baslat();
+      expect(durum1.gizlilikOnaylandi, isFalse);
+
+      await durum1.gizlilikOnayiniAyarla(true);
+      expect(durum1.gizlilikOnaylandi, isTrue);
+      durum1.dispose();
+
+      final durum2 = UygulamaDurumu();
+      await durum2.baslat();
+      expect(durum2.gizlilikOnaylandi, isTrue);
+      durum2.dispose();
+    },
+  );
 }

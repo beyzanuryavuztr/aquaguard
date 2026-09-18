@@ -166,6 +166,10 @@ class UygulamaDurumu extends ChangeNotifier {
   Future<void> yaziBoyutuAyarla(YaziBoyutu boyut) =>
       _ayarlar.yaziBoyutuAyarla(boyut);
 
+  bool get gizlilikOnaylandi => _ayarlar.gizlilikOnaylandi;
+  Future<void> gizlilikOnayiniAyarla(bool onaylandi) =>
+      _ayarlar.gizlilikOnayiniAyarla(onaylandi);
+
   KullaniciProfili get kullaniciProfili => _ayarlar.kullaniciProfili;
   Future<void> kullaniciProfiliniGuncelle(KullaniciProfili profil) =>
       _ayarlar.kullaniciProfiliniGuncelle(profil);

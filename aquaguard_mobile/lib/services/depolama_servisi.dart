@@ -61,6 +61,7 @@ class DepolamaServisi {
   static const _sahaModuAnahtari = 'aquaguard_saha_modu_acik';
   static const _titresimAnahtari = 'aquaguard_titresim_geri_bildirimi_acik';
   static const _yaziBoyutuAnahtari = 'aquaguard_yazi_boyutu';
+  static const _gizlilikOnayiAnahtari = 'aquaguard_gizlilik_onayi_verildi';
   static const _kuyruklananKomutlarAnahtari = 'aquaguard_kuyruklanan_komutlar';
   static const _maliyetParametreleriAnahtari = 'aquaguard_maliyet_parametreleri';
   static const _uygulamaDiliAnahtari = 'aquaguard_uygulama_dili';
@@ -363,6 +364,18 @@ class DepolamaServisi {
   Future<void> yaziBoyutuKaydet(YaziBoyutu boyut) async {
     final tercihler = await _tercihler;
     await tercihler.setString(_yaziBoyutuAnahtari, boyut.name);
+  }
+
+  /// Varsayilan FALSE -- operator onboarding'de acikca kabul etmeden
+  /// gizlilik politikasi ONAYLANMIS SAYILMAZ (bkz. screens/onboarding_ekrani.dart).
+  Future<bool> gizlilikOnaylandiMi() async {
+    final tercihler = await _tercihler;
+    return tercihler.getBool(_gizlilikOnayiAnahtari) ?? false;
+  }
+
+  Future<void> gizlilikOnayiniKaydet(bool onaylandi) async {
+    final tercihler = await _tercihler;
+    await tercihler.setBool(_gizlilikOnayiAnahtari, onaylandi);
   }
 
   // ==========================================================================

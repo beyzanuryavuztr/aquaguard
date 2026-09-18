@@ -29,6 +29,7 @@ import '../services/disa_aktarma_factory.dart';
 import '../services/hata_gunlugu_servisi.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/yardim_butonu.dart';
+import 'gizlilik_politikasi_ekrani.dart';
 import 'hakkinda_ekrani.dart';
 
 class AyarlarEkrani extends StatefulWidget {
@@ -783,6 +784,19 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
                   'hiçbir sunucuya gönderilmez',
                 ),
                 onTap: () => _hataGunlugunuDisaAktar(context),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.privacy_tip_outlined),
+                title: const Text('Gizlilik Politikası'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const GizlilikPolitikasiEkrani(),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),

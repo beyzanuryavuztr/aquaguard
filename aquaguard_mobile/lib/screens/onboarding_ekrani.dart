@@ -22,6 +22,7 @@ import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
 import '../widgets/tikanma_turu_ikonu.dart';
 import 'giris_ekrani.dart';
+import 'gizlilik_politikasi_ekrani.dart';
 
 class OnboardingEkrani extends StatefulWidget {
   const OnboardingEkrani({super.key});
@@ -41,7 +42,24 @@ class _OnboardingEkraniState extends State<OnboardingEkrani> {
     super.dispose();
   }
 
+  /// "Atla" butonu da BUNU cagirir -- gizlilik onayi HENUZ verilmemisse
+  /// (onay kutusu SON sayfada) turu tamamlatmak yerine oraya yonlendirir,
+  /// boylece "Atla" onay adimini BYPASS EDEMEZ.
   Future<void> _tamamlaVeDevamEt() async {
+    if (!context.read<UygulamaDurumu>().gizlilikOnaylandi) {
+      await _controller.animateToPage(
+        _toplamSayfa - 1,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Devam etmek için Gizlilik Politikası\'nı onaylayın'),
+        ),
+      );
+      return;
+    }
     await context.read<UygulamaDurumu>().onboardingiTamamla();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -62,6 +80,13 @@ class _OnboardingEkraniState extends State<OnboardingEkrani> {
 
   @override
   Widget build(BuildContext context) {
+    // Sadece SON sayfada (gizlilik onay kutusunun bulundugu sayfa) izlenir --
+    // "Baslat" butonunu onay verilmeden devre disi birakmak icin.
+    final sonSayfadaMi = _sayfa == _toplamSayfa - 1;
+    final gizlilikOnaylandi = sonSayfadaMi
+        ? context.watch<UygulamaDurumu>().gizlilikOnaylandi
+        : true;
+
     return Scaffold(
       body: SafeArea(
         child: DuyarliIcerik(
@@ -100,10 +125,8 @@ class _OnboardingEkraniState extends State<OnboardingEkrani> {
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _ileriGit,
-                    child: Text(
-                      _sayfa == _toplamSayfa - 1 ? 'Başla' : 'İleri',
-                    ),
+                    onPressed: gizlilikOnaylandi ? _ileriGit : null,
+                    child: Text(sonSayfadaMi ? 'Başla' : 'İleri'),
                   ),
                 ),
               ),
@@ -396,39 +419,73 @@ class _BaslaSayfasi extends StatelessWidget {
       baslik: 'Haydi Başlayalım',
       aciklama: 'Demo Modu ile gerçek donanım olmadan hemen deneyebilir, '
           'hazır olduğunuzda gerçek Deneyap Kart cihazına bağlanabilirsiniz.',
-      altIcerik: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(
-                Icons.smart_toy_outlined,
-                color: Theme.of(context).colorScheme.tertiary,
+      altIcerik: Column(
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.smart_toy_outlined,
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Demo Modu',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  Switch(
+                    value: durum.demoModuAktif,
+                    onChanged: (acik) {
+                      final durumOkuyucu = context.read<UygulamaDurumu>();
+                      if (acik) {
+                        durumOkuyucu.demoModunuAc();
+                      } else {
+                        durumOkuyucu.demoModunuKapat();
+                      }
+                    },
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Demo Modu',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: durum.gizlilikOnaylandi,
+            onChanged: (deger) => context
+                .read<UygulamaDurumu>()
+                .gizlilikOnayiniAyarla(deger ?? false),
+            title: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const Text('Okudum, kabul ediyorum: '),
+                InkWell(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const GizlilikPolitikasiEkrani(),
+                    ),
+                  ),
+                  child: Text(
+                    'Gizlilik Politikası',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
-              ),
-              Switch(
-                value: durum.demoModuAktif,
-                onChanged: (acik) {
-                  final durumOkuyucu = context.read<UygulamaDurumu>();
-                  if (acik) {
-                    durumOkuyucu.demoModunuAc();
-                  } else {
-                    durumOkuyucu.demoModunuKapat();
-                  }
-                },
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

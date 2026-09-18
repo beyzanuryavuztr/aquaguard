@@ -42,6 +42,7 @@ class AyarlarProvider extends ChangeNotifier {
   bool _sahaModuAktif = false;
   bool _titresimAktif = true;
   YaziBoyutu _yaziBoyutu = YaziBoyutu.normal;
+  bool _gizlilikOnaylandi = false;
   KullaniciProfili _kullaniciProfili = const KullaniciProfili();
   MaliyetParametreleri _maliyetParametreleri = const MaliyetParametreleri();
   UygulamaDili _uygulamaDili = UygulamaDili.turkce;
@@ -53,6 +54,7 @@ class AyarlarProvider extends ChangeNotifier {
   bool get sahaModuAktif => _sahaModuAktif;
   bool get titresimAktif => _titresimAktif;
   YaziBoyutu get yaziBoyutu => _yaziBoyutu;
+  bool get gizlilikOnaylandi => _gizlilikOnaylandi;
   KullaniciProfili get kullaniciProfili => _kullaniciProfili;
   MaliyetParametreleri get maliyetParametreleri => _maliyetParametreleri;
   UygulamaDili get uygulamaDili => _uygulamaDili;
@@ -65,6 +67,7 @@ class AyarlarProvider extends ChangeNotifier {
     _sahaModuAktif = await _depolama.sahaModuGetir();
     _titresimAktif = await _depolama.titresimAktifMi();
     _yaziBoyutu = await _depolama.yaziBoyutuGetir();
+    _gizlilikOnaylandi = await _depolama.gizlilikOnaylandiMi();
     _maliyetParametreleri = await _depolama.maliyetParametreleriGetir();
     _uygulamaDili = await _depolama.uygulamaDiliGetir();
     _kullaniciProfili = await _depolama.kullaniciProfiliGetir();
@@ -106,6 +109,12 @@ class AyarlarProvider extends ChangeNotifier {
   Future<void> yaziBoyutuAyarla(YaziBoyutu boyut) async {
     _yaziBoyutu = boyut;
     await _depolama.yaziBoyutuKaydet(boyut);
+    notifyListeners();
+  }
+
+  Future<void> gizlilikOnayiniAyarla(bool onaylandi) async {
+    _gizlilikOnaylandi = onaylandi;
+    await _depolama.gizlilikOnayiniKaydet(onaylandi);
     notifyListeners();
   }
 
