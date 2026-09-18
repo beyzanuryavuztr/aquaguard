@@ -20,11 +20,10 @@ Widget _sarmala(UygulamaDurumu durum) {
     providers: [
       ChangeNotifierProvider.value(value: durum),
       ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+      ChangeNotifierProvider.value(value: durum.cihazProvider),
     ],
     child: const MaterialApp(
-      home: Scaffold(
-        floatingActionButton: AcilDurdurmaFab(),
-      ),
+      home: Scaffold(floatingActionButton: AcilDurdurmaFab()),
     ),
   );
 }
@@ -32,31 +31,32 @@ Widget _sarmala(UygulamaDurumu durum) {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('FABa dokununca onay diyalogu acilir, Vazgec ile hicbir sey degismez', (
-    tester,
-  ) async {
-    final durum = UygulamaDurumu();
-    await durum.baslat();
+  testWidgets(
+    'FABa dokununca onay diyalogu acilir, Vazgec ile hicbir sey degismez',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
 
-    await tester.pumpWidget(_sarmala(durum));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_sarmala(durum));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('ACİL DURDUR'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('ACİL DURDUR'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Acil Durdurma'), findsOneWidget);
-    expect(find.text('Vazgeç'), findsOneWidget);
+      expect(find.text('Acil Durdurma'), findsOneWidget);
+      expect(find.text('Vazgeç'), findsOneWidget);
 
-    await tester.tap(find.text('Vazgeç'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Vazgeç'));
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    for (final zon in durum.tumZonNumaralari) {
-      expect(durum.sulamasiDurduruldu(zon), isFalse);
-    }
+      expect(tester.takeException(), isNull);
+      for (final zon in durum.tumZonNumaralari) {
+        expect(durum.sulamasiDurduruldu(zon), isFalse);
+      }
 
-    durum.dispose();
-  });
+      durum.dispose();
+    },
+  );
 
   testWidgets('onaylayinca tum zonlarin vanasi kapanir', (tester) async {
     final durum = UygulamaDurumu();
