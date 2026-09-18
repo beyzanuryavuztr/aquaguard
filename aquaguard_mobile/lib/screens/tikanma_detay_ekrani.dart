@@ -27,7 +27,8 @@ import '../models/sensor_okuma.dart';
 import '../models/sensor_saglik_durumu.dart';
 import '../models/sensor_tanimi.dart';
 import '../models/tedavi_karsilastirmasi.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
+import '../providers/tarla_provider.dart';
 import '../widgets/aciklanabilirlik_paneli.dart';
 import '../widgets/durum_renkleri.dart';
 import '../widgets/duyarli_icerik.dart';
@@ -48,16 +49,17 @@ class TikanmaDetayEkrani extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
-    final okuma = durum.sonOkuma(zonNumarasi);
-    final cevrimici = durum.zonCevrimiciMi(zonNumarasi);
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final tarla = context.watch<TarlaProvider>();
+    final okuma = cihaz.sonOkuma(zonNumarasi);
+    final cevrimici = cihaz.zonCevrimiciMi(zonNumarasi);
     final renk = DurumRenkleri.renkGetir(okuma: okuma, cevrimici: cevrimici);
-    final gecmisEnYeniOnce = durum.gecmis(zonNumarasi);
+    final gecmisEnYeniOnce = cihaz.gecmis(zonNumarasi);
     final oncesiSonrasi = tedaviOncesiSonrasiBul(gecmisEnYeniOnce);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${durum.zonAdiGetir(zonNumarasi)} Detayı'),
+        title: Text('${tarla.zonAdiGetir(zonNumarasi)} Detayı'),
         actions: const [
           YardimButonu(ekranAnahtari: 'zon_detay', baslik: 'Zon Detayı'),
         ],
@@ -85,10 +87,7 @@ class TikanmaDetayEkrani extends StatelessWidget {
                     _TedaviBanner(zonNumarasi: zonNumarasi, okuma: okuma),
                     const SizedBox(height: 16),
                   ],
-                  ManuelMudahalePaneli(
-                    zonNumarasi: zonNumarasi,
-                    okuma: okuma,
-                  ),
+                  ManuelMudahalePaneli(zonNumarasi: zonNumarasi, okuma: okuma),
                   if (okuma.durum == TeshisDurumu.tespitEdildi ||
                       okuma.durum == TeshisDurumu.belirsiz) ...[
                     AciklanabilirlikPaneli(okuma: okuma),

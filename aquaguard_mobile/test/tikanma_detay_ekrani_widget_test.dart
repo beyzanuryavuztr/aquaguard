@@ -15,11 +15,13 @@ import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/screens/tikanma_detay_ekrani.dart';
 
 Widget _sarmala(UygulamaDurumu durum) {
-  return ChangeNotifierProvider.value(
-    value: durum,
-    child: const MaterialApp(
-      home: TikanmaDetayEkrani(zonNumarasi: 1),
-    ),
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: durum),
+      ChangeNotifierProvider.value(value: durum.cihazProvider),
+      ChangeNotifierProvider.value(value: durum.tarlaProvider),
+    ],
+    child: const MaterialApp(home: TikanmaDetayEkrani(zonNumarasi: 1)),
   );
 }
 
