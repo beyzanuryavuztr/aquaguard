@@ -19,18 +19,18 @@ import 'package:flutter/material.dart';
 
 import '../models/sensor_okuma.dart';
 import '../models/tarla.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
 import 'durum_renkleri.dart';
 
 class TarlaHaritasi extends StatelessWidget {
   final List<Tarla> tarlalar;
-  final UygulamaDurumu durum;
+  final CihazIletisimProvider cihaz;
   final void Function(int zonNumarasi) onZonSecildi;
 
   const TarlaHaritasi({
     super.key,
     required this.tarlalar,
-    required this.durum,
+    required this.cihaz,
     required this.onZonSecildi,
   });
 
@@ -42,7 +42,7 @@ class TarlaHaritasi extends StatelessWidget {
         const _HaritaLejandi(),
         const SizedBox(height: 16),
         for (final tarla in tarlalar) ...[
-          _TarlaBloku(tarla: tarla, durum: durum, onZonSecildi: onZonSecildi),
+          _TarlaBloku(tarla: tarla, cihaz: cihaz, onZonSecildi: onZonSecildi),
           const SizedBox(height: 16),
         ],
       ],
@@ -90,12 +90,12 @@ class _HaritaLejandi extends StatelessWidget {
 
 class _TarlaBloku extends StatelessWidget {
   final Tarla tarla;
-  final UygulamaDurumu durum;
+  final CihazIletisimProvider cihaz;
   final void Function(int zonNumarasi) onZonSecildi;
 
   const _TarlaBloku({
     required this.tarla,
-    required this.durum,
+    required this.cihaz,
     required this.onZonSecildi,
   });
 
@@ -105,9 +105,7 @@ class _TarlaBloku extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -145,8 +143,8 @@ class _TarlaBloku extends StatelessWidget {
               for (final zon in tarla.zonNumaralari)
                 _ZonKarosu(
                   zonNumarasi: zon,
-                  okuma: durum.sonOkuma(zon),
-                  cevrimici: durum.zonCevrimiciMi(zon),
+                  okuma: cihaz.sonOkuma(zon),
+                  cevrimici: cihaz.zonCevrimiciMi(zon),
                   onTap: () => onZonSecildi(zon),
                 ),
             ],
