@@ -30,7 +30,9 @@ import '../models/sensor_okuma.dart';
 import '../models/su_tuketimi.dart';
 import '../models/tedavi_basari_analizi.dart';
 import '../models/tikanma_olayi.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/ayarlar_provider.dart';
+import '../providers/cihaz_iletisim_provider.dart';
+import '../providers/tarla_provider.dart';
 import '../services/disa_aktarma_factory.dart';
 import '../services/disa_aktarma_servisi.dart';
 import '../services/rapor_pdf_servisi.dart';
@@ -71,9 +73,15 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
 
   @override
   Widget build(BuildContext context) {
-    final durum = context.watch<UygulamaDurumu>();
-    final tumZonlar = durum.tumZonNumaralari;
-    final tumOkumalar = durum.tumOkumalarBirlesik;
+    // Facade yerine dogrudan ilgili 3 provider'i izler (Faz "ekran
+    // migrasyonu") -- AktiviteBildirimProvider BURADA KULLANILMIYOR
+    // (planlanan 2 provider degil, gercekte 3 farkli provider gerekiyordu --
+    // kod incelenip DOGRULANDI).
+    final cihaz = context.watch<CihazIletisimProvider>();
+    final tarla = context.watch<TarlaProvider>();
+    final ayarlar = context.watch<AyarlarProvider>();
+    final tumZonlar = tarla.tumZonNumaralari;
+    final tumOkumalar = cihaz.tumOkumalarBirlesik;
 
     final turSayaclari = <TikanmaTuru, int>{
       TikanmaTuru.kimyasal: 0,
@@ -89,7 +97,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
     final toplamTespit = turSayaclari.values.fold(0, (a, b) => a + b);
 
     final basariAnalizi = TedaviBasariAnalizi.birlestir(
-      tumZonlar.map((z) => tedaviBasarisiniHesapla(durum.gecmis(z))),
+      tumZonlar.map((z) => tedaviBasarisiniHesapla(cihaz.gecmis(z))),
     );
 
     final simdiSuHesabiIcin = DateTime.now();
@@ -99,8 +107,8 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
         if (_seciliZon == null || _seciliZon == z)
           z: suTuketimiHesaplaLitre(
             suPenceresi == null
-                ? durum.gecmis(z)
-                : durum
+                ? cihaz.gecmis(z)
+                : cihaz
                       .gecmis(z)
                       .where(
                         (o) =>
@@ -117,7 +125,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
 
     final tumOlaylar = <TikanmaOlayi>[
       for (final z in tumZonlar)
-        ...tikanmaOlaylariniBul(durum.gecmis(z).reversed.toList()),
+        ...tikanmaOlaylariniBul(cihaz.gecmis(z).reversed.toList()),
     ]..sort((a, b) => b.zaman.compareTo(a.zaman));
 
     final simdi = DateTime.now();
@@ -145,12 +153,12 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
             onPressed: () => _pdfRaporuOlustur(
               context,
               turSayaclari: turSayaclari,
-              tedaviSayaclari: durum.tedaviSayaclari,
+              tedaviSayaclari: cihaz.tedaviSayaclari,
               basariAnalizi: basariAnalizi,
               olaylar: filtreliOlaylar,
-              zonAdiGetir: durum.zonAdiGetir,
+              zonAdiGetir: tarla.zonAdiGetir,
               toplamSuTuketimiLitre: toplamSuTuketimiLitre,
-              profil: durum.kullaniciProfili,
+              profil: ayarlar.kullaniciProfili,
             ),
           ),
           IconButton(
@@ -257,20 +265,20 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
               children: [
                 _TedaviSayacKarti(
                   etiket: 'Asit\nDozlama',
-                  sayi: durum.tedaviSayaclari[TedaviTuru.asitDozlama] ?? 0,
+                  sayi: cihaz.tedaviSayaclari[TedaviTuru.asitDozlama] ?? 0,
                   renk: const Color(0xFFEF6C00),
                 ),
                 const SizedBox(width: 10),
                 _TedaviSayacKarti(
                   etiket: 'Klor\nEnjeksiyon',
-                  sayi: durum.tedaviSayaclari[TedaviTuru.klorEnjeksiyon] ?? 0,
+                  sayi: cihaz.tedaviSayaclari[TedaviTuru.klorEnjeksiyon] ?? 0,
                   renk: const Color(0xFF2E7D32),
                 ),
                 const SizedBox(width: 10),
                 _TedaviSayacKarti(
                   etiket: 'Yüksek Basınçlı\nYıkama',
                   sayi:
-                      durum.tedaviSayaclari[TedaviTuru.yuksekBasincliYikama] ??
+                      cihaz.tedaviSayaclari[TedaviTuru.yuksekBasincliYikama] ??
                       0,
                   renk: const Color(0xFF1565C0),
                 ),
@@ -284,7 +292,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
             _MaliyetOzetiKarti(
               toplamSuTuketimiLitre: toplamSuTuketimiLitre,
               olaylar: filtreliOlaylar,
-              parametreler: durum.maliyetParametreleri,
+              parametreler: ayarlar.maliyetParametreleri,
               donemEtiketi: _seciliDonem.etiket,
             ),
             const SizedBox(height: 24),
@@ -297,7 +305,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
               baslik: 'Zon',
               secili: _seciliZon,
               secenekler: tumZonlar,
-              etiketUret: (z) => z == null ? 'Tümü' : durum.zonAdiGetir(z),
+              etiketUret: (z) => z == null ? 'Tümü' : tarla.zonAdiGetir(z),
               onSecim: (z) => setState(() => _seciliZon = z),
             ),
             const SizedBox(height: 8),
@@ -328,7 +336,7 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
             _SuTuketimiKarti(
               toplamLitre: toplamSuTuketimiLitre,
               zonDagilimi: zonSuTuketimleri,
-              zonAdiGetir: durum.zonAdiGetir,
+              zonAdiGetir: tarla.zonAdiGetir,
             ),
             const SizedBox(height: 12),
             if (filtreliOlaylar.isEmpty)
@@ -600,7 +608,7 @@ class _OlaySatiri extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bilgi = tikanmaTuruBilgisiGetir(olay.tur);
-    final zonAdi = context.read<UygulamaDurumu>().zonAdiGetir(olay.zone);
+    final zonAdi = context.read<TarlaProvider>().zonAdiGetir(olay.zone);
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(

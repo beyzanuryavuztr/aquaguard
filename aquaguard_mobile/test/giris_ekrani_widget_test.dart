@@ -97,6 +97,7 @@ void main() {
           ChangeNotifierProvider.value(value: durum.tarlaProvider),
           ChangeNotifierProvider.value(value: durum.bakimProvider),
           ChangeNotifierProvider.value(value: durum.aktiviteProvider),
+          ChangeNotifierProvider.value(value: durum.ayarlarProvider),
         ],
         child: _uygulamaSarici(const GirisEkrani()),
       ),
