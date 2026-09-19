@@ -119,7 +119,7 @@ class _AktifTedaviSatiri extends StatelessWidget {
                     color: DurumRenkleri.tedaviAktif.rozetTonu,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.build_circle,
                     color: DurumRenkleri.tedaviAktif,
                     size: 22,
@@ -152,10 +152,7 @@ class _AktifTedaviSatiri extends StatelessWidget {
                         ilerleme.kalanSaniye > 0
                             ? 'Tahmini kalan: ${ilerleme.kalanSaniye} sn'
                             : 'Tamamlanmak üzere...',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: onSurfaceVariant,
-                        ),
+                        style: TextStyle(fontSize: 11, color: onSurfaceVariant),
                       ),
                     ],
                   ),

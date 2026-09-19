@@ -13,6 +13,8 @@
   "sahaModuAciklama": "Parlak güneş altında okunabilirlik için daha kalın metin ve belirgin kenarlıklar.",
   "titresimBaslik": "Titreşim Geri Bildirimi",
   "titresimAciklama": "Kritik eylemlerde (acil durdurma, tedavi başlatma) cihazınız titresin.",
+  "renkKorluguBaslik": "Renk Körlüğü Uyumlu Renkler",
+  "renkKorluguAciklama": "Durum renklerini kırmızı-yeşil ayrımı gerektirmeyen mavi/turuncu paletiyle değiştirir.",
   "yaziBoyutuEtiketi": "Yazı Boyutu",
   "yaziBoyutuKucuk": "Küçük",
   "yaziBoyutuNormal": "Normal",

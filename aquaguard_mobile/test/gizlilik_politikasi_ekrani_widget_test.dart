@@ -34,7 +34,7 @@ void main() {
   testWidgets(
     'Ayarlar ekranindaki Gizlilik Politikası satiri bu ekrana gecer',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(500, 6000));
+      await tester.binding.setSurfaceSize(const Size(500, 6500));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final durum = UygulamaDurumu();

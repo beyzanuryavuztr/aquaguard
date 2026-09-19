@@ -130,7 +130,7 @@ class _CevrimdisiBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.cloud_off, color: DurumRenkleri.cevrimdisi),
+          Icon(Icons.cloud_off, color: DurumRenkleri.cevrimdisi),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -500,10 +500,7 @@ class _TedaviBanner extends StatelessWidget {
     return Card(
       color: DurumRenkleri.tedaviAktif.withValues(alpha: 0.1),
       child: ListTile(
-        leading: const Icon(
-          Icons.build_circle,
-          color: DurumRenkleri.tedaviAktif,
-        ),
+        leading: Icon(Icons.build_circle, color: DurumRenkleri.tedaviAktif),
         title: Text(metin, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: const Text('Ayrıntılar ve ilerleme için dokunun'),
         trailing: const Icon(Icons.chevron_right),

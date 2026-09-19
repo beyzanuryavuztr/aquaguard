@@ -56,7 +56,7 @@ class AcilDurdurmaFab extends StatelessWidget {
     final onay = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        icon: const Icon(
+        icon: Icon(
           Icons.warning_amber_rounded,
           color: DurumRenkleri.tespitEdildi,
           size: 36,

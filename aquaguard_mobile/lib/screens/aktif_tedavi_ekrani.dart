@@ -197,12 +197,12 @@ class _AktifTedaviYok extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.check_circle, size: 64, color: DurumRenkleri.normal),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'Şu anda aktif bir tedavi yok',
             style: TextStyle(fontWeight: FontWeight.bold),

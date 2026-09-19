@@ -55,7 +55,7 @@ class _HaritaLejandi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const girdiler = [
+    final girdiler = [
       (DurumRenkleri.normal, 'Normal'),
       (DurumRenkleri.belirsiz, 'Belirsiz'),
       (DurumRenkleri.tespitEdildi, 'Tespit'),

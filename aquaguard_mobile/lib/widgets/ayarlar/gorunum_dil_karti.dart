@@ -118,6 +118,18 @@ class GorunumDilKartlari extends StatelessWidget {
                       .read<AyarlarProvider>()
                       .titresimGeriBildirimiAyarla(yeni),
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.renkKorluguBaslik),
+                  subtitle: Text(l10n.renkKorluguAciklama),
+                  value: ayarlar.renkKorluguModu,
+                  onChanged: (yeni) async {
+                    await context.read<AyarlarProvider>().renkKorluguModuAyarla(
+                      yeni,
+                    );
+                    _tumAgaciYenidenCiz();
+                  },
+                ),
                 const SizedBox(height: 16),
                 Text(
                   l10n.yaziBoyutuEtiketi,
@@ -180,4 +192,19 @@ class GorunumDilKartlari extends StatelessWidget {
       ],
     );
   }
+}
+
+/// DurumRenkleri artik statik bir palet okudugundan (48 kullanim yeri
+/// Theme'e bagli DEGIL), palet degisince mevcut TUM elementler yerinde
+/// yeniden cizilir -- Navigator/rota yigini ve widget state'i KORUNUR
+/// (bir ValueKey ile alt agaci yeniden kurmak kullaniciyi ekrandan atardi).
+void _tumAgaciYenidenCiz() {
+  void ziyaret(Element eleman) {
+    eleman.markNeedsBuild();
+    eleman.visitChildren(ziyaret);
+  }
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.rootElement?.visitChildren(ziyaret);
+  });
 }

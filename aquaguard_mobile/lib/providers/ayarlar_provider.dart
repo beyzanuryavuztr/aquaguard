@@ -28,6 +28,7 @@ import '../models/maliyet_parametreleri.dart';
 import '../models/tema_modu.dart';
 import '../models/uygulama_dili.dart';
 import '../models/yazi_boyutu.dart';
+import '../widgets/durum_renkleri.dart';
 import '../services/depolama_servisi.dart';
 
 class AyarlarProvider extends ChangeNotifier {
@@ -41,6 +42,7 @@ class AyarlarProvider extends ChangeNotifier {
   AksanRengi _aksanRengi = AksanRengi.teal;
   bool _sahaModuAktif = false;
   bool _titresimAktif = true;
+  bool _renkKorluguModu = false;
   YaziBoyutu _yaziBoyutu = YaziBoyutu.normal;
   bool _gizlilikOnaylandi = false;
   KullaniciProfili _kullaniciProfili = const KullaniciProfili();
@@ -53,6 +55,7 @@ class AyarlarProvider extends ChangeNotifier {
   AksanRengi get aksanRengi => _aksanRengi;
   bool get sahaModuAktif => _sahaModuAktif;
   bool get titresimAktif => _titresimAktif;
+  bool get renkKorluguModu => _renkKorluguModu;
   YaziBoyutu get yaziBoyutu => _yaziBoyutu;
   bool get gizlilikOnaylandi => _gizlilikOnaylandi;
   KullaniciProfili get kullaniciProfili => _kullaniciProfili;
@@ -66,6 +69,8 @@ class AyarlarProvider extends ChangeNotifier {
     _aksanRengi = await _depolama.aksanRengiGetir();
     _sahaModuAktif = await _depolama.sahaModuGetir();
     _titresimAktif = await _depolama.titresimAktifMi();
+    _renkKorluguModu = await _depolama.renkKorluguModuAcikMi();
+    DurumRenkleri.renkKorluguModu = _renkKorluguModu;
     _yaziBoyutu = await _depolama.yaziBoyutuGetir();
     _gizlilikOnaylandi = await _depolama.gizlilikOnaylandiMi();
     _maliyetParametreleri = await _depolama.maliyetParametreleriGetir();
@@ -103,6 +108,13 @@ class AyarlarProvider extends ChangeNotifier {
   Future<void> titresimGeriBildirimiAyarla(bool acik) async {
     _titresimAktif = acik;
     await _depolama.titresimAyarlaKaydet(acik);
+    notifyListeners();
+  }
+
+  Future<void> renkKorluguModuAyarla(bool acik) async {
+    _renkKorluguModu = acik;
+    DurumRenkleri.renkKorluguModu = acik;
+    await _depolama.renkKorluguModuKaydet(acik);
     notifyListeners();
   }
 

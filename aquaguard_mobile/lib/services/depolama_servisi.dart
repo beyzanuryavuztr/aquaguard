@@ -60,6 +60,7 @@ class DepolamaServisi {
   static const _aksanRengiAnahtari = 'aquaguard_aksan_rengi';
   static const _sahaModuAnahtari = 'aquaguard_saha_modu_acik';
   static const _titresimAnahtari = 'aquaguard_titresim_geri_bildirimi_acik';
+  static const _renkKorluguAnahtari = 'aquaguard_renk_korlugu_modu';
   static const _yaziBoyutuAnahtari = 'aquaguard_yazi_boyutu';
   static const _gizlilikOnayiAnahtari = 'aquaguard_gizlilik_onayi_verildi';
   static const _kuyruklananKomutlarAnahtari = 'aquaguard_kuyruklanan_komutlar';
@@ -348,6 +349,16 @@ class DepolamaServisi {
   Future<void> titresimAyarlaKaydet(bool acik) async {
     final tercihler = await _tercihler;
     await tercihler.setBool(_titresimAnahtari, acik);
+  }
+
+  Future<bool> renkKorluguModuAcikMi() async {
+    final tercihler = await _tercihler;
+    return tercihler.getBool(_renkKorluguAnahtari) ?? false;
+  }
+
+  Future<void> renkKorluguModuKaydet(bool acik) async {
+    final tercihler = await _tercihler;
+    await tercihler.setBool(_renkKorluguAnahtari, acik);
   }
 
   /// Sahada gunes altinda okunabilirlik icin (bkz. models/yazi_boyutu.dart).

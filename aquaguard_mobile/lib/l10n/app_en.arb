@@ -12,6 +12,8 @@
   "sahaModuAciklama": "Bolder text and more visible borders for readability in bright sunlight.",
   "titresimBaslik": "Haptic Feedback",
   "titresimAciklama": "Vibrate on critical actions (emergency stop, starting treatment).",
+  "renkKorluguBaslik": "Color-blind Friendly Colors",
+  "renkKorluguAciklama": "Replaces status colors with a blue/orange palette that does not rely on red-green contrast.",
   "yaziBoyutuEtiketi": "Text Size",
   "yaziBoyutuKucuk": "Small",
   "yaziBoyutuNormal": "Normal",

@@ -28,7 +28,7 @@ void main() {
     // layout'u (RenderSliverList) yuzeyin altina tasan icerigi (orn.
     // "Referans debi") ARTIK LAYOUT ETMIYORDU -- bu yuzden yukseklik
     // ARTIRILDI, sadece kirpma/tasma alani buyutulmedi.
-    await tester.binding.setSurfaceSize(const Size(500, 4200));
+    await tester.binding.setSurfaceSize(const Size(500, 4600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MultiProvider(

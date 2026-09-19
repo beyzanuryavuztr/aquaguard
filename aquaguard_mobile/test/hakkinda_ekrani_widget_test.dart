@@ -110,7 +110,7 @@ void main() {
     // metin alani + kaydet butonu) en basa eklendi (Faz 3). 5400 -> 5800:
     // Görünüm kartina "Titreşim Geri Bildirimi" anahtari + "Yazı Boyutu"
     // segmenti eklendi, Hakkında satiri daha da asagida kaldi.
-    await tester.binding.setSurfaceSize(const Size(500, 5800));
+    await tester.binding.setSurfaceSize(const Size(500, 6300));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final durum = UygulamaDurumu();

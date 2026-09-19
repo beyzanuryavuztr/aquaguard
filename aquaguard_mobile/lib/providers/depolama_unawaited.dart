@@ -36,10 +36,14 @@ void unawaited(Future<void> future) {
   _bekleyenYazimlar.add(izlenen);
 }
 
-/// O ana kadar baslatilmis (ve bu sirada baslatilanlar dahil) tum yazimlar
+/// O ana kadar baslatilmis tum yazimlar
 /// bitene kadar bekler. Hicbir zaman hata firlatmaz.
 Future<void> bekleyenYazimlariBekle() async {
-  while (_bekleyenYazimlar.isNotEmpty) {
-    await Future.wait(_bekleyenYazimlar.toList());
-  }
+  // Cagri ANINDAKI yazimlarin anlik goruntusu beklenir -- baska bir
+  // ornegin (veya canli simulasyonun) surekli yeni yazim uretmesi bu
+  // beklemeyi sonsuza uzatmasin. (Zaman asimi BILEREK yok: Timer,
+  // testlerde "pending timer" hatasina yol aciyor.)
+  final anlik = _bekleyenYazimlar.toList();
+  if (anlik.isEmpty) return;
+  await Future.wait(anlik);
 }

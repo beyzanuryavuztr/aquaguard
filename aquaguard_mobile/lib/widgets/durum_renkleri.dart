@@ -40,14 +40,24 @@ enum ZonOnceligi { cevrimdisi, normal, belirsiz, tespitEdildi, tedavide }
 class DurumRenkleri {
   DurumRenkleri._();
 
-  static const Color cevrimdisi = Color(0xFF6B7A8C);
-  static const Color normal = Color(0xFF43A047); // Basari (marka paleti)
-  static const Color belirsiz = Color(0xFFFFB300); // Uyari (marka paleti)
-  static const Color tespitEdildi = Color(0xFFE53935); // Tehlike (marka paleti)
+  /// Renk korlugu uyumlu palet (Okabe-Ito tabanli, kirmizi-yesil ayrimi
+  /// GEREKTIRMEZ). Durumlar ayrica ikonla da ayirt edilir (bkz. ikonGetir),
+  /// bu palet ikinci bir guvence katmanidir. Ayarlar'dan degistirilir
+  /// (bkz. AyarlarProvider.renkKorluguModuAyarla).
+  static bool renkKorluguModu = false;
+
+  static Color get cevrimdisi => const Color(0xFF6B7A8C);
+  static Color get normal =>
+      renkKorluguModu ? const Color(0xFF0072B2) : const Color(0xFF43A047);
+  static Color get belirsiz =>
+      renkKorluguModu ? const Color(0xFFF0E442) : const Color(0xFFFFB300);
+  static Color get tespitEdildi =>
+      renkKorluguModu ? const Color(0xFFD55E00) : const Color(0xFFE53935);
   // "Tedavide" rengi KASITLI olarak marka vurgu rengi (#00BFA6 turkuvaz)
   // DEGILDIR -- ikisi karisirsa "bu turkuvaz marka mi yoksa bir durum mu?"
   // belirsizligi olusur (bkz. tema.dart dosya basi aciklamasi).
-  static const Color tedaviAktif = Color(0xFF2E90FA);
+  static Color get tedaviAktif =>
+      renkKorluguModu ? const Color(0xFFCC79A7) : const Color(0xFF2E90FA);
 
   static ZonOnceligi onceligiBelirle({
     required SensorOkuma? okuma,
