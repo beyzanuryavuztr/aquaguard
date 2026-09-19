@@ -10,6 +10,10 @@
 ///     2) Su an suren HERHANGI BIR tedavi, operator tarafindan her zaman
 ///        ERKEN durdurulabilir (ornegin sahada baska bir sorun fark edilirse).
 ///
+///     3) Sistem otonom calisirken bile (zon normal/tespit edilmis, tedavi
+///        baslamamis) operator bir tedavi kanalini "Hizli Eylemler" ile
+///        ELLE baslatabilir (2026-09-19).
+///
 ///   Bu, daha once "belirsiz -> operatör kontrolü gerekiyor" mesajinin hicbir
 ///   ic aksiyona baglanmamasi eksikligini giderir.
 ///
@@ -32,10 +36,15 @@ class ManuelMudahalePaneli extends StatelessWidget {
   final int zonNumarasi;
   final SensorOkuma okuma;
 
+  /// Zon cihazla iletisimde mi? Cevrimdisiyken elle tedavi komutu
+  /// gonderilemeyecegi icin Hizli Eylemler butonlari pasif gosterilir.
+  final bool cevrimici;
+
   const ManuelMudahalePaneli({
     super.key,
     required this.zonNumarasi,
     required this.okuma,
+    this.cevrimici = true,
   });
 
   @override
@@ -50,6 +59,16 @@ class ManuelMudahalePaneli extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: _SecimKarti(zonNumarasi: zonNumarasi),
+      );
+    }
+    // Durulama surerken mutex kilidi acik -- yeni tedavi zaten reddedilir,
+    // butonlari hic gostermeyiz.
+    if (!okuma.durulamaAktif &&
+        (okuma.durum == TeshisDurumu.normal ||
+            okuma.durum == TeshisDurumu.tespitEdildi)) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: _HizliEylemKarti(zonNumarasi: zonNumarasi, cevrimici: cevrimici),
       );
     }
     return const SizedBox.shrink();
@@ -123,6 +142,80 @@ class _DurdurKarti extends StatelessWidget {
                 },
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sistem otonom calisirken bile (zon normal ya da tespit edilmis ama
+/// henuz tedavi baslamamis) operatorun bir tedavi kanalini ELLE
+/// baslatabilmesi -- ornegin "bu hatti bugun yikayayim" ya da onleyici
+/// asit dozlama. Ayni onay diyalogu, 3 sn kimyasal geri sayimi, mutex
+/// reddi ve ACK/zaman asimi mesajlari kullanilir (yeni guvenlik mantigi
+/// icat edilmez).
+class _HizliEylemKarti extends StatelessWidget {
+  final int zonNumarasi;
+  final bool cevrimici;
+  const _HizliEylemKarti({required this.zonNumarasi, required this.cevrimici});
+
+  static const _eylemler = [
+    (TedaviTuru.asitDozlama, Icons.science_outlined),
+    (TedaviTuru.klorEnjeksiyon, Icons.water_drop_outlined),
+    (TedaviTuru.yuksekBasincliYikama, Icons.cleaning_services_outlined),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final soluk = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _PanelBasligi(metin: 'Hızlı Eylemler'),
+            const SizedBox(height: 8),
+            Text(
+              'Sistem kendi kararıyla çalışıyor. Gerekirse bir tedaviyi elle '
+              'başlatabilirsiniz -- aynı anda yalnızca bir kanal çalışır.',
+              style: TextStyle(fontSize: 12, color: soluk),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (tedavi, ikon) in _eylemler)
+                  OutlinedButton.icon(
+                    icon: Icon(ikon, size: 18),
+                    label: Text('${tedaviEtiketi(tedavi)} Başlat'),
+                    onPressed: !cevrimici
+                        ? null
+                        : () => _onayDiyaloguGoster(
+                            context,
+                            baslik: '${tedaviEtiketi(tedavi)} Başlat',
+                            icerik:
+                                'Zon $zonNumarasi için "${tedaviEtiketi(tedavi)}" '
+                                'tedavisini şimdi başlatmak istediğinize emin '
+                                'misiniz? Bu işlem geri alınamaz.',
+                            onayEtiketi: 'Başlat',
+                            geriSayimSaniye: 3,
+                            onOnay: () => context
+                                .read<CihazIletisimProvider>()
+                                .manuelTedaviBaslat(zonNumarasi, tedavi),
+                          ),
+                  ),
+              ],
+            ),
+            if (!cevrimici) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Zon çevrimdışı -- komut gönderilemez.',
+                style: TextStyle(fontSize: 12, color: soluk),
+              ),
+            ],
           ],
         ),
       ),

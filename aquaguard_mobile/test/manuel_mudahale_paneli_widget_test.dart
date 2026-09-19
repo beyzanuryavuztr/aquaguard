@@ -93,21 +93,122 @@ void main() {
     expect(find.text('Asit Dozlama'), findsNothing);
   });
 
-  testWidgets('normal durumda panel hicbir sey gostermez (SizedBox.shrink)', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _sarmala(
-        ManuelMudahalePaneli(
-          zonNumarasi: 1,
-          okuma: _okuma(durum: TeshisDurumu.normal),
+  group('Hizli Eylemler', () {
+    Future<void> pumpPanel(
+      WidgetTester tester,
+      SensorOkuma okuma, {
+      bool cevrimici = true,
+    }) async {
+      await tester.pumpWidget(
+        _sarmala(
+          ManuelMudahalePaneli(
+            zonNumarasi: 1,
+            okuma: okuma,
+            cevrimici: cevrimici,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
+    }
 
-    expect(tester.takeException(), isNull);
-    expect(find.byType(Card), findsNothing);
+    testWidgets('normal zonda 3 tedavi kanali icin baslat butonu gorunur', (
+      tester,
+    ) async {
+      await pumpPanel(tester, _okuma(durum: TeshisDurumu.normal));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Hızlı Eylemler'), findsOneWidget);
+      expect(find.text('Asit Dozlama Başlat'), findsOneWidget);
+      expect(find.text('Klor Enjeksiyonu Başlat'), findsOneWidget);
+      expect(find.text('Yüksek Basınçlı Yıkama Başlat'), findsOneWidget);
+    });
+
+    testWidgets('tespit edilmis ama tedavisi baslamamis zonda da gorunur', (
+      tester,
+    ) async {
+      await pumpPanel(
+        tester,
+        _okuma(durum: TeshisDurumu.tespitEdildi, tur: TikanmaTuru.kimyasal),
+      );
+      expect(find.text('Hızlı Eylemler'), findsOneWidget);
+    });
+
+    testWidgets('belirsizde kendi secim karti var, Hizli Eylemler GORUNMEZ', (
+      tester,
+    ) async {
+      await pumpPanel(tester, _okuma(durum: TeshisDurumu.belirsiz));
+      expect(find.text('Hızlı Eylemler'), findsNothing);
+      expect(find.text('Operatör Kontrolü Gerekiyor'), findsOneWidget);
+    });
+
+    testWidgets('durulama surerken (mutex kilidi) gorunmez', (tester) async {
+      await pumpPanel(
+        tester,
+        SensorOkuma(
+          zaman: DateTime(2026, 9, 3, 12),
+          zone: 1,
+          ph: 7.0,
+          ec: 1.2,
+          orp: 300,
+          turbidite: 15,
+          debi: 2.5,
+          deltaBasinc: 0.3,
+          durum: TeshisDurumu.normal,
+          tikanmaTuru: TikanmaTuru.yok,
+          guven: 42,
+          tedaviAktif: TedaviTuru.yok,
+          durulamaAktif: true,
+        ),
+      );
+      expect(find.text('Hızlı Eylemler'), findsNothing);
+    });
+
+    testWidgets('tedavi surerken sadece Durdur karti gorunur', (tester) async {
+      await pumpPanel(
+        tester,
+        _okuma(
+          durum: TeshisDurumu.tespitEdildi,
+          tedaviAktif: TedaviTuru.asitDozlama,
+          tur: TikanmaTuru.kimyasal,
+        ),
+      );
+      expect(find.text('Hızlı Eylemler'), findsNothing);
+      expect(find.text('Tedaviyi Durdur'), findsOneWidget);
+    });
+
+    testWidgets('cevrimdisi zonda butonlar pasif ve aciklama gorunur', (
+      tester,
+    ) async {
+      await pumpPanel(
+        tester,
+        _okuma(durum: TeshisDurumu.normal),
+        cevrimici: false,
+      );
+
+      final buton = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Asit Dozlama Başlat'),
+      );
+      expect(buton.onPressed, isNull);
+      expect(find.textContaining('çevrimdışı'), findsOneWidget);
+    });
+
+    testWidgets('baslat onay diyalogu acar, 3 saniyelik geri sayim vardir', (
+      tester,
+    ) async {
+      await pumpPanel(tester, _okuma(durum: TeshisDurumu.normal));
+
+      await tester.tap(find.text('Klor Enjeksiyonu Başlat'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.textContaining('Klor Enjeksiyonu'), findsWidgets);
+      expect(find.text('Başlat (3)'), findsOneWidget);
+      final buton = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(buton.onPressed, isNull);
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.text('Başlat'), findsOneWidget);
+    });
   });
 
   testWidgets('Tedaviyi Durdur butonuna basinca onay diyalogu acilir', (

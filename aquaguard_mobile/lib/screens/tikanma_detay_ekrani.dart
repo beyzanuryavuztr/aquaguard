@@ -87,7 +87,11 @@ class TikanmaDetayEkrani extends StatelessWidget {
                     _TedaviBanner(zonNumarasi: zonNumarasi, okuma: okuma),
                     const SizedBox(height: 16),
                   ],
-                  ManuelMudahalePaneli(zonNumarasi: zonNumarasi, okuma: okuma),
+                  ManuelMudahalePaneli(
+                    zonNumarasi: zonNumarasi,
+                    okuma: okuma,
+                    cevrimici: cevrimici,
+                  ),
                   if (okuma.durum == TeshisDurumu.tespitEdildi ||
                       okuma.durum == TeshisDurumu.belirsiz) ...[
                     AciklanabilirlikPaneli(okuma: okuma),
