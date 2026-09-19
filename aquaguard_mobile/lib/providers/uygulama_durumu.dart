@@ -195,8 +195,7 @@ class UygulamaDurumu extends ChangeNotifier {
   List<Tarla> get tarlalar => _tarla.tarlalar;
   List<int> get tumZonNumaralari => _tarla.tumZonNumaralari;
   String zonAdiGetir(int zone) => _tarla.zonAdiGetir(zone);
-  List<TarlaNotu> tarlaNotlari(String tarlaId) =>
-      _tarla.tarlaNotlari(tarlaId);
+  List<TarlaNotu> tarlaNotlari(String tarlaId) => _tarla.tarlaNotlari(tarlaId);
 
   Future<void> tarlaEkle(Tarla tarla) => _tarla.tarlaEkle(tarla);
   Future<void> tarlaSil(String id) => _tarla.tarlaSil(id);
@@ -273,8 +272,7 @@ class UygulamaDurumu extends ChangeNotifier {
 
   Future<void> demoModunuAc() => _cihaz.demoModunuAc();
   Future<void> demoModunuKapat() => _cihaz.demoModunuKapat();
-  Future<void> demoHiziniAyarla(DemoHizi hiz) =>
-      _cihaz.demoHiziniAyarla(hiz);
+  Future<void> demoHiziniAyarla(DemoHizi hiz) => _cihaz.demoHiziniAyarla(hiz);
   Future<void> mqttAyarlariniGuncelle({
     required String host,
     required int port,
@@ -283,8 +281,7 @@ class UygulamaDurumu extends ChangeNotifier {
 
   Future<KomutSonucu> manuelTedaviBaslat(int zone, TedaviTuru tedavi) =>
       _cihaz.manuelTedaviBaslat(zone, tedavi);
-  Future<void> manuelTedaviDurdur(int zone) =>
-      _cihaz.manuelTedaviDurdur(zone);
+  Future<void> manuelTedaviDurdur(int zone) => _cihaz.manuelTedaviDurdur(zone);
   Future<void> manuelNormaleDondur(int zone) =>
       _cihaz.manuelNormaleDondur(zone);
 
@@ -319,7 +316,9 @@ class UygulamaDurumu extends ChangeNotifier {
     // kapatmak, o sahibin altindaki veriyi de kapatirdi (bkz. yukaridaki
     // constructor notu).
     if (_veritabaniSahibi) {
-      unawaited(_veritabani.close());
+      // Bekleyen ates-et-unut yazimlar bitmeden kapatmak, yarim kalan
+      // transaction'lari dusuruyordu (A5) -- once bosalmalarini bekle.
+      unawaited(bekleyenYazimlariBekle().then((_) => _veritabani.close()));
     }
     super.dispose();
   }

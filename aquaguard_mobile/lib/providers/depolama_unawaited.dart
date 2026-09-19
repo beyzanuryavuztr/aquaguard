@@ -19,8 +19,27 @@ library;
 
 import 'package:flutter/foundation.dart' show debugPrint;
 
+/// Henuz tamamlanmamis "ates et ve unut" yazimlari. Veritabani kapatilmadan
+/// ONCE bunlarin bitmesi beklenir (bkz. [bekleyenYazimlariBekle]) -- aksi
+/// halde dispose() sirasinda yarim kalan bir transaction "database has
+/// already been closed" hatasiyla dusuyor ve yazilmasi gereken veri
+/// kayboluyordu (A5).
+final Set<Future<void>> _bekleyenYazimlar = {};
+
 void unawaited(Future<void> future) {
-  future.catchError((Object hata) {
-    debugPrint('AquaGuard depolama hatasi: $hata');
-  });
+  late final Future<void> izlenen;
+  izlenen = future
+      .catchError((Object hata) {
+        debugPrint('AquaGuard depolama hatasi: $hata');
+      })
+      .whenComplete(() => _bekleyenYazimlar.remove(izlenen));
+  _bekleyenYazimlar.add(izlenen);
+}
+
+/// O ana kadar baslatilmis (ve bu sirada baslatilanlar dahil) tum yazimlar
+/// bitene kadar bekler. Hicbir zaman hata firlatmaz.
+Future<void> bekleyenYazimlariBekle() async {
+  while (_bekleyenYazimlar.isNotEmpty) {
+    await Future.wait(_bekleyenYazimlar.toList());
+  }
 }
