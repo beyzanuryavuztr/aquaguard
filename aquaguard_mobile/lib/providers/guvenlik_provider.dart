@@ -65,6 +65,7 @@ class GuvenlikProvider extends ChangeNotifier {
     await _depolama.pinKorumasiniKaydet(false);
     _pinKorumasiAktif = false;
     _pinKilitliSuAn = false;
+    _zamanAsimiylaKilitlendi = false;
     notifyListeners();
   }
 
@@ -78,6 +79,7 @@ class GuvenlikProvider extends ChangeNotifier {
       _basarisizPinDenemesi = 0;
       _pinKilitBitisZamani = null;
       _pinKilitliSuAn = false;
+      _zamanAsimiylaKilitlendi = false;
       notifyListeners();
       return true;
     }
@@ -94,6 +96,54 @@ class GuvenlikProvider extends ChangeNotifier {
   /// gerek kalmadan oturum kilidini acar.
   void pinKilidiniBiyometrikIleAc() {
     _pinKilitliSuAn = false;
+    _zamanAsimiylaKilitlendi = false;
     notifyListeners();
+  }
+
+  // ==========================================================================
+  // OTURUM ZAMAN ASIMI (D3)
+  // ==========================================================================
+  //
+  // Uygulama arka plana alindiktan sonra [zamanAsimi]'ndan UZUN sure
+  // gecerse (telefon masada/cebinde acik unutuldu), on plana donuste PIN
+  // yeniden istenir. SADECE PIN korumasi acikken ve oturum zaten kilitsizken
+  // anlamlidir. Zaman kaynagi enjekte edilebilir (test icin).
+
+  static const Duration varsayilanZamanAsimi = Duration(minutes: 5);
+
+  DateTime? _arkaplanZamani;
+  bool _zamanAsimiylaKilitlendi = false;
+
+  /// Kilidin SOGUK acilis yerine zaman asimindan kaynaklandigini belirtir --
+  /// arayuz sadece bu durumda PIN ekranini mevcut ekranin USTUNE bindirir
+  /// (soguk acilista kilidi zaten baslangic yonlendiricisi gosteriyor).
+  bool get zamanAsimiylaKilitlendi =>
+      _zamanAsimiylaKilitlendi && pinKilitliSuAn;
+
+  void arkaplanaAlindi({DateTime? simdi}) {
+    if (!_pinKorumasiAktif || _pinKilitliSuAn) return;
+    _arkaplanZamani = simdi ?? DateTime.now();
+  }
+
+  void planaDonuldu({
+    DateTime? simdi,
+    Duration zamanAsimi = varsayilanZamanAsimi,
+  }) {
+    final gidis = _arkaplanZamani;
+    _arkaplanZamani = null;
+    if (gidis == null || !_pinKorumasiAktif || _pinKilitliSuAn) return;
+    if ((simdi ?? DateTime.now()).difference(gidis) >= zamanAsimi) {
+      _pinKilitliSuAn = true;
+      _zamanAsimiylaKilitlendi = true;
+      notifyListeners();
+    }
+  }
+
+  /// SADECE test: PIN korumasi ACIK + oturum kilitsiz durumunu, gercek
+  /// guvenli depoya (flutter_secure_storage) dokunmadan kurar.
+  @visibleForTesting
+  void debugOturumuKilitsizYap() {
+    _pinKorumasiAktif = true;
+    _pinKilitliSuAn = false;
   }
 }

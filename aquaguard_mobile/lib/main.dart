@@ -44,6 +44,7 @@ import 'screens/giris_ekrani.dart';
 import 'screens/onboarding_ekrani.dart';
 import 'screens/pin_kilit_ekrani.dart';
 import 'services/hata_gunlugu_servisi.dart';
+import 'widgets/oturum_zaman_asimi.dart';
 
 void main() {
   runZonedGuarded(
@@ -147,7 +148,7 @@ class AquaGuardUygulamasi extends StatelessWidget {
                   data: MediaQuery.of(context).copyWith(
                     textScaler: TextScaler.linear(ayarlar.yaziBoyutu.oran),
                   ),
-                  child: child!,
+                  child: OturumZamanAsimi(child: child!),
                 ),
                 home: const _BaslangicYonlendirici(),
               ),
