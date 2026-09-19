@@ -1,0 +1,47 @@
+name: Web Yayini (GitHub Pages)
+
+# Her main'e push'ta web surumunu derleyip GitHub Pages'e yayinlar.
+# Ilk kullanimdan once: Repo > Settings > Pages > Source = "GitHub Actions".
+# Adres: https://<kullanici>.github.io/aquaguard/
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aquaguard_mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.4'
+      - run: flutter pub get
+      # --base-href: uygulama alt yolda (/aquaguard/) yayinlandigi icin gerekli.
+      - run: flutter build web --release --base-href /aquaguard/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: aquaguard_mobile/build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
