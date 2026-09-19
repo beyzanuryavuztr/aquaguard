@@ -95,7 +95,16 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - MQTT bağlantısı için opsiyonel TLS desteği (varsayılan halen düz
   bağlantı — bkz. Bilinen Sınırlamalar).
 
+- Broker adresi genel test broker'ıysa ve web + https + TLS kapalıysa
+  Ayarlar'da uyarı gösterilir. Android release için `android/key.properties`
+  ile imza, `POST_NOTIFICATIONS`/`USE_BIOMETRIC` izinleri eklendi (Android SDK
+  bulunmadığından derlenerek doğrulanmadı). Firmware için CI derleme işi eklendi.
+- Model Performansı ekranındaki doğruluk standart sapması güncel yeniden
+  eğitim çıktısıyla eşitlendi (%89.9 ± %1.5).
+
 ### Bilinen Sınırlamalar
+
+- Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.
 
 - MQTT varsayılan olarak genel test broker'ı (`test.mosquitto.org`)
   üzerinden düz TCP ile çalışır. Kimlik doğrulama desteklenir ama varsayılan

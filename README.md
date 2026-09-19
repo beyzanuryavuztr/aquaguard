@@ -151,12 +151,14 @@ Pin/kalibrasyon sabitleri `config.h` içindedir. Gerçek donanıma flaşlamadan
 önce [`firmware/DONANIM_KONTROL_LISTESI.md`](firmware/DONANIM_KONTROL_LISTESI.md)'ye
 bakın (pin doğrulaması, kalibrasyon adımları, ilk çalıştırma duman testi sırası).
 
-> **CI notu:** `.github/workflows/ci.yml` şu an sadece Flutter ve Python
-> tarafını otomatik doğruluyor. Firmware derlemesi CI'ya bilerek dahil
-> edilmedi — Deneyap Kart, Arduino CLI'nin varsayılan board index'inde
-> yok ve doğrulanmamış bir FQBN ile pipeline eklemek yanıltıcı olurdu.
-> Firmware CI, board-manager URL'i donanım ekibiyle doğrulandıktan sonra
-> eklenecek bir sonraki adımdır.
+> **CI notu:** `.github/workflows/ci.yml` firmware'i genel ESP32 kartı
+> (`esp32:esp32:esp32`) için arduino-cli ile **derler** — bu yalnızca derleme
+> doğrulamasıdır. Deneyap Kart'ın kendi kart tanımıyla derleme ve gerçek
+> donanım davranışı CI'da doğrulanmaz.
+
+**Ölçüm sınırlaması:** Sıcaklık sensörü yoktur (bilinçli tercih); pH ve EC
+ölçümleri sıcaklık telafisi yapılmaz, bu da doğruluğu sınırlar. Sahada
+kalibrasyon sıcaklığına yakın koşullarda çalışın.
 
 ### Güvenlik notu (MQTT)
 

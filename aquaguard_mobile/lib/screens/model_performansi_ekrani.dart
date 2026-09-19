@@ -34,7 +34,7 @@ class ModelPerformansiEkrani extends StatelessWidget {
     (
       'assets/model_gorselleri/cv_dogruluk_grafigi.png',
       'Çapraz Doğrulama Doğruluğu',
-      '5-fold çapraz doğrulama sonucu: %89.9 ± %2.3 doğruluk (PROJE_BRIEF.md hedefi: ~%90).',
+      '5-fold çapraz doğrulama sonucu: %89.9 ± %1.5 doğruluk (PROJE_BRIEF.md hedefi: ~%90).',
     ),
     (
       'assets/model_gorselleri/karisiklik_matrisi.png',

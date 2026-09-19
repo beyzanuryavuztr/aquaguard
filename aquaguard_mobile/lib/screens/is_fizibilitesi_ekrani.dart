@@ -90,7 +90,7 @@ class IsFizibilitesiEkrani extends StatelessWidget {
                     _FizibiliteSatiri(
                       ikon: Icons.model_training_outlined,
                       baslik: 'ML doğruluk (sentetik veri, 5-fold CV)',
-                      deger: '%89.9 ± %2.3',
+                      deger: '%89.9 ± %1.5',
                       kaynak: 'Model Performansı ekranına bakın',
                       sonSatir: true,
                       onTap: () => Navigator.of(context).push(

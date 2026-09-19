@@ -59,3 +59,25 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
       - run: pytest
+
+  firmware:
+    name: Firmware (arduino-cli derleme, genel ESP32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: ESP32 cekirdegi ve kutuphaneler
+        run: |
+          arduino-cli config init
+          arduino-cli config set network.connection_timeout 600s
+          arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core install esp32:esp32 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli lib install "PubSubClient" "ArduinoJson" "TinyGSM" "RTClib" "ESP32Servo"
+      # Yalnizca DERLEME dogrulamasi (genel esp32:esp32:esp32 karti). Deneyap
+      # Kart tanimi ve gercek donanim davranisi burada DOGRULANMAZ.
+      - name: Derle
+        run: |
+          # arduino-cli, klasor adinin .ino adiyla ayni olmasini ister.
+          mkdir -p /tmp/aquaguard_main
+          cp firmware/*.ino firmware/*.h /tmp/aquaguard_main/
+          arduino-cli compile --fqbn esp32:esp32:esp32 /tmp/aquaguard_main

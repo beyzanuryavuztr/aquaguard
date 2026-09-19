@@ -26,7 +26,7 @@ void main() {
       expect(find.text('7.266 ₺'), findsOneWidget);
       expect(find.text('~11.200 ₺'), findsOneWidget);
       expect(find.text('%35'), findsOneWidget);
-      expect(find.text('%89.9 ± %2.3'), findsOneWidget);
+      expect(find.text('%89.9 ± %1.5'), findsOneWidget);
 
       // Rakip karsilastirma tablosu -- 3 rakip sutunu + AquaGuard'in kendi
       // ayirt edici ifadeleri.
@@ -53,7 +53,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: IsFizibilitesiEkrani()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('%89.9 ± %2.3'));
+    await tester.tap(find.text('%89.9 ± %1.5'));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
