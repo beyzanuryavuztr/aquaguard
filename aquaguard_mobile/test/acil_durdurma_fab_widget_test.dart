@@ -111,4 +111,41 @@ void main() {
 
     durum.dispose();
   });
+
+  testWidgets(
+    'gercek modda cihaza ulasilamazsa "durduruldu" DEGIL, uyari gosterilir',
+    (tester) async {
+      // Demo KAPALI + dinleyen olmayan broker (127.0.0.1:1): komutlar
+      // iletilemez, kuyruga alinir. Arayuz bunu acikca soylemeli.
+      SharedPreferences.setMockInitialValues({
+        'aquaguard_demo_modu_acik': false,
+        'aquaguard_mqtt_host': '127.0.0.1',
+        'aquaguard_mqtt_port': 1,
+      });
+      final durum = UygulamaDurumu();
+      // testWidgets FakeAsync icinde calisir; gercek soket baglantisi
+      // (basarisiz olacak olsa da) gercek zaman ister -> runAsync.
+      await tester.runAsync(() => durum.baslat());
+
+      await tester.pumpWidget(_sarmala(durum));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ACİL DURDUR'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ACİL DURDUR').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Cihaza ULAŞILAMIYOR'), findsOneWidget);
+      expect(
+        find.text(
+          'Acil durdurma uygulandı: tüm tedaviler ve sulama durduruldu.',
+        ),
+        findsNothing,
+      );
+
+      durum.dispose();
+    },
+  );
 }

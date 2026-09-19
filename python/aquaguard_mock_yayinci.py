@@ -270,7 +270,8 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict, istemci=None,
 
 def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
                     durulama_aktif: bool, hazne_asit_yuzde: float,
-                    hazne_klor_yuzde: float) -> str:
+                    hazne_klor_yuzde: float,
+                    ana_vana_acik: bool = True) -> str:
     """firmware/mqtt_handler.h basindaki JSON semasiyla BIREBIR AYNI alanlar.
 
     guven_kimyasal/guven_biyolojik/guven_fiziksel alanlari, karar motorunun
@@ -306,6 +307,9 @@ def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
         "durulama_aktif": durulama_aktif,
         "hazne_asit_seviye_yuzde": round(hazne_asit_yuzde, 1),
         "hazne_klor_seviye_yuzde": round(hazne_klor_yuzde, 1),
+        # SEMA v2 (2026-09-19): ana vananin GERCEK durumu -- gercek firmware
+        # da yayinlar; uygulama vana durumunu bununla esitler.
+        "ana_vana_acik": bool(ana_vana_acik),
     }
     return json.dumps(mesaj, ensure_ascii=False)
 
@@ -418,6 +422,7 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
                 ornek, teshis, zone, tedavi_aktif, durulama_aktif,
                 calisma_durumu["hazne_asit_yuzde"],
                 calisma_durumu["hazne_klor_yuzde"],
+                ana_vana_acik=calisma_durumu["sulama_acik"],
             )
 
             istemci.publish(veri_konusu, mesaj, qos=1, retain=True)

@@ -96,12 +96,30 @@ class AcilDurdurmaFab extends StatelessWidget {
     final vanasiYeniKapatilanlar = await cihaz.acilDurdurmaTetikle();
     if (!context.mounted) return;
 
+    // DURUSTLUK: gercek modda komutlar cihaza ULASMAYABILIR (kuyruga alinir,
+    // 5 dk icinde iletilemezse duser). "Durduruldu" demek yerine gercek
+    // durumu soyle; cihaz onayi ayrica vana durumu telemetrisiyle gelir.
+    final gercekMod = !cihaz.demoModuAktif;
+    final kuyrukta = gercekMod ? cihaz.sonAcilDurdurmaKuyrugaAlinan : 0;
+    final String mesaj;
+    if (!gercekMod) {
+      mesaj = 'Acil durdurma uygulandı: tüm tedaviler ve sulama durduruldu.';
+    } else if (kuyrukta > 0) {
+      mesaj =
+          'UYARI: Cihaza ULAŞILAMIYOR -- $kuyrukta komut kuyruğa alındı ve '
+          'bağlantı 5 dakika içinde gelmezse GÖNDERİLMEYECEK. '
+          'Cihazın başında elle durdurun.';
+    } else {
+      mesaj =
+          'Acil durdurma komutları cihaza GÖNDERİLDİ. Cihazın yanıtını (vana '
+          'durumu) birkaç saniye içinde zon ekranından doğrulayın.';
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          'Acil durdurma uygulandı: tüm tedaviler ve sulama durduruldu.',
-        ),
-        duration: const Duration(seconds: 3),
+        content: Text(mesaj),
+        backgroundColor: kuyrukta > 0 ? DurumRenkleri.tespitEdildi : null,
+        duration: Duration(seconds: kuyrukta > 0 ? 10 : (gercekMod ? 6 : 3)),
         action: vanasiYeniKapatilanlar.isEmpty
             ? null
             : SnackBarAction(

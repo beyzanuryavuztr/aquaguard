@@ -173,6 +173,11 @@ class SensorOkuma {
   final double? hazneAsitSeviyeYuzde;
   final double? hazneKlorSeviyeYuzde;
 
+  // ANA VANA DURUMU (sema v2, 2026-09-19): cihazin GERCEK vana durumu. `null`
+  // = alan gelmedi (eski firmware, demo simulasyonu) -- uygulama o zaman
+  // kendi tahminini korur.
+  final bool? anaVanaAcik;
+
   const SensorOkuma({
     required this.zaman,
     required this.zone,
@@ -192,6 +197,7 @@ class SensorOkuma {
     required this.durulamaAktif,
     this.hazneAsitSeviyeYuzde,
     this.hazneKlorSeviyeYuzde,
+    this.anaVanaAcik,
   });
 
   /// Ucunun turu icin guven yuzdesini isimle sorgulamak icin yardimci (grafik cizimlerinde kullanislidir).
@@ -227,6 +233,9 @@ class SensorOkuma {
       durulamaAktif: json['durulama_aktif'] as bool? ?? false,
       hazneAsitSeviyeYuzde: sayiNullable(json['hazne_asit_seviye_yuzde']),
       hazneKlorSeviyeYuzde: sayiNullable(json['hazne_klor_seviye_yuzde']),
+      anaVanaAcik: json['ana_vana_acik'] is bool
+          ? json['ana_vana_acik'] as bool
+          : null,
     );
   }
 
@@ -250,6 +259,7 @@ class SensorOkuma {
     'durulama_aktif': durulamaAktif,
     'hazne_asit_seviye_yuzde': hazneAsitSeviyeYuzde,
     'hazne_klor_seviye_yuzde': hazneKlorSeviyeYuzde,
+    'ana_vana_acik': anaVanaAcik,
   };
 
   /// toJson() ile kaydedilmis (dolayisiyla Turkce string kodlari degil,
@@ -287,6 +297,9 @@ class SensorOkuma {
       durulamaAktif: json['durulama_aktif'] as bool? ?? false,
       hazneAsitSeviyeYuzde: sayiNullable(json['hazne_asit_seviye_yuzde']),
       hazneKlorSeviyeYuzde: sayiNullable(json['hazne_klor_seviye_yuzde']),
+      anaVanaAcik: json['ana_vana_acik'] is bool
+          ? json['ana_vana_acik'] as bool
+          : null,
     );
   }
 

@@ -70,12 +70,17 @@ class AyarlarSabitleri {
   //     services/mqtt_servisi.dart). Gercek firmware HENUZ bunu yayinlamiyor
   //     (bkz. firmware/mqtt_handler.h sema v2 notu) -- altyapi hazir, donanim
   //     entegrasyonu bekleniyor. ---
-  static String komutDurumuKonusu(int zone) => 'aquaguard/zone$zone/komut_durumu';
+  static String komutDurumuKonusu(int zone) =>
+      'aquaguard/zone$zone/komut_durumu';
 
   // --- Komut ACK/NACK zaman asimi -- bu sureden uzun yanit gelmezse
   //     operatore "zaman asimi" gosterilir (bkz. providers/uygulama_durumu.dart
   //     _komutGonderVeOnayBekle). ---
   static const Duration komutZamanAsimi = Duration(seconds: 30);
+
+  /// Yerel vana komutundan sonra, cihaz telemetrisiyle vana esitlemesinin
+  /// ASKIYA alindigi sure (cihaz 10 sn yayinlar; komut + yansima payi).
+  static const Duration vanaEsitlemeBeklemesi = Duration(seconds: 25);
 
   // --- Offline mod: cihazin kendi agi/broker baglantisi yokken kuyruga
   //     alinan komutlarin gecerlilik suresi -- bundan eski komutlar

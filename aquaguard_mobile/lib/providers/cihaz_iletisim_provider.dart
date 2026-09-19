@@ -89,6 +89,11 @@ class CihazIletisimProvider extends ChangeNotifier {
   final Map<int, DateTime> _tedaviBaslangicZamanlari = {};
   final Set<int> _sulamasiDurdurulanZonlar = {};
 
+  // Zon basina en son YEREL vana komutu zamani -- cihaz telemetrisi ile
+  // esitleme, komut cihaza ulasip yansiyana kadar (bekleme suresi boyunca)
+  // eski durumla yerel durumu ezmesin diye.
+  final Map<int, DateTime> _vanaKomutZamanlari = {};
+
   final List<KuyruklanmisKomut> _kuyruklananKomutlar = [];
   final Map<String, Completer<KomutSonucu>> _bekleyenKomutlar = {};
 
@@ -362,12 +367,51 @@ class CihazIletisimProvider extends ChangeNotifier {
   // MQTT OLAY ISLEYICILERI
   // ============================================================================
 
+  /// Cihazin GERCEK ana vana durumunu (telemetride `ana_vana_acik`) yerel
+  /// tahminle esitler. SADECE gercek MQTT modunda ve alan gelmisse calisir
+  /// (eski firmware/demo `null` doner -- yerel tahmin korunur). Yerel bir
+  /// vana komutundan sonra [AyarlarSabitleri.vanaEsitlemeBeklemesi] boyunca
+  /// esitleme yapilmaz: komut cihaza ulasip yansimadan gelen ESKI bir
+  /// telemetri, kullanicinin yeni komutunu ezmesin.
+  void _vanaDurumunuCihazlaEsitle(SensorOkuma okuma) {
+    final cihazdaAcik = okuma.anaVanaAcik;
+    if (_demoModuAktif || cihazdaAcik == null) return;
+
+    final sonKomut = _vanaKomutZamanlari[okuma.zone];
+    if (sonKomut != null &&
+        DateTime.now().difference(sonKomut) <
+            AyarlarSabitleri.vanaEsitlemeBeklemesi) {
+      return;
+    }
+
+    final yerelKapali = _sulamasiDurdurulanZonlar.contains(okuma.zone);
+    if (cihazdaAcik == !yerelKapali) return; // zaten esit
+
+    if (cihazdaAcik) {
+      _sulamasiDurdurulanZonlar.remove(okuma.zone);
+    } else {
+      _sulamasiDurdurulanZonlar.add(okuma.zone);
+    }
+    unawaited(_depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar));
+    _manuelMudahaleKaydet(
+      okuma.zone,
+      'Zon ${okuma.zone}: ana vana durumu CIHAZDAN alinan veriyle esitlendi '
+      '(cihazda vana ${cihazdaAcik ? "ACIK" : "KAPALI"})',
+    );
+  }
+
+  /// SADECE test: gercek MQTT'yi beklemeden, cihazdan bir telemetri
+  /// mesaji gelmis gibi isler.
+  @visibleForTesting
+  void telemetriGeldiTestIcin(SensorOkuma okuma) => _veriGeldiginde(okuma);
+
   void _veriGeldiginde(SensorOkuma okuma) {
     debugPrint(
       '[AquaGuard/Veri] Zon ${okuma.zone}: durum=${okuma.durum.name} '
       'tur=${okuma.tikanmaTuru.name} guven=%${okuma.guven.toStringAsFixed(0)}',
     );
     final onceki = _sonOkumalar[okuma.zone];
+    _vanaDurumunuCihazlaEsitle(okuma);
 
     if (onceki != null) {
       // Mesaj/kural mantigi burada DEGIL -- gecisAktiviteleriniUret() saf
@@ -430,14 +474,17 @@ class CihazIletisimProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _komutGonderVeyaKuyrukla(
+  /// Komutu ANINDA gonderir (true) ya da baglanti yoksa kuyruga alir (false).
+  /// Kuyruktaki komut [AyarlarSabitleri.kuyrukKomutGecerlilikSuresi] icinde
+  /// gonderilemezse DUSER -- cagiran taraf bunu kullaniciya bildirmelidir.
+  Future<bool> _komutGonderVeyaKuyrukla(
     int zone,
     Map<String, dynamic> komut,
   ) async {
     final mqtt = _mqtt;
     if (mqtt != null && mqtt.bagliMi) {
       mqtt.komutGonder(zone, komut);
-      return;
+      return true;
     }
     _kuyruklananKomutlar.add(
       KuyruklanmisKomut(
@@ -447,6 +494,7 @@ class CihazIletisimProvider extends ChangeNotifier {
       ),
     );
     await _depolama.kuyruklananKomutlariKaydet(_kuyruklananKomutlar);
+    return false;
   }
 
   Future<void> _kuyruklananKomutlariGonder() async {
@@ -462,6 +510,19 @@ class CihazIletisimProvider extends ChangeNotifier {
         .toList();
     for (final kuyruklu in gecerliler) {
       mqtt.komutGonder(kuyruklu.zone, kuyruklu.komut);
+    }
+    // Suresi dolan komutlar SESSIZCE dusmesin (ozellikle acil durdurma/vana):
+    // operator gecmiste ne GONDERILEMEDIGINI gorebilmeli.
+    for (final kuyruklu in _kuyruklananKomutlar) {
+      if (kuyruklu.suresiGecmisMi(
+        AyarlarSabitleri.kuyrukKomutGecerlilikSuresi,
+      )) {
+        _manuelMudahaleKaydet(
+          kuyruklu.zone,
+          'Zon ${kuyruklu.zone}: "${kuyruklu.komut['komut']}" komutu cihaza '
+          'ULASAMADI (kuyrukta suresi doldu) -- GONDERILMEDI, cihaz basinda kontrol edin',
+        );
+      }
     }
     _kuyruklananKomutlar.clear();
     await _depolama.kuyruklananKomutlariKaydet(_kuyruklananKomutlar);
@@ -618,6 +679,7 @@ class CihazIletisimProvider extends ChangeNotifier {
   Future<void> sulamayiDurdur(int zone) async {
     if (_sulamasiDurdurulanZonlar.contains(zone)) return;
     _sulamasiDurdurulanZonlar.add(zone);
+    _vanaKomutZamanlari[zone] = DateTime.now();
     unawaited(_depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar));
     if (_demoModuAktif) {
       _simulasyon?.sulamayiDuraklat(zone);
@@ -633,6 +695,7 @@ class CihazIletisimProvider extends ChangeNotifier {
   Future<void> sulamayiBaslat(int zone) async {
     if (!_sulamasiDurdurulanZonlar.contains(zone)) return;
     _sulamasiDurdurulanZonlar.remove(zone);
+    _vanaKomutZamanlari[zone] = DateTime.now();
     unawaited(_depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar));
     if (_demoModuAktif) {
       _simulasyon?.sulamayiDevamEttir(zone);
@@ -649,9 +712,16 @@ class CihazIletisimProvider extends ChangeNotifier {
   // ACIL DURDURMA (tum sistem geneli guvenlik supabi)
   // ============================================================================
 
+  /// Son acil durdurmada cihaza ULASAMAYIP kuyruga alinan komut sayisi
+  /// (gercek modda). 0 = hepsi ANINDA gonderildi. Kuyruktaki komutlar
+  /// [AyarlarSabitleri.kuyrukKomutGecerlilikSuresi] icinde iletilemezse DUSER.
+  int _sonAcilKuyrugaAlinan = 0;
+  int get sonAcilDurdurmaKuyrugaAlinan => _sonAcilKuyrugaAlinan;
+
   Future<List<int>> acilDurdurmaTetikle() async {
     final zonlar = _tarla.tumZonNumaralari;
     final vanasiYeniKapatilanlar = <int>[];
+    final iletimler = <Future<bool>>[];
 
     for (final zon in zonlar) {
       final okuma = _sonOkumalar[zon];
@@ -659,7 +729,9 @@ class CihazIletisimProvider extends ChangeNotifier {
         if (_demoModuAktif) {
           _simulasyon?.manuelTedaviDurdur(zon, okuma.tikanmaTuru);
         } else {
-          unawaited(_komutGonderVeyaKuyrukla(zon, {'komut': 'tedavi_durdur'}));
+          iletimler.add(
+            _komutGonderVeyaKuyrukla(zon, {'komut': 'tedavi_durdur'}),
+          );
         }
       }
       if (!_sulamasiDurdurulanZonlar.contains(zon)) {
@@ -668,18 +740,24 @@ class CihazIletisimProvider extends ChangeNotifier {
         if (_demoModuAktif) {
           _simulasyon?.sulamayiDuraklat(zon);
         } else {
-          unawaited(_komutGonderVeyaKuyrukla(zon, {'komut': 'sulama_durdur'}));
+          _vanaKomutZamanlari[zon] = DateTime.now();
+          iletimler.add(
+            _komutGonderVeyaKuyrukla(zon, {'komut': 'sulama_durdur'}),
+          );
         }
       }
     }
     unawaited(_depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar));
+    final sonuclar = await Future.wait(iletimler);
+    _sonAcilKuyrugaAlinan = sonuclar.where((iletildi) => !iletildi).length;
 
     final kayit = AktiviteKaydi(
       zaman: DateTime.now(),
       zone: 0,
       mesaj:
           'ACİL DURDURMA tetiklendi: tüm tedaviler durduruldu, '
-          '${vanasiYeniKapatilanlar.length} zonun ana vanası kapatıldı',
+          '${vanasiYeniKapatilanlar.length} zonun ana vanası kapatıldı'
+          '${_sonAcilKuyrugaAlinan > 0 ? " -- UYARI: $_sonAcilKuyrugaAlinan komut cihaza ULASAMADI, kuyruga alindi" : ""}',
       tur: AktiviteTuru.manuelMudahale,
     );
     _aktivite.aktiviteKaydiEkle(kayit);

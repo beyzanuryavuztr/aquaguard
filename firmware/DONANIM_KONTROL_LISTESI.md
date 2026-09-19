@@ -2,7 +2,9 @@
 
 Bu liste Enver için hazırlandı: `firmware/` kodu 2026-09-19'da arduino-cli (ESP32 çekirdeği 3.x, genel
 `esp32:esp32:esp32` kartı; TinyGSM 0.12, PubSubClient 2.8, ArduinoJson 7.4,
-ESP32Servo 3.1, RTClib 2.1) ile UYARISIZ DERLENDİ (%31 flash, %7 RAM).
+ESP32Servo 3.1, RTClib 2.1) ile DERLENDİ (%31 flash, %7 RAM). Kalan uyarılar: ArduinoJson 7'de
+`StaticJsonDocument` kullanımdan kalkma uyarısı (kod v6 API'siyle yazıldı;
+v6.21.x sabitlemek uyarıyı kaldırır). Aşağıdaki "MQTT paket boyutu" maddesine bakın.
 Bu yalnızca sözdizimi/kütüphane uyumunu doğrular: Deneyap Kart'a özgü kart
 tanımıyla derleme, pin doğruluğu ve sensör davranışı gerçek donanımda
 ilk kez çalıştırılmadan önce aşağıdaki adımlarla doğrulanmalı.
@@ -105,15 +107,19 @@ Diğer, düşük öncelikli/bilinen sınırlamalar (değiştirilmedi, riski dü�
 - `mqtt_handler.h`'nin her yayında yeni `String` nesnesi oluşturması
   (heap fragmentation riski) — ESP32'nin büyük heap'i sayesinde kısa
   vadede sorun çıkarması olası değil.
-- **Komut ACK/NACK (sema v2, 2026-09-16, HENÜZ UYGULANMADI)**: Flutter
-  tarafı artık operatör komutlarına bir `komut_id` ekliyor ve
-  `aquaguard/zone{N}/komut_durumu` konusundan bir yanıt (ACK/NACK)
-  bekliyor — 30 saniye içinde yanıt gelmezse "zaman aşımı" gösteriyor.
-  Bu firmware HENÜZ bu konuyu yayınlamıyor (bkz. `mqtt_handler.h` dosya
-  başı sema v2 notu) — donanım entegrasyonu sırasında bu eklenene kadar,
-  gerçek MQTT modunda manuel müdahale komutları HER ZAMAN "zaman aşımı"
-  ile sonuçlanacaktır (Python mock yayıncı bunu zaten uyguluyor, gerçek
-  firmware ile karşılaştırmalı test edin).
+- **MQTT paket boyutu (2026-09-19, KRİTİK düzeltme)**: PubSubClient'in varsayılan
+  paket sınırı 256 bayttır; telemetri JSON'u (~330 bayt) bunu aşar ve
+  `publish()` **her seferinde sessizce başarısız olurdu** (firmware hiç veri
+  göndermezdi). `mqttBaslat()` artık `setBufferSize(MQTT_PAKET_BOYUTU=768)`
+  çağırıyor. Seri portta "[MQTT] UYARI: tampon boyutu ayarlanamadi" görürseniz
+  bellek yetersizdir.
+- **Komut ACK/NACK (sema v2) -- 2026-09-19'da firmware'e EKLENDİ**: her komuta
+  eklenen `komut_id` okunur, sonuç `aquaguard/zone{N}/komut_durumu` konusuna
+  `{"komut_id","durum":"tamamlandi"|"reddedildi"}` olarak yayınlanır (Python
+  mock ile aynı sözleşme). Ana vana durumu da telemetriyle (`ana_vana_acik`)
+  raporlanır. **Gerçek donanımda henüz denenmedi** -- ilk testte bir komut
+  gönderip uygulamada "Uygulandı"/"REDDEDİLDİ" (zaman aşımı DEĞİL) çıktığını
+  doğrulayın.
 
 ## Kaynak / Tek Kaynak Referansları
 

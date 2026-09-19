@@ -11,11 +11,10 @@
 ///   operatore "cihazla baglanti sorunlu olabilir" bilgisini tasir, "mutex
 ///   kilidi reddetti" ile KARISTIRILMAMALIDIR.
 ///
-///   GERCEK donanim (firmware) HENUZ komut_durumu konusunu yayinlamiyor
-///   (bkz. firmware/mqtt_handler.h sema v2 notu) -- bu yuzden pratikte
-///   gercek MQTT modunda her komut su an icin HER ZAMAN zamanAsimi ile
-///   sonuclanacaktir, donanim entegrasyonuna kadar. Demo Modu bu yolu hic
-///   kullanmaz (dogrudan SimulasyonServisi uzerinden calisir, bkz.
+///   Firmware (2026-09-19) ve Python mock komut_durumu konusunu yayinlar
+///   (bkz. firmware/mqtt_handler.h _komutDurumuYayinla). GERCEK donanimda
+///   henuz denenmedi -- yanit gelmezse zamanAsimi sonucu KALIR. Demo Modu bu
+///   yolu hic kullanmaz (dogrudan SimulasyonServisi uzerinden calisir, bkz.
 ///   UygulamaDurumu.manuelTedaviBaslat).
 ///
 /// Tarih:  2026-09-16

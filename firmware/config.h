@@ -206,6 +206,15 @@
 // AyarlarSabitleri.komutKonusu() / providers/uygulama_durumu.dart
 #define MQTT_KONU_KOMUT       "aquaguard/zone%d/komut"
 
+// Komut sonucu (ACK/NACK) -- CIHAZDAN uygulamaya. Govde:
+//   {"komut_id":"...","durum":"tamamlandi"|"reddedildi"}
+// Uygulama her komuta "komut_id" ekler; yanit gelmezse 30 sn sonra
+// "zaman asimi" gosterir. Flutter: AyarlarSabitleri.komutDurumuKonusu().
+#define MQTT_KONU_KOMUT_DURUMU "aquaguard/zone%d/komut_durumu"
+
+// PubSubClient paket siniri (bayt). Varsayilan 256, telemetri JSON'u icin YETERSIZ.
+#define MQTT_PAKET_BOYUTU     768
+
 // APN bilgisi (SIM karti operatorune gore degisir -- YER TUTUCU)
 #define GSM_APN               "internet"
 #define GSM_KULLANICI         ""

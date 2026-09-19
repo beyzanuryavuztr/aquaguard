@@ -52,7 +52,7 @@ static unsigned long _debiSonHesapZamaniMs = 0;
 
 // ISR: her darbede yalnizca sayaci arttirir, baska islem yapmaz (kisa tutulmali)
 static void IRAM_ATTR _debiPalsKesmesi() {
-  _debiPalsSayaci++;
+  _debiPalsSayaci = _debiPalsSayaci + 1;  // "++" volatile uyarisi (C++20) icin acik yazim
 }
 
 // ============================================================================

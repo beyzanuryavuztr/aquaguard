@@ -244,7 +244,7 @@ class TestMesajOlustur:
             "zaman", "zone", "ph", "ec", "orp", "turbidite", "debi", "delta_basinc",
             "durum", "tikanma_turu", "guven", "guven_kimyasal", "guven_biyolojik",
             "guven_fiziksel", "tedavi_aktif", "durulama_aktif",
-            "hazne_asit_seviye_yuzde", "hazne_klor_seviye_yuzde",
+            "hazne_asit_seviye_yuzde", "hazne_klor_seviye_yuzde", "ana_vana_acik",
         }
         assert beklenen_alanlar.issubset(mesaj.keys())
         assert mesaj["zone"] == 1
@@ -252,6 +252,20 @@ class TestMesajOlustur:
         assert mesaj["durulama_aktif"] is False
         assert mesaj["hazne_asit_seviye_yuzde"] == 100.0
         assert mesaj["hazne_klor_seviye_yuzde"] == 100.0
+        assert mesaj["ana_vana_acik"] is True
+
+    def test_vana_kapaliyken_ana_vana_acik_false_yayinlanir(self):
+        rng = np.random.default_rng(6)
+        ornek = next(senaryo_adimlarini_uret(rng))[0]
+        teshis = kural_tabanli_teshis(ornek)
+
+        import json
+
+        mesaj = json.loads(_mesaj_olustur(
+            ornek, teshis, zone=1, tedavi_aktif="yok", durulama_aktif=False,
+            hazne_asit_yuzde=100.0, hazne_klor_yuzde=100.0, ana_vana_acik=False,
+        ))
+        assert mesaj["ana_vana_acik"] is False
 
 
 class _SahteMqttIstemci:
