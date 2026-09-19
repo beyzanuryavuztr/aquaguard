@@ -28,7 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/sunum_adimi.dart';
-import '../providers/uygulama_durumu.dart';
+import '../providers/cihaz_iletisim_provider.dart';
 import '../widgets/duyarli_icerik.dart';
 
 class JuriSunumEkrani extends StatefulWidget {
@@ -94,7 +94,7 @@ class _JuriSunumEkraniState extends State<JuriSunumEkrani> {
                           const SizedBox(height: 24),
                           FilledButton.icon(
                             onPressed: () => context
-                                .read<UygulamaDurumu>()
+                                .read<CihazIletisimProvider>()
                                 .demoSenaryosuTetikle(
                                   adim.opsiyonelDemoSenaryosu!,
                                 ),

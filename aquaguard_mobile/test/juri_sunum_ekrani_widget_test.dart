@@ -24,8 +24,11 @@ void main() {
     await durum.baslat();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+        ],
         child: const MaterialApp(home: JuriSunumEkrani()),
       ),
     );
@@ -47,8 +50,11 @@ void main() {
     await durum.baslat();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+        ],
         child: const MaterialApp(home: JuriSunumEkrani()),
       ),
     );
@@ -70,8 +76,11 @@ void main() {
     await durum.baslat();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+        ],
         child: const MaterialApp(home: JuriSunumEkrani()),
       ),
     );
@@ -96,8 +105,11 @@ void main() {
       final oncekiUzunluk = durum.aktiviteGecmisi.length;
 
       await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: durum,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ],
           child: const MaterialApp(home: JuriSunumEkrani()),
         ),
       );
@@ -120,8 +132,11 @@ void main() {
     await durum.baslat();
 
     await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: durum,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: durum),
+          ChangeNotifierProvider.value(value: durum.cihazProvider),
+        ],
         child: const MaterialApp(home: JuriSunumEkrani()),
       ),
     );
