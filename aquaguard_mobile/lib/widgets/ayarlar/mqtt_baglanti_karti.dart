@@ -10,10 +10,12 @@
 ///   dogrudan CihazIletisimProvider'i izler, facade uzerinden DEGIL.
 library;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/ayarlar_sabitleri.dart';
+import '../../models/mqtt_uyarilari.dart';
 import '../../providers/cihaz_iletisim_provider.dart';
 import '../../services/mqtt_servisi.dart';
 import 'bolum_basligi.dart';
@@ -41,6 +43,50 @@ class _MqttBaglantiKartiState extends State<MqttBaglantiKarti> {
     _kullaniciController.dispose();
     _parolaController.dispose();
     super.dispose();
+  }
+
+  /// Guvensiz yapilandirma uyarilari (K4 genel broker, Y4 web+https+TLS yok).
+  List<Widget> _uyariKutulari(BuildContext context) {
+    final mesajlar = <String>[
+      ?genelBrokerUyarisi(_hostController.text),
+      ?webTlsUyarisi(
+        web: kIsWeb,
+        https: Uri.base.scheme == 'https',
+        guvenli: _mqttGuvenli,
+      ),
+    ];
+    return [
+      for (final mesaj in mesajlar)
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.errorContainer,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  mesaj,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ];
   }
 
   @override
@@ -91,6 +137,7 @@ class _MqttBaglantiKartiState extends State<MqttBaglantiKarti> {
                 children: [
                   TextFormField(
                     controller: _hostController,
+                    onChanged: (_) => setState(() {}),
                     decoration: const InputDecoration(
                       labelText: 'Broker Adresi',
                       hintText: 'örn. test.mosquitto.org',
@@ -184,6 +231,7 @@ class _MqttBaglantiKartiState extends State<MqttBaglantiKarti> {
                       });
                     },
                   ),
+                  ..._uyariKutulari(context),
                   const SizedBox(height: 4),
                   Align(
                     alignment: Alignment.centerLeft,
