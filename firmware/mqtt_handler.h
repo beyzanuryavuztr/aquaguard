@@ -5,8 +5,9 @@
  * Amac:
  *   SIM800L GSM modulu uzerinden GPRS baglantisi kurar ve sensor/teshis/
  *   tedavi verisini MQTT protokolu ile uzak sunucuya (ve oradan Flutter
- *   mobil uygulamasina) yayinlar. Baglanti koptugunda ENGELLEMEDEN
- *   (non-blocking) periyodik olarak yeniden baglanmayi dener.
+ *   mobil uygulamasina) yayinlar. Baglanti koptugunda periyodik olarak
+ *   yeniden baglanmayi dener; deneme kutuphane icinde BLOKLAYICIDIR, bu
+ *   yuzden aktif bir tedavi (pompa) sirasinda ERTELENIR.
  *
  * JSON PAYLOAD SEMASI (mock_yayinci.py ve Flutter uygulamasiyla AYNI olmali):
  *   {
@@ -256,6 +257,14 @@ bool mqttBagliMi() {
 // BAGLANTI_DENEME_ARALIGI_MS gectiyse dener. Boylece ana dongu kilitlenmez.
 void mqttBaglantiyiSagla() {
   if (_mqttClient.connected()) {
+    return;
+  }
+
+  // GUVENLIK (K3): gprsConnect/connect BLOKLAYICIDIR (onlarca saniye). Bir
+  // pompa CALISIRKEN bu blokaj tedaviGuncelle()'yi durdurur ve pompa
+  // suresini asabilir -- bu yuzden aktif tedavi bitene kadar yeniden
+  // baglanma denemesi ERTELENIR (veri yayini o sure kesilir, ki bu guvenli).
+  if (aktifTedaviGetir() != TEDAVI_YOK) {
     return;
   }
 

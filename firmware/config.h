@@ -120,6 +120,30 @@
 #define ADC_REFERANS_VOLTAJ     3.30f
 #define ADC_COZUNURLUK          4095.0f
 
+// GERILIM BOLUCU ORANLARI (Y1 -- KRITIK DONANIM AYARI)
+// ESP32 ADC pini EN FAZLA 3.3 V okur; ustundeki giris kartin ADC girisine
+// ZARAR VERIR ve okuma kirpilir. Basinc transduseri (0.5-4.5 V) ve turbidite
+// modulu (~4.2 V) 3.3 V'u ASAR: bu ikisi icin sensor ile ADC pini arasina
+// iki direncli bir gerilim bolucu KONMALIDIR. Oran = V_pin / V_sensor:
+//   R1 (ust) = 10k, R2 (alt) = 20k  ->  oran = 20/(10+20) = 0.6667
+// Firmware, okunan pin voltajini bu orana bolerek SENSOR tarafi voltaji geri
+// hesaplar; kalibrasyon sabitleri SENSOR tarafi voltajla tanimlidir.
+// 1.0 = bolucu YOK (sensor cikisi zaten <= 3.3 V ise, orn. pH/EC/ORP
+// modulleri). GERCEK direnc degerlerinizi olcup burayi guncelleyin.
+#define PH_BOLUCU_ORANI          1.0f
+#define EC_BOLUCU_ORANI          1.0f
+#define ORP_BOLUCU_ORANI         1.0f
+#define TURBIDITE_BOLUCU_ORANI   0.6667f   // 10k/20k bolucu VARSAYIMI
+#define BASINC_BOLUCU_ORANI      0.6667f   // 10k/20k bolucu VARSAYIMI
+
+// Sensorlerin BEKLENEN EN YUKSEK cikis voltajlari (derleme zamani guvenlik
+// kontrolu icin -- bkz. sensors.h static_assert). Modul datasheet'inden girin.
+#define PH_MAKS_CIKIS_V          3.00f
+#define EC_MAKS_CIKIS_V          3.00f
+#define ORP_MAKS_CIKIS_V         3.00f
+#define TURBIDITE_MAKS_CIKIS_V   4.50f
+#define BASINC_MAKS_CIKIS_V      BASINC_MAKS_VOLTAJ
+
 // ============================================================================
 // 4) FIZIKSEL SINIRLAR (sensors.h'de disari tasan degerleri kirpmak icin)
 // ============================================================================
@@ -214,6 +238,13 @@
 
 // PubSubClient paket siniri (bayt). Varsayilan 256, telemetri JSON'u icin YETERSIZ.
 #define MQTT_PAKET_BOYUTU     768
+
+// Donanim watchdog zaman asimi (ms). Ana dongu bu surede ilerlemezse (kilitlenme,
+// beklenmedik bloklama) kart YENIDEN BASLATILIR -- yeniden baslatma pompa
+// pinlerini LOW yapar (tedaviSistemBaslat), yani hata durumunda kimyasal
+// dozlama GUVENLI yone (durma) duser. GSM baglanti denemeleri (TinyGSM
+// gprsConnect ~60 sn bloklayabilir) bunu tetiklemesin diye 120 sn.
+#define WATCHDOG_ZAMAN_ASIMI_MS 120000UL
 
 // APN bilgisi (SIM karti operatorune gore degisir -- YER TUTUCU)
 #define GSM_APN               "internet"

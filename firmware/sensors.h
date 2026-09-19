@@ -79,13 +79,30 @@ static float _medyanBul(float ornekler[], int adet) {
   return ornekler[adet / 2];
 }
 
-// Bir analog pinden 5 hizli ornek alip medyan voltaji dondurur
-static float _medyanVoltajOku(int pin) {
+// DERLEME ZAMANI GUVENLIK KONTROLU (Y1): sensorun en yuksek cikis voltaji,
+// bolucu orani uygulandiktan SONRA ADC referansini (3.3 V) asiyorsa derleme
+// DURUR -- aksi halde kartin ADC girisi zarar gorurdu. Bkz. config.h
+// "GERILIM BOLUCU ORANLARI".
+static_assert(PH_MAKS_CIKIS_V * PH_BOLUCU_ORANI <= ADC_REFERANS_VOLTAJ,
+              "pH sensoru cikisi ADC referansini asiyor: PH_BOLUCU_ORANI kucultulmeli");
+static_assert(EC_MAKS_CIKIS_V * EC_BOLUCU_ORANI <= ADC_REFERANS_VOLTAJ,
+              "EC sensoru cikisi ADC referansini asiyor: EC_BOLUCU_ORANI kucultulmeli");
+static_assert(ORP_MAKS_CIKIS_V * ORP_BOLUCU_ORANI <= ADC_REFERANS_VOLTAJ,
+              "ORP sensoru cikisi ADC referansini asiyor: ORP_BOLUCU_ORANI kucultulmeli");
+static_assert(TURBIDITE_MAKS_CIKIS_V * TURBIDITE_BOLUCU_ORANI <= ADC_REFERANS_VOLTAJ,
+              "Turbidite modulu cikisi ADC referansini asiyor: TURBIDITE_BOLUCU_ORANI kucultulmeli");
+static_assert(BASINC_MAKS_CIKIS_V * BASINC_BOLUCU_ORANI <= ADC_REFERANS_VOLTAJ,
+              "Basinc sensoru cikisi ADC referansini asiyor: BASINC_BOLUCU_ORANI kucultulmeli");
+
+// Bir analog pinden 5 hizli ornek alip medyan voltaji dondurur.
+// [bolucuOrani]: sensor ile ADC pini arasindaki gerilim bolucunun orani
+// (V_pin / V_sensor); donen deger SENSOR TARAFI voltajdir (bolucu geri alinir).
+static float _medyanVoltajOku(int pin, float bolucuOrani = 1.0f) {
   const int ORNEK_SAYISI = 5;
   float ornekler[ORNEK_SAYISI];
   for (int i = 0; i < ORNEK_SAYISI; i++) {
     int ham = analogRead(pin);
-    ornekler[i] = (ham / ADC_COZUNURLUK) * ADC_REFERANS_VOLTAJ;
+    ornekler[i] = ((ham / ADC_COZUNURLUK) * ADC_REFERANS_VOLTAJ) / bolucuOrani;
     delayMicroseconds(200);   // ardisik ornekler arasi kisa bekleme
   }
   return _medyanBul(ornekler, ORNEK_SAYISI);
@@ -96,32 +113,32 @@ static float _medyanVoltajOku(int pin) {
 // ============================================================================
 
 float phOku() {
-  float voltaj = _medyanVoltajOku(PIN_PH_SENSOR);
+  float voltaj = _medyanVoltajOku(PIN_PH_SENSOR, PH_BOLUCU_ORANI);
   float ph = PH_KALIBRASYON_OFSET + (voltaj - PH_KALIBRASYON_NOTR_V) * PH_KALIBRASYON_EGIM;
   return _degereSinirlaFloat(ph, PH_MIN, PH_MAKS);
 }
 
 float ecOku() {
-  float voltaj = _medyanVoltajOku(PIN_EC_SENSOR);
+  float voltaj = _medyanVoltajOku(PIN_EC_SENSOR, EC_BOLUCU_ORANI);
   float ec = EC_KALIBRASYON_OFSET + voltaj * EC_KALIBRASYON_EGIM;
   return _degereSinirlaFloat(ec, EC_MIN, EC_MAKS);
 }
 
 float orpOku() {
-  float voltaj = _medyanVoltajOku(PIN_ORP_SENSOR);
+  float voltaj = _medyanVoltajOku(PIN_ORP_SENSOR, ORP_BOLUCU_ORANI);
   float orp = (voltaj - ORP_KALIBRASYON_OFSET_V) * ORP_KALIBRASYON_KAZANC;
   return _degereSinirlaFloat(orp, ORP_MIN, ORP_MAKS);
 }
 
 float turbiditeOku() {
-  float voltaj = _medyanVoltajOku(PIN_TURBIDITE_SENSOR);
+  float voltaj = _medyanVoltajOku(PIN_TURBIDITE_SENSOR, TURBIDITE_BOLUCU_ORANI);
   // Voltaj dustukce bulaniklik artar (temiz suda voltaj en yuksek)
   float ntu = (TURBIDITE_KALIBRASYON_TEMIZ_V - voltaj) * TURBIDITE_KALIBRASYON_EGIM;
   return _degereSinirlaFloat(ntu, TURBIDITE_MIN, TURBIDITE_MAKS);
 }
 
 float basincOku() {
-  float voltaj = _medyanVoltajOku(PIN_BASINC_SENSOR);
+  float voltaj = _medyanVoltajOku(PIN_BASINC_SENSOR, BASINC_BOLUCU_ORANI);
   float oran = (voltaj - BASINC_MIN_VOLTAJ) / (BASINC_MAKS_VOLTAJ - BASINC_MIN_VOLTAJ);
   float bar = oran * BASINC_MAKS_BAR;
   return _degereSinirlaFloat(bar, DELTA_BASINC_MIN, DELTA_BASINC_MAKS);

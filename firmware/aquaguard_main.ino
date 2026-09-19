@@ -9,14 +9,17 @@
  *     sensor oku -> karar ver (Katman 1) -> gerekiyorsa tedavi uygula
  *     -> SD karta logla -> MQTT ile yayinla
  *
- *   TASARIM ILKESI: Hicbir yerde delay() kullanilmaz. Tum zamanlama
- *   millis() tabanli non-blocking sayaclarla yapilir; boylece sensor
- *   okuma, tedavi durum makinesi ve MQTT baglantisi birbirini bloke etmeden
- *   ayni anda ilerleyebilir.
+ *   TASARIM ILKESI: Zamanlama millis() tabanli sayaclarla yapilir, delay()
+ *   yalnizca kurulumda (seri port stabilizasyonu) kullanilir. DIKKAT: GSM
+ *   yeniden baglanma cagrilari (TinyGSM gprsConnect, PubSubClient connect)
+ *   kutuphane icinde BLOKLAYICIDIR; bu yuzden (a) bir pompa calisirken
+ *   yeniden baglanma ERTELENIR (mqtt_handler.h), (b) donanim watchdog'u
+ *   kilitlenmeye karsi karti yeniden baslatir (bkz. watchdogBaslat).
  *
  * ONEMLI - DERLEME / SAHA NOTU:
- *   Bu dosya, bu gelistirme ortaminda (Arduino/Deneyap Kart derleyicisi
- *   kurulu olmadigi icin) DERLENIP TEST EDILEMEMISTIR. Kod, Arduino/ESP32
+ *   Bu dosya arduino-cli ile GENEL ESP32 karti icin DERLENDI (2026-09-19),
+ *   ama Deneyap Kart tanimiyla derlenmedi ve GERCEK DONANIMDA HIC
+ *   CALISTIRILMADI. Kod, Arduino/ESP32
  *   C++ standartlarina ve kullanilan kutuphanelerin (TinyGSM, PubSubClient,
  *   ArduinoJson, RTClib, SD, ESP32Servo) bilinen API'lerine uygun sekilde
  *   yazilmistir; ancak gercek Deneyap Kart uzerinde Deneyap Kart IDE'siyle
@@ -62,6 +65,32 @@ static unsigned long _sonMqttZamaniMs = 0;
 void islemDongusunuCalistir();
 
 // ============================================================================
+// DONANIM WATCHDOG (K3)
+// ============================================================================
+// Ana dongu WATCHDOG_ZAMAN_ASIMI_MS boyunca ilerlemezse kart yeniden
+// baslatilir; yeniden baslatma pompa pinlerini LOW yapar (guvenli yon).
+// Arduino-ESP32 cekirdek 3.x (IDF 5) ve 2.x (IDF 4) API'leri FARKLIDIR:
+// 3.x yolu derlenerek dogrulandi, 2.x yolu (Deneyap Kart paketi 2.x
+// cekirdek kullanabilir) DERLENMEDI -- gercek kartla ilk derlemede kontrol edin.
+#include <esp_task_wdt.h>
+
+static void watchdogBaslat() {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  esp_task_wdt_config_t ayar = {};
+  ayar.timeout_ms = WATCHDOG_ZAMAN_ASIMI_MS;
+  ayar.idle_core_mask = 0;   // bosta gorevleri izleme, sadece ana dongu
+  ayar.trigger_panic = true; // zaman asiminda yeniden baslat
+  // Cekirdek watchdog'u onceden baslattiysa yeniden yapilandir, degilse baslat.
+  if (esp_task_wdt_reconfigure(&ayar) == ESP_ERR_INVALID_STATE) {
+    esp_task_wdt_init(&ayar);
+  }
+#else
+  esp_task_wdt_init(WATCHDOG_ZAMAN_ASIMI_MS / 1000, true);
+#endif
+  esp_task_wdt_add(NULL);    // mevcut gorevi (loop) izlemeye al
+}
+
+// ============================================================================
 // KURULUM
 // ============================================================================
 
@@ -89,6 +118,11 @@ void setup() {
   mqttBaslat();
   Serial.println(F("[SISTEM] GSM/MQTT modulu baslatildi."));
 
+  // Watchdog, modem yeniden baslatma gibi uzun kurulum adimlarindan SONRA
+  // devreye girer (aksi halde kurulum sirasinda kendini yeniden baslatirdi).
+  watchdogBaslat();
+  Serial.println(F("[SISTEM] Donanim watchdog aktif."));
+
   Serial.println(F("[SISTEM] Kurulum tamamlandi, ana donguye giriliyor.\n"));
 }
 
@@ -97,6 +131,7 @@ void setup() {
 // ============================================================================
 
 void loop() {
+  esp_task_wdt_reset();   // ana dongu yasiyor -- watchdog'u besle
   // Non-blocking durum makineleri -- HER turda ilerletilmeli
   tedaviGuncelle();
   mqttDonguyuIsle();

@@ -36,6 +36,18 @@ WiFi aktifken güvenilir çalışmaz) — bu kısıtlama Deneyap Kart'ın hangi
 revizyonu kullanıldığında da geçerlidir, pin değiştirilecekse mutlaka ADC1
 kanalından seçilmelidir.
 
+## 1b) Gerilim Bölücü (ADC 3,3 V sınırı) — KRİTİK
+
+ESP32 ADC pini **en fazla 3,3 V** okur. Basınç transduseri (0,5–4,5 V) ve
+türbidite modülü (~4,2 V) bunu aşar; bu iki sensörün çıkışı ile ADC pini
+arasına iki dirençli gerilim bölücü konmalıdır (örn. üst 10 kΩ / alt 20 kΩ →
+oran 0,6667). `config.h`'deki `*_BOLUCU_ORANI` değerleri firmware'e bu oranı
+söyler; yanlış/eksik ayar **derleme hatası** verir (`sensors.h`
+static_assert) — böylece 4,5 V'luk çıkış bölücüsüz bağlanacak bir yapılandırma
+derlenemez. pH/EC/ORP modülleri genelde ≤ 3 V verir (oran 1,0); **modül
+datasheet'inden doğrulayın**. Kalibrasyon sabitleri SENSÖR tarafı voltajla
+tanımlıdır (firmware bölücüyü geri alır).
+
 ## 2) Sensör Kalibrasyonu
 
 Tüm analog sensörler aynı yöntemle kalibre edilir: iki bilinen referans
@@ -85,6 +97,15 @@ Kod flaşlandıktan sonra, karmaşık senaryolara (otonom tedavi vb.) geçmeden
    gerçek donanımda da geçerli olduğunun ilk kanıtıdır.
 
 ## 4) Bilinen Sınırlamalar / Dikkat Edilmesi Gerekenler
+
+- **Watchdog + bağlanma ertelemesi (2026-09-19)**: GSM yeniden bağlanma
+  çağrıları (TinyGSM `gprsConnect`, PubSubClient `connect`) kütüphane içinde
+  **bloklayıcıdır**. Bir pompa çalışırken bu, tedavi süresini aşırabilirdi;
+  artık aktif tedavi sürerken yeniden bağlanma **ertelenir** (bu sürede veri
+  yayını kesilir). Ayrıca 120 sn'lik donanım watchdog'u ana döngü kilitlenirse
+  kartı yeniden başlatır (yeniden başlatma pompa pinlerini LOW yapar). Watchdog
+  API'si çekirdek 3.x için derlendi; Deneyap Kart paketi 2.x çekirdek
+  kullanıyorsa `#else` yolu **derlenmedi** — ilk derlemede kontrol edin.
 
 Bu proje boyunca yapılan "acımasız hakem" denetim turlarında firmware
 **inceleme yoluyla** (derleme olmadan) düzeltildi. Aşağıdaki değişiklik,
