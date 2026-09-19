@@ -48,7 +48,13 @@ class SensorKarti extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
-    final kart = AnimatedContainer(
+    final degerMetni =
+        '${deger.toStringAsFixed(deger.abs() < 10 ? 2 : 0)}'
+        '${birim.isNotEmpty ? ' $birim' : ''}';
+    final saglikMetni = saglikDurumu == SensorSaglikDurumu.normal
+        ? ''
+        : ', uyarı: ${sensorSagligiEtiketi(saglikDurumu)}';
+    final kartGorunum = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: secili
@@ -100,6 +106,17 @@ class SensorKarti extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    final kart = Semantics(
+      button: true,
+      selected: secili,
+      label: '$baslik sensörü',
+      value: '$degerMetni$saglikMetni',
+      hint: 'Trend grafiğini göstermek için dokunun',
+      onTap: onTap,
+      excludeSemantics: true,
+      child: kartGorunum,
     );
 
     if (saglikDurumu == SensorSaglikDurumu.normal) return kart;

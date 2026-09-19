@@ -38,9 +38,29 @@ class EnerjiGostergesi extends StatelessWidget {
         ? DurumRenkleri.belirsiz
         : DurumRenkleri.tespitEdildi;
 
+    return Semantics(
+      label: 'Cihaz enerji durumu, simüle gösterge',
+      value: 'Pil yüzde $pil, ${gsmGuclu ? 'GSM güçlü' : 'GSM orta'}',
+      excludeSemantics: true,
+      child: _tooltipluGosterge(
+        context,
+        pil,
+        gsmGuclu,
+        pilRenk,
+        onSurfaceVariant,
+      ),
+    );
+  }
+
+  Widget _tooltipluGosterge(
+    BuildContext context,
+    int pil,
+    bool gsmGuclu,
+    Color pilRenk,
+    Color onSurfaceVariant,
+  ) {
     return Tooltip(
-      message:
-          'Simüle gösterge — firmware şu an bu telemetriyi yayınlamıyor.',
+      message: 'Simüle gösterge — firmware şu an bu telemetriyi yayınlamıyor.',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(

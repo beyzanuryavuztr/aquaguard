@@ -50,9 +50,9 @@ class MutexKilitGostergesi extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   'Tedavi Kanalı Kilidi',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -102,8 +102,23 @@ class _KanalGostergesi extends StatelessWidget {
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
     final renk = aktifMi
         ? DurumRenkleri.tedaviAktif
-        : (kilitliMi ? onSurfaceVariant.withValues(alpha: 0.4) : onSurfaceVariant);
+        : (kilitliMi
+              ? onSurfaceVariant.withValues(alpha: 0.4)
+              : onSurfaceVariant);
 
+    return Semantics(
+      label: '$etiket kanalı',
+      value: aktifMi ? 'çalışıyor' : (kilitliMi ? 'kilitli' : 'hazır'),
+      excludeSemantics: true,
+      child: _kanalGorunumu(context, renk, onSurfaceVariant),
+    );
+  }
+
+  Widget _kanalGorunumu(
+    BuildContext context,
+    Color renk,
+    Color onSurfaceVariant,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
@@ -132,11 +147,7 @@ class _KanalGostergesi extends StatelessWidget {
                       color: Theme.of(context).colorScheme.surfaceContainerHigh,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.lock,
-                      size: 12,
-                      color: onSurfaceVariant,
-                    ),
+                    child: Icon(Icons.lock, size: 12, color: onSurfaceVariant),
                   ),
                 ),
             ],
