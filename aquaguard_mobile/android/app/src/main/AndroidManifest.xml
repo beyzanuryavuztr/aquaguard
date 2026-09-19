@@ -7,6 +7,13 @@
          yalnizca debug/profile manifestlerine koyar -- RELEASE APK'de yoksa
          uygulama hicbir ag baglantisi kuramaz. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ (API 33): bildirim gostermek icin calisma zamani izni;
+         flutter_local_notifications requestNotificationsPermission() bunu
+         ister, ama manifestte DECLARE edilmemisse istek sessizce basarisiz
+         olur. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- PIN ekraninda biyometrik dogrulama (local_auth). -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
