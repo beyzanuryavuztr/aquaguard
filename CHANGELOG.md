@@ -19,8 +19,10 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - Demo Modu: gerçek donanım olmadan uygulama-içi simülasyon servisi,
   ayarlanabilir hız, tek dokunuşla senaryo tetikleme (sağlıklı/kimyasal/
   biyolojik/fiziksel tıkanma/mutex kilidi gösterimi).
-- Operatör manuel müdahale paneli: belirsiz teşhiste manuel tedavi seçimi,
-  aktif tedaviyi erken durdurma, yanlış alarm işaretleme, ana vana
+- Operatör manuel müdahale paneli: "Hızlı Eylemler" ile sağlıklı bir zonda
+  bile asit/klor/yıkama elle başlatma (onay + 3 sn kimyasal geri sayımı +
+  mutex kilidi), belirsiz teşhiste manuel tedavi seçimi, aktif tedaviyi
+  erken durdurma, yanlış alarm işaretleme, ana vana
   aç/kapat, acil durdurma (tüm zonlar).
 
 ### Eklenenler — Ekranlar ve Kullanıcı Deneyimi
@@ -31,6 +33,7 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
   Jüri Sunum Modu, İş Fizibilitesi, Model Performansı, Hakkında.
 - Koyu/Açık/Sistem tema desteği, aksan rengi seçimi (teal/toprak), Saha
   Modu (güneş altında okunabilirlik için kontrast artırımı).
+  Renk körlüğü uyumlu durum paleti (Ayarlar > Görünüm).
 - Bağlamsal yardım butonları, sensör gauge göstergeleri, sistem sağlığı
   göstergesi, zon şeması.
 - Tarla GPS konumu ve harita (flutter_map/OpenStreetMap, API anahtarı
@@ -63,7 +66,7 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - CI/CD: GitHub Actions üzerinde `flutter analyze --fatal-infos`,
   `flutter test --coverage`, `flutter build web --release`; Python
   katmanı için ayrı `pytest` işi.
-- Test paketi: 382 Flutter testi + Python `pytest` paketi.
+- Test paketi: 391 Flutter testi + Python `pytest` paketi.
 
 ### Güvenlik
 
