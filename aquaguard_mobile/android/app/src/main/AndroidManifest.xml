@@ -3,6 +3,10 @@
          icin sadece ON PLANDA, TEK SEFERLIK bir konum okumasi -- surekli
          arka plan takibi YOK, bu yuzden ACCESS_BACKGROUND_LOCATION
          istenmiyor. -->
+    <!-- MQTT, OpenStreetMap karolari ve TLS icin GEREKLI. Flutter bu izni
+         yalnizca debug/profile manifestlerine koyar -- RELEASE APK'de yoksa
+         uygulama hicbir ag baglantisi kuramaz. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
