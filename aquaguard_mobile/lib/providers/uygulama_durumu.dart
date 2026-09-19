@@ -9,20 +9,18 @@
 ///   cihaz_iletisim_provider.dart -- her birinin dosya basi notu KENDI
 ///   sorumluluk alanini ve boluunme gerekcesini aciklar).
 ///
-///   Bu facade GECICIDIR: 76 dosya (42 lib + 34 test) hala
-///   `context.watch<UygulamaDurumu>()` / `Provider.of<UygulamaDurumu>()`
-///   uzerinden calisiyor -- hepsini TEK seferde 6 yeni provider'a tasimak
-///   riskli bir "big bang" degisiklik olurdu. Bunun yerine: TUM eski genel
-///   API (getter/metod imzalari) BIREBIR korunur, her cagri ilgili yeni
-///   provider'a DELEGE edilir. Ekranlar zamanla (en yuksek trafikliden
-///   baslanarak) dogrudan ilgili yeni provider'a tasindikca, bu facade'a
-///   olan bagimlilik azalir; TUM ekranlar tasindiginda bu dosya kaldirilir.
+///   GUNCEL DURUM (2026-09-19): hicbir ekran/widget artik bu facade'i
+///   izlemiyor -- hepsi dogrudan ilgili alt provider'i kullaniyor. Facade
+///   iki gorevle KALIYOR: (1) main.dart'ta alt provider'larin yasam
+///   dongusunu ve baslatma sirasini yoneten KOMPOZISYON KOKU, (2) 38 test
+///   dosyasinin tek satirlik kurulum girisi (`UygulamaDurumu()..baslat()`).
+///   Eski genel API imzalari testler icin korunur; yeni kod bunlari
+///   KULLANMAMALI -- ilgili alt provider'a dogrudan gitmeli.
 ///
 ///   ChangeNotifier OLARAK KALIR (Provider'in bekledigi tip), ama kendi
 ///   durumunu TUTMAZ -- 6 alt provider'dan herhangi biri degisince
 ///   (`addListener` ile dinlenir) kendi `notifyListeners()`'ini tetikler,
-///   boylece hala bu facade'i dinleyen (henuz tasinmamis) ekranlar da
-///   dogru zamanda yeniden cizilir.
+///   boylece bu facade'i dinleyen testler de dogru zamanda bilgilendirilir.
 ///
 /// Tarih:  2026-09-01 (ilk yazim) / 2026-09-17 (facade'a donusturuldu)
 library;
@@ -62,8 +60,8 @@ export 'cihaz_iletisim_provider.dart' show DemoSenaryosu, ZonDurumOzeti;
 
 class UygulamaDurumu extends ChangeNotifier {
   // Alt provider'lar disaridan enjekte EDILMEZ -- bu facade'in TEK
-  // gorevi, eski `UygulamaDurumu()` (parametresiz) genel API'sini 76
-  // tuketici dosya (42 lib + 34 test) icin DEGISTIRMEDEN korumaktir.
+  // gorevi, eski `UygulamaDurumu()` (parametresiz) genel API'sini
+  // test dosyalari icin DEGISTIRMEDEN korumaktir.
   // TarlaProvider'in callback'leri (bkz. o dosyanin dosya basi notu)
   // CihazIletisimProvider'a `late final` araciligiyla GECIKMELI referans
   // verir -- callback'ler ancak tarlaEkle/tarlaSil cagrildiginda (yani
@@ -75,7 +73,7 @@ class UygulamaDurumu extends ChangeNotifier {
   // repository'ler olarak enjekte edilir (bkz. asagisi). Opsiyonel olarak
   // DISARIDAN enjekte edilebilir -- SADECE testlerin "uygulamayi kapat/
   // yeniden ac" senaryosunu (iki ayri UygulamaDurumu ornegi, AYNI kalici
-  // depoyu paylasmali) simule edebilmesi icin; 74/76 cagiran dosya bunu
+  // depoyu paylasmali) simule edebilmesi icin; testlerin cogu bunu
   // KULLANMAZ, parametresiz `UygulamaDurumu()` DEGISMEDEN calismaya devam eder.
   final AquaGuardVeritabani _veritabani;
   final bool _veritabaniSahibi;

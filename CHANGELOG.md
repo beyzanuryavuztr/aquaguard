@@ -49,11 +49,11 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 
 - "God Object" `UygulamaDurumu` provider'ı 6 odaklı alt provider'a
   bölündü (Ayarlar, Tarla, Güvenlik, Bakım, Aktivite/Bildirim, Cihaz
-  İletişim); eski genel API'yi koruyan geçici bir facade üzerinden
-  76 tüketici dosya değiştirilmeden çalışmaya devam ediyor.
-  Performans: en dar kapsamlı 3 ekran (PIN kilidi, bildirim geçmişi,
-  tarla notları) doğrudan ilgili alt provider'ı izleyecek şekilde
-  taşındı.
+  İletişim). Tüm ekranlar ve widget'lar artık yalnızca ihtiyaç duydukları
+  alt provider'ı izliyor; `UygulamaDurumu` yalnızca yaşam döngüsünü
+  yöneten kompozisyon kökü olarak kalıyor. Kök `MaterialApp` artık her
+  sensör okumasında değil, sadece tema/dil/yazı boyutu değişince yeniden
+  çiziliyor. Ayarlar ekranı 11 bağımsız bölüm widget'ına bölündü.
 - Repository pattern ile depolama katmanı soyutlandı; SharedPreferences
   yerine SQLite'a (drift) geçildi — sensör geçmişi, aktivite/bildirim
   geçmişi ve tarla notları artık pratik bir üst sınırı olmayan (10.000
