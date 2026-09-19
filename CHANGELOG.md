@@ -86,8 +86,9 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
   kapalıdır; üretimde kendi TLS+kimlik doğrulamalı broker'ınızı kullanın.
 - i18n sadece Ayarlar > Görünüm bölümünde etkin; uygulamanın geri
   kalanı sabit Türkçe metin içerir.
-- Firmware (`firmware/`) bu geliştirme ortamında derlenip gerçek
-  donanımda doğrulanamamıştır — sadece kod incelemesiyle yazılmıştır.
+- Firmware (`firmware/`) genel ESP32 kartı için uyarısız derleniyor
+  (arduino-cli), ancak Deneyap Kart tanımıyla derlenmedi ve gerçek
+  donanımda hiç çalıştırılmadı; pinler ve kalibrasyon sabitleri yer tutucudur.
 - Erişilebilirlik: ana durum/sensör/kontrol widget'larında ekran okuyucu
   etiketleri var; uygulamanın tamamı henüz taranmadı.
 - README'deki ekran görüntüleri bölümü henüz gerçek görsellerle

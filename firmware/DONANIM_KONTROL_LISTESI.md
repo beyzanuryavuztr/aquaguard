@@ -1,9 +1,11 @@
 # AquaGuard Firmware — Donanım Entegrasyon Kontrol Listesi
 
-Bu liste Enver için hazırlandı: `firmware/` klasöründeki kod bu ortamda hiç
-derlenmedi (Arduino/ESP32 toolchain mevcut değil) — yazılım tarafı dikkatli
-inceleme ile yazıldı, ama gerçek donanımda ilk kez çalıştırılmadan önce
-aşağıdaki adımların sırayla doğrulanması gerekiyor.
+Bu liste Enver için hazırlandı: `firmware/` kodu 2026-09-19'da arduino-cli (ESP32 çekirdeği 3.x, genel
+`esp32:esp32:esp32` kartı; TinyGSM 0.12, PubSubClient 2.8, ArduinoJson 7.4,
+ESP32Servo 3.1, RTClib 2.1) ile UYARISIZ DERLENDİ (%31 flash, %7 RAM).
+Bu yalnızca sözdizimi/kütüphane uyumunu doğrular: Deneyap Kart'a özgü kart
+tanımıyla derleme, pin doğruluğu ve sensör davranışı gerçek donanımda
+ilk kez çalıştırılmadan önce aşağıdaki adımlarla doğrulanmalı.
 
 ## 1) Pin Bağlantı Doğrulaması
 
