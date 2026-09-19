@@ -63,10 +63,14 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - CI/CD: GitHub Actions üzerinde `flutter analyze --fatal-infos`,
   `flutter test --coverage`, `flutter build web --release`; Python
   katmanı için ayrı `pytest` işi.
-- Test paketi: 369 Flutter testi + Python `pytest` paketi.
+- Test paketi: 382 Flutter testi + Python `pytest` paketi.
 
 ### Güvenlik
 
+- MQTT kullanıcı adı/parola desteği: parola cihazın güvenli deposunda saklanır,
+  arayüzde geri gösterilmez; TLS kapalıyken uyarı gösterilir.
+- PIN oturum zaman aşımı: uygulama 5 dakikadan uzun arka planda kalırsa PIN
+  ekranı yeniden mevcut ekranın üstüne biner.
 - Kimyasal dozlama (asit/klor) başlatma onayına, yanlışlıkla dokunmayı
   zorlaştıran 3 saniyelik geri sayım eklendi.
 - MQTT bağlantısı için opsiyonel TLS desteği (varsayılan halen düz
@@ -75,12 +79,13 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 ### Bilinen Sınırlamalar
 
 - MQTT varsayılan olarak genel test broker'ı (`test.mosquitto.org`)
-  üzerinden düz TCP ile çalışır; kullanıcı adı/parola kimlik doğrulaması
-  henüz yok. Üretimde kendi TLS+kimlik doğrulamalı broker'ınızı kullanın.
+  üzerinden düz TCP ile çalışır. Kimlik doğrulama desteklenir ama varsayılan
+  kapalıdır; üretimde kendi TLS+kimlik doğrulamalı broker'ınızı kullanın.
 - i18n sadece Ayarlar > Görünüm bölümünde etkin; uygulamanın geri
   kalanı sabit Türkçe metin içerir.
 - Firmware (`firmware/`) bu geliştirme ortamında derlenip gerçek
   donanımda doğrulanamamıştır — sadece kod incelemesiyle yazılmıştır.
-- Erişilebilirlik (ekran okuyucu desteği) henüz kapsamlı değildir.
+- Erişilebilirlik: ana durum/sensör/kontrol widget'larında ekran okuyucu
+  etiketleri var; uygulamanın tamamı henüz taranmadı.
 - README'deki ekran görüntüleri bölümü henüz gerçek görsellerle
   doldurulmadı (`docs/screenshots/` — manuel olarak eklenecek).
