@@ -60,6 +60,8 @@ class MqttServisi {
     required int port,
     required List<int> zonlar,
     required bool guvenli,
+    String kullaniciAdi = "",
+    String parola = "",
   }) async {
     baglantiDurumuDegistiginde(MqttBaglantiDurumu.baglaniyor);
 
@@ -87,9 +89,14 @@ class MqttServisi {
     };
     istemci.logging(on: false);
 
-    istemci.connectionMessage = MqttConnectMessage()
+    var baglantiMesaji = MqttConnectMessage()
         .withClientIdentifier(clientId)
         .startClean();
+    // Kimlik dogrulama (D1): bos kullanici adi = anonim baglanti.
+    if (kullaniciAdi.isNotEmpty) {
+      baglantiMesaji = baglantiMesaji.authenticateAs(kullaniciAdi, parola);
+    }
+    istemci.connectionMessage = baglantiMesaji;
 
     try {
       await istemci.connect();

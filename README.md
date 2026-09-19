@@ -169,6 +169,12 @@ okuyabilmesini sağlayın. Ayarlar ekranındaki "Güvenli Bağlantı (TLS)"
 anahtarı açıldığında uygulama TLS (8883) veya WSS (8081) üzerinden
 bağlanır; bu, sunucu tarafında TLS dinleyicisi açık bir broker gerektirir.
 
+Broker kimlik doğrulaması için Ayarlar > MQTT Bağlantısı bölümünden
+kullanıcı adı/parola girilebilir. Parola SharedPreferences'a değil, cihazın
+güvenli deposuna (Android Keystore / iOS Keychain / web WebCrypto) yazılır ve
+arayüzde geri gösterilmez. TLS kapalıyken kimlik bilgisi şifresiz gideceği için
+uygulama uyarı gösterir; üretimde TLS ile birlikte kullanın.
+
 ## Durum
 
 Yazılım (Python karar motoru + Flutter uygulaması) bu depoda geliştirilip

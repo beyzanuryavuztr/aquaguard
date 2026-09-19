@@ -28,6 +28,8 @@ class MqttBaglantiKarti extends StatefulWidget {
 class _MqttBaglantiKartiState extends State<MqttBaglantiKarti> {
   final _hostController = TextEditingController();
   final _portController = TextEditingController();
+  final _kullaniciController = TextEditingController();
+  final _parolaController = TextEditingController();
   final _formAnahtari = GlobalKey<FormState>();
   bool _mqttGuvenli = false;
   bool _baslangicDegerleriYuklendi = false;
@@ -36,6 +38,8 @@ class _MqttBaglantiKartiState extends State<MqttBaglantiKarti> {
   void dispose() {
     _hostController.dispose();
     _portController.dispose();
+    _kullaniciController.dispose();
+    _parolaController.dispose();
     super.dispose();
   }
 
@@ -47,6 +51,7 @@ class _MqttBaglantiKartiState extends State<MqttBaglantiKarti> {
       _hostController.text = cihaz.mqttHost;
       _portController.text = cihaz.mqttPort.toString();
       _mqttGuvenli = cihaz.mqttGuvenli;
+      _kullaniciController.text = cihaz.mqttKullaniciAdi;
       _baslangicDegerleriYuklendi = true;
     }
 
@@ -112,6 +117,41 @@ class _MqttBaglantiKartiState extends State<MqttBaglantiKarti> {
                     },
                   ),
                   const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _kullaniciController,
+                    autocorrect: false,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Kullanıcı Adı (opsiyonel)',
+                      helperText: 'Boş bırakırsanız anonim bağlanılır',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _parolaController,
+                    obscureText: true,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      labelText: 'Parola',
+                      helperText: cihaz.mqttParolaTanimli
+                          ? 'Kayıtlı parola korunur; değiştirmek için yeni parola girin'
+                          : 'Cihazın güvenli deposunda saklanır',
+                    ),
+                  ),
+                  if (_kullaniciController.text.trim().isNotEmpty &&
+                      !_mqttGuvenli)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Uyarı: TLS kapalıyken kullanıcı adı ve parola şifresiz gider. Güvenli Bağlantı (TLS) önerilir.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Güvenli Bağlantı (TLS)'),
@@ -159,7 +199,12 @@ class _MqttBaglantiKartiState extends State<MqttBaglantiKarti> {
                               host: _hostController.text.trim(),
                               port: int.parse(_portController.text.trim()),
                               guvenli: _mqttGuvenli,
+                              kullaniciAdi: _kullaniciController.text.trim(),
+                              parola: _parolaController.text.isEmpty
+                                  ? null
+                                  : _parolaController.text,
                             );
+                        _parolaController.clear();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(

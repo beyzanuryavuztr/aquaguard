@@ -27,6 +27,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:aquaguard_mobile/services/veritabani.dart';
@@ -39,5 +40,8 @@ Future<void> testExecutable(FutureOr<void> Function() main) async {
   // drift'in "ayni QueryExecutor'i paylasan birden fazla veritabani"
   // uyarisi burada YANLIS ALARM, kapatilir.
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+  // Guvenli depo (PIN + MQTT kimligi) platform kanali host'ta yok -- sahte
+  // bellek-ici surumle degistirilir; aksi halde okuma/yazma ASILIR.
+  FlutterSecureStorage.setMockInitialValues({});
   await main();
 }

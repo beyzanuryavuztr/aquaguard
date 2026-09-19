@@ -42,6 +42,7 @@ import '../repositories/sensor_okuma_repository.dart';
 import '../services/bildirim_servisi.dart';
 import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
+import '../services/mqtt_kimlik_servisi.dart';
 import '../services/mqtt_servisi.dart';
 import '../services/simulasyon_servisi.dart';
 import '../widgets/durum_renkleri.dart';
@@ -76,6 +77,8 @@ class CihazIletisimProvider extends ChangeNotifier {
   String _mqttHost = '';
   int _mqttPort = 0;
   bool _mqttGuvenli = false;
+  String _mqttKullaniciAdi = "";
+  String _mqttParola = "";
   MqttBaglantiDurumu _baglantiDurumu = MqttBaglantiDurumu.baglaniyor;
   bool _cihazBagliMi = true;
   StreamSubscription<List<ConnectivityResult>>? _baglantiAboneligi;
@@ -99,6 +102,10 @@ class CihazIletisimProvider extends ChangeNotifier {
   String get mqttHost => _mqttHost;
   int get mqttPort => _mqttPort;
   bool get mqttGuvenli => _mqttGuvenli;
+  String get mqttKullaniciAdi => _mqttKullaniciAdi;
+
+  /// Parola arayuze DUZ METIN olarak acilmaz (yalnizca 'tanimli mi' bilgisi).
+  bool get mqttParolaTanimli => _mqttParola.isNotEmpty;
   MqttBaglantiDurumu get baglantiDurumu => _baglantiDurumu;
   bool get cihazBagliMi => _cihazBagliMi;
 
@@ -107,8 +114,7 @@ class CihazIletisimProvider extends ChangeNotifier {
   List<SensorOkuma> gecmis(int zone) =>
       List.unmodifiable(_gecmisler[zone] ?? const <SensorOkuma>[]);
   DateTime? tedaviBaslangicZamani(int zone) => _tedaviBaslangicZamanlari[zone];
-  bool sulamasiDurduruldu(int zone) =>
-      _sulamasiDurdurulanZonlar.contains(zone);
+  bool sulamasiDurduruldu(int zone) => _sulamasiDurdurulanZonlar.contains(zone);
 
   /// Tum zonlardaki tum gecmis okumalar tek bir listede (istatistik hesaplari icin).
   List<SensorOkuma> get tumOkumalarBirlesik {
@@ -146,11 +152,18 @@ class CihazIletisimProvider extends ChangeNotifier {
   /// kovaya duser; siniflandirma DurumRenkleri.onceligiBelirle()'den gelir
   /// (tek kaynak).
   ZonDurumOzeti durumOzetiHesapla(List<int> zonlar) {
-    var normal = 0, belirsiz = 0, tespitEdildi = 0, tedavide = 0, cevrimdisi = 0;
+    var normal = 0,
+        belirsiz = 0,
+        tespitEdildi = 0,
+        tedavide = 0,
+        cevrimdisi = 0;
     for (final zon in zonlar) {
       final okuma = _sonOkumalar[zon];
       final cevrimici = _zonCevrimici[zon] ?? false;
-      switch (DurumRenkleri.onceligiBelirle(okuma: okuma, cevrimici: cevrimici)) {
+      switch (DurumRenkleri.onceligiBelirle(
+        okuma: okuma,
+        cevrimici: cevrimici,
+      )) {
         case ZonOnceligi.cevrimdisi:
           cevrimdisi++;
         case ZonOnceligi.tedavide:
@@ -191,6 +204,9 @@ class CihazIletisimProvider extends ChangeNotifier {
     _mqttHost = ayarlar.host;
     _mqttPort = ayarlar.port;
     _mqttGuvenli = ayarlar.guvenli;
+    final kimlik = await MqttKimlikServisi.oku();
+    _mqttKullaniciAdi = kimlik.kullaniciAdi;
+    _mqttParola = kimlik.parola;
     _demoModuAktif = await _depolama.demoModuAcikMi();
     _demoHizi = await _depolama.demoHiziGetir();
     _sulamasiDurdurulanZonlar
@@ -261,6 +277,8 @@ class CihazIletisimProvider extends ChangeNotifier {
       port: _mqttPort,
       zonlar: _tarla.tumZonNumaralari,
       guvenli: _mqttGuvenli,
+      kullaniciAdi: _mqttKullaniciAdi,
+      parola: _mqttParola,
     );
   }
 
@@ -315,11 +333,25 @@ class CihazIletisimProvider extends ChangeNotifier {
     required String host,
     required int port,
     required bool guvenli,
+    String? kullaniciAdi,
+    String? parola,
   }) async {
     _mqttHost = host;
     _mqttPort = port;
     _mqttGuvenli = guvenli;
-    await _depolama.mqttAyarlariniKaydet(host: host, port: port, guvenli: guvenli);
+    // null = mevcut degeri KORU (eski cagrilar kimligi silmez; arayuz
+    // parolayi geri gostermez). Bos kullanici adi = kimligi SIL (anonim).
+    _mqttKullaniciAdi = kullaniciAdi ?? _mqttKullaniciAdi;
+    _mqttParola = _mqttKullaniciAdi.isEmpty ? "" : (parola ?? _mqttParola);
+    await MqttKimlikServisi.kaydet(
+      kullaniciAdi: _mqttKullaniciAdi,
+      parola: _mqttParola,
+    );
+    await _depolama.mqttAyarlariniKaydet(
+      host: host,
+      port: port,
+      guvenli: guvenli,
+    );
     if (!_demoModuAktif) {
       await _mqttyeBaglan();
     }
@@ -388,9 +420,7 @@ class CihazIletisimProvider extends ChangeNotifier {
     try {
       final ilkDurum = await Connectivity().checkConnectivity();
       _cihazBagliMi = !ilkDurum.contains(ConnectivityResult.none);
-      _baglantiAboneligi = Connectivity().onConnectivityChanged.listen((
-        sonuc,
-      ) {
+      _baglantiAboneligi = Connectivity().onConnectivityChanged.listen((sonuc) {
         _cihazBagliMi = !sonuc.contains(ConnectivityResult.none);
         notifyListeners();
       });
@@ -410,7 +440,11 @@ class CihazIletisimProvider extends ChangeNotifier {
       return;
     }
     _kuyruklananKomutlar.add(
-      KuyruklanmisKomut(zone: zone, komut: komut, olusturmaZamani: DateTime.now()),
+      KuyruklanmisKomut(
+        zone: zone,
+        komut: komut,
+        olusturmaZamani: DateTime.now(),
+      ),
     );
     await _depolama.kuyruklananKomutlariKaydet(_kuyruklananKomutlar);
   }
@@ -422,7 +456,8 @@ class CihazIletisimProvider extends ChangeNotifier {
 
     final gecerliler = _kuyruklananKomutlar
         .where(
-          (k) => !k.suresiGecmisMi(AyarlarSabitleri.kuyrukKomutGecerlilikSuresi),
+          (k) =>
+              !k.suresiGecmisMi(AyarlarSabitleri.kuyrukKomutGecerlilikSuresi),
         )
         .toList();
     for (final kuyruklu in gecerliler) {
@@ -583,9 +618,7 @@ class CihazIletisimProvider extends ChangeNotifier {
   Future<void> sulamayiDurdur(int zone) async {
     if (_sulamasiDurdurulanZonlar.contains(zone)) return;
     _sulamasiDurdurulanZonlar.add(zone);
-    unawaited(
-      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
-    );
+    unawaited(_depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar));
     if (_demoModuAktif) {
       _simulasyon?.sulamayiDuraklat(zone);
     } else {
@@ -600,9 +633,7 @@ class CihazIletisimProvider extends ChangeNotifier {
   Future<void> sulamayiBaslat(int zone) async {
     if (!_sulamasiDurdurulanZonlar.contains(zone)) return;
     _sulamasiDurdurulanZonlar.remove(zone);
-    unawaited(
-      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
-    );
+    unawaited(_depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar));
     if (_demoModuAktif) {
       _simulasyon?.sulamayiDevamEttir(zone);
     } else {
@@ -641,9 +672,7 @@ class CihazIletisimProvider extends ChangeNotifier {
         }
       }
     }
-    unawaited(
-      _depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar),
-    );
+    unawaited(_depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar));
 
     final kayit = AktiviteKaydi(
       zaman: DateTime.now(),
@@ -697,8 +726,10 @@ class CihazIletisimProvider extends ChangeNotifier {
       case DemoSenaryosu.mutexKilidi:
         if (mevcutZonlar.contains(2)) {
           _simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.biyolojik);
-          final reddedildiMi =
-              !_simulasyon!.manuelTedaviBaslat(2, TikanmaTuru.kimyasal);
+          final reddedildiMi = !_simulasyon!.manuelTedaviBaslat(
+            2,
+            TikanmaTuru.kimyasal,
+          );
           if (reddedildiMi) {
             final redKaydi = AktiviteKaydi(
               zaman: DateTime.now(),
@@ -711,7 +742,8 @@ class CihazIletisimProvider extends ChangeNotifier {
             _aktivite.aktiviteKaydiEkle(redKaydi, bildirimDegerlendir: false);
           }
         }
-        aciklama = 'Mutex Kilit Gösterimi (Zon 2: Klor sürüyor, Asit reddedildi)';
+        aciklama =
+            'Mutex Kilit Gösterimi (Zon 2: Klor sürüyor, Asit reddedildi)';
         break;
     }
 
