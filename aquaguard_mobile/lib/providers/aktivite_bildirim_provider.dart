@@ -68,6 +68,24 @@ class AktiviteBildirimProvider extends ChangeNotifier {
       _okunmusBildirimIdleri.contains(bildirimIdGetir(kayit));
 
   Future<void> baslat() async {
+    await _kaliciVeriyiYukle();
+    _dusukPilKontroluYap();
+    notifyListeners();
+  }
+
+  /// Veri modu (Demo <-> Gercek) degistiginde, o modun KENDI kalici
+  /// aktivite/bildirim gecmisini yeniden yukler (bkz. modlu_repolar.dart) --
+  /// bellekteki onceki modun verisi atilir, iki mod ASLA karismaz.
+  Future<void> modVerisiniYenidenYukle() async {
+    _aktiviteGecmisi.clear();
+    _bildirimGecmisi.clear();
+    _bildirimKuyrugu.clear();
+    _okunmusBildirimIdleri.clear();
+    await _kaliciVeriyiYukle();
+    notifyListeners();
+  }
+
+  Future<void> _kaliciVeriyiYukle() async {
     final oncedenKayitliAktiviteler = await _depo.aktiviteGecmisiGetir();
     _aktiviteGecmisi.addAll(oncedenKayitliAktiviteler);
     _aktiviteGecmisi.sort((a, b) => b.zaman.compareTo(a.zaman));
@@ -81,12 +99,7 @@ class AktiviteBildirimProvider extends ChangeNotifier {
       _bildirimGecmisi.removeRange(200, _bildirimGecmisi.length);
     }
 
-    _okunmusBildirimIdleri.addAll(
-      await _depo.okunmusBildirimIdleriGetir(),
-    );
-
-    _dusukPilKontroluYap();
-    notifyListeners();
+    _okunmusBildirimIdleri.addAll(await _depo.okunmusBildirimIdleriGetir());
   }
 
   /// Ilk kurulumda (bir zonun HIC gecmisi yoksa) uretilen GECMISE DONUK

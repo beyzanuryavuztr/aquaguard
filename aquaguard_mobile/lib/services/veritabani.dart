@@ -91,8 +91,18 @@ class TarlaNotlari extends Table {
   ],
 )
 class AquaGuardVeritabani extends _$AquaGuardVeritabani {
-  AquaGuardVeritabani([QueryExecutor? executor])
-    : super(executor ?? (testBaglantiFabrikasi ?? _baglantiOlustur)());
+  /// [ad]: gercek (kalici) veri icin varsayilan; Demo Modu verisi AYRI bir
+  /// dosyada tutulur (bkz. [demo]) -- sentetik veri gercek veriyle KARISMAZ.
+  AquaGuardVeritabani([QueryExecutor? executor, String ad = gercekVeriAdi])
+    : super(
+        executor ?? (testBaglantiFabrikasi ?? () => _baglantiOlustur(ad))(),
+      );
+
+  static const String gercekVeriAdi = 'aquaguard_veritabani';
+  static const String demoVeriAdi = 'aquaguard_demo_veritabani';
+
+  /// Demo Modu'nun AYRI veritabani (sentetik gecmis + simulasyon okumalari).
+  factory AquaGuardVeritabani.demo() => AquaGuardVeritabani(null, demoVeriAdi);
 
   AquaGuardVeritabani.test(super.executor);
 
@@ -127,9 +137,9 @@ class AquaGuardVeritabani extends _$AquaGuardVeritabani {
   /// alir (dosya sistemi paylasimi/testler-arasi veri kirlenmesi OLMAZ).
   static QueryExecutor Function()? testBaglantiFabrikasi;
 
-  static QueryExecutor _baglantiOlustur() {
+  static QueryExecutor _baglantiOlustur(String ad) {
     return driftDatabase(
-      name: 'aquaguard_veritabani',
+      name: ad,
       web: DriftWebOptions(
         sqlite3Wasm: Uri.parse('sqlite3.wasm'),
         driftWorker: Uri.parse('drift_worker.dart.js'),

@@ -26,19 +26,19 @@ import 'package:flutter/material.dart';
 import '../models/sensor_okuma.dart';
 import '../models/trend_tahmini.dart';
 
-enum TrendDonemi { saat24, gun7, gun30 }
+// 30 gun secenegi KALDIRILDI: veri en fazla 7 gun saklaniyor (bkz.
+// AyarlarSabitleri.gecmisSaklamaSuresi) -- ulasilamayan bir secenek yanilticiydi.
+enum TrendDonemi { saat24, gun7 }
 
 extension TrendDonemiX on TrendDonemi {
   Duration get pencere => switch (this) {
     TrendDonemi.saat24 => const Duration(hours: 24),
     TrendDonemi.gun7 => const Duration(days: 7),
-    TrendDonemi.gun30 => const Duration(days: 30),
   };
 
   String get etiket => switch (this) {
     TrendDonemi.saat24 => '24s',
     TrendDonemi.gun7 => '7g',
-    TrendDonemi.gun30 => '30g',
   };
 }
 

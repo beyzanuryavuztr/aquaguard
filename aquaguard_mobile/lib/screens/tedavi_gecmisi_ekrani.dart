@@ -41,21 +41,19 @@ import '../widgets/duyarli_icerik.dart';
 import '../widgets/tikanma_turu_ikonu.dart';
 import '../widgets/yardim_butonu.dart';
 
-enum _TarihAraligi { tumu, saat24, gun7, gun30 }
+enum _TarihAraligi { tumu, saat24, gun7 }
 
 extension on _TarihAraligi {
   Duration? get pencere => switch (this) {
     _TarihAraligi.tumu => null,
     _TarihAraligi.saat24 => const Duration(hours: 24),
     _TarihAraligi.gun7 => const Duration(days: 7),
-    _TarihAraligi.gun30 => const Duration(days: 30),
   };
 
   String get etiket => switch (this) {
     _TarihAraligi.tumu => 'Tümü',
     _TarihAraligi.saat24 => 'Son 24s',
     _TarihAraligi.gun7 => 'Son 7g',
-    _TarihAraligi.gun30 => 'Son 30g',
   };
 }
 
@@ -83,16 +81,21 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
     final tumZonlar = tarla.tumZonNumaralari;
     final tumOkumalar = cihaz.tumOkumalarBirlesik;
 
+    // OLAYLAR (ardisik tespit okumalari TEK olay) -- eskiden burada tespit
+    // durumundaki her OKUMA ayri sayiliyordu; 10 sn'lik yayin araliginda tek
+    // bir tikanma onlarca "olay" olarak gorunuyordu.
+    final tumOlaylar = <TikanmaOlayi>[
+      for (final z in tumZonlar)
+        ...tikanmaOlaylariniBul(cihaz.gecmis(z).reversed.toList()),
+    ]..sort((a, b) => b.zaman.compareTo(a.zaman));
+
     final turSayaclari = <TikanmaTuru, int>{
       TikanmaTuru.kimyasal: 0,
       TikanmaTuru.biyolojik: 0,
       TikanmaTuru.fiziksel: 0,
     };
-    for (final okuma in tumOkumalar) {
-      if (okuma.durum == TeshisDurumu.tespitEdildi) {
-        turSayaclari[okuma.tikanmaTuru] =
-            (turSayaclari[okuma.tikanmaTuru] ?? 0) + 1;
-      }
+    for (final olay in tumOlaylar) {
+      turSayaclari[olay.tur] = (turSayaclari[olay.tur] ?? 0) + 1;
     }
     final toplamTespit = turSayaclari.values.fold(0, (a, b) => a + b);
 
@@ -122,11 +125,6 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
       0.0,
       (a, b) => a + b,
     );
-
-    final tumOlaylar = <TikanmaOlayi>[
-      for (final z in tumZonlar)
-        ...tikanmaOlaylariniBul(cihaz.gecmis(z).reversed.toList()),
-    ]..sort((a, b) => b.zaman.compareTo(a.zaman));
 
     final simdi = DateTime.now();
     final pencere = _seciliDonem.pencere;
@@ -391,9 +389,9 @@ class _TedaviGecmisiEkraniState extends State<TedaviGecmisiEkrani> {
     final dosyaAdi = DisaAktarmaServisi.dosyaAdiUret('tum_zonlar_raporu');
     final konum = await csvKaydet(dosyaAdi, csv);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('CSV dışa aktarıldı: $konum')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('CSV dışa aktarıldı: $konum')));
   }
 
   PieChartSectionData _dilimOlustur(int sayi, int toplam, Color renk) {
@@ -426,7 +424,11 @@ class _BasariOraniKarti extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(Icons.verified_outlined, color: Theme.of(context).colorScheme.primary, size: 32),
+            Icon(
+              Icons.verified_outlined,
+              color: Theme.of(context).colorScheme.primary,
+              size: 32,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -615,9 +617,7 @@ class _OlaySatiri extends StatelessWidget {
         backgroundColor: bilgi.renk.rozetTonu,
         child: TikanmaTuruIkonu(tur: olay.tur, boyut: 20),
       ),
-      title: Text(
-        '$zonAdi — ${turEtiketi(olay.tur)} tıkanma tespit edildi',
-      ),
+      title: Text('$zonAdi — ${turEtiketi(olay.tur)} tıkanma tespit edildi'),
       subtitle: Text(
         'Güven %${olay.guven.toStringAsFixed(0)} • '
         '${TarihBicimleri.tamZamanli.format(olay.zaman)}',

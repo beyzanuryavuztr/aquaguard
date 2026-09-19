@@ -2,7 +2,7 @@
 //
 // SQLite gecisinin (Faz 13) gercek amaci olan "SharedPreferences'in 200
 // kayitlik sinirindan kurtulma" hedefini dogrular: sayi sinirinin artik
-// 10.000 oldugunu, 7 gunden eski kayitlarin CANLI buyume yolunda
+// 10.500 oldugunu, 7 gunden eski kayitlarin CANLI buyume yolunda
 // (gecmiseEkle) budandigini, ama ILK KURULUM tohumunun (gecmisiTopluKaydet --
 // GecmisVeriUreticisi'nin 12 GUNLUK gecmise donuk sentetik verisi) bu zaman
 // sinirindan BILEREK MUAF oldugunu kilitler.
@@ -67,60 +67,58 @@ void main() {
     },
   );
 
-  test(
-    'gecmiseEkle (canli buyume) 7 gunden eski kayitlari BUDAR',
-    () async {
-      final simdi = DateTime.now();
-      final onGunOncekiKayit = _okuma(
-        zone: 2,
-        zaman: simdi.subtract(const Duration(days: 10)),
-      );
-      // Eski kaydi ONCE toplu-yazim yoluyla (zaman sinirindan muaf) sokariz --
-      // amac: canli ekleme (gecmiseEkle) tetiklendiğinde bu kaydin
-      // BUDANDIGINI gormek.
-      await depo.gecmisiTopluKaydet(2, [onGunOncekiKayit]);
-      expect(await depo.gecmisiGetir(2), hasLength(1));
+  test('gecmiseEkle (canli buyume) 7 gunden eski kayitlari BUDAR', () async {
+    final simdi = DateTime.now();
+    final onGunOncekiKayit = _okuma(
+      zone: 2,
+      zaman: simdi.subtract(const Duration(days: 10)),
+    );
+    // Eski kaydi ONCE toplu-yazim yoluyla (zaman sinirindan muaf) sokariz --
+    // amac: canli ekleme (gecmiseEkle) tetiklendiğinde bu kaydin
+    // BUDANDIGINI gormek.
+    await depo.gecmisiTopluKaydet(2, [onGunOncekiKayit]);
+    expect(await depo.gecmisiGetir(2), hasLength(1));
 
-      await depo.gecmiseEkle(_okuma(zone: 2, zaman: simdi));
+    await depo.gecmiseEkle(_okuma(zone: 2, zaman: simdi));
 
-      final gecmis = await depo.gecmisiGetir(2);
-      expect(gecmis, hasLength(1));
-      expect(
-        gecmis.single.zaman.difference(simdi).inSeconds.abs(),
-        lessThan(2),
-        reason: '10 gunluk eski kayit silinmis, sadece yeni kayit kalmali',
-      );
-    },
-  );
+    final gecmis = await depo.gecmisiGetir(2);
+    expect(gecmis, hasLength(1));
+    expect(
+      gecmis.single.zaman.difference(simdi).inSeconds.abs(),
+      lessThan(2),
+      reason: '10 gunluk eski kayit silinmis, sadece yeni kayit kalmali',
+    );
+  });
 
   test(
-    'gecmiseEkle sayi siniri 10.000 -- asan EN ESKI kayitlar budanir',
+    'gecmiseEkle sayi siniri 10.500 -- asan EN ESKI kayitlar budanir',
     () async {
       final simdi = DateTime.now();
-      // 10.000 kayidi (hepsi son birkac saat icinde, zaman siniri
+      // 10.500 kayidi (hepsi son birkac saat icinde, zaman siniri
       // TETIKLENMESIN diye) TOPLU yazimla hizlica sokariz.
       final tabanGecmis = List.generate(
-        10000,
+        10500,
         (i) => _okuma(
           zone: 3,
-          zaman: simdi.subtract(Duration(seconds: 10000 - i)),
+          zaman: simdi.subtract(Duration(seconds: 10500 - i)),
         ),
       );
       await depo.gecmisiTopluKaydet(3, tabanGecmis);
-      expect(await depo.gecmisiGetir(3), hasLength(10000));
+      expect(await depo.gecmisiGetir(3), hasLength(10500));
 
-      // 10.001'inci kaydi CANLI yoldan (gecmiseEkle) ekle -- sayi siniri
+      // 10.501'inci kaydi CANLI yoldan (gecmiseEkle) ekle -- sayi siniri
       // simdi tetiklenmeli, EN ESKI kayit budanmali.
       final enYeniOkuma = _okuma(zone: 3, zaman: simdi);
       await depo.gecmiseEkle(enYeniOkuma);
 
       final gecmis = await depo.gecmisiGetir(3);
-      expect(gecmis, hasLength(10000));
+      expect(gecmis, hasLength(10500));
       expect(gecmis.first.zaman, enYeniOkuma.zaman);
       expect(
         gecmis.any((o) => o.zaman == tabanGecmis.first.zaman),
         isFalse,
-        reason: 'En eski (tabanGecmis.first) kayit sayi siniri asilinca silinmis olmali',
+        reason:
+            'En eski (tabanGecmis.first) kayit sayi siniri asilinca silinmis olmali',
       );
     },
   );

@@ -79,8 +79,7 @@ class _TrendAnaliziEkraniState extends State<TrendAnaliziEkrani> {
                             child: ChoiceChip(
                               label: Text(tarla.zonAdiGetir(z)),
                               selected: zon == z,
-                              onSelected: (_) =>
-                                  setState(() => _seciliZon = z),
+                              onSelected: (_) => setState(() => _seciliZon = z),
                             ),
                           ),
                       ],
@@ -95,8 +94,7 @@ class _TrendAnaliziEkraniState extends State<TrendAnaliziEkrani> {
                   SegmentedButton<TrendDonemi>(
                     segments: TrendDonemi.values
                         .map(
-                          (d) =>
-                              ButtonSegment(value: d, label: Text(d.etiket)),
+                          (d) => ButtonSegment(value: d, label: Text(d.etiket)),
                         )
                         .toList(),
                     selected: {_donem},
@@ -104,7 +102,16 @@ class _TrendAnaliziEkraniState extends State<TrendAnaliziEkrani> {
                     onSelectionChanged: (secim) =>
                         setState(() => _donem = secim.first),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Veriler son 7 gün saklanır: dakikada bir kayıt, durum '
+                    'değişimleri (tespit/tedavi) anında kaydedilir.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   for (final tanim in sensorTanimlari) ...[
                     SensorTrendGrafigi(
                       key: ValueKey('${zon}_${tanim.baslik}'),

@@ -82,6 +82,17 @@ class AyarlarSabitleri {
   /// ASKIYA alindigi sure (cihaz 10 sn yayinlar; komut + yansima payi).
   static const Duration vanaEsitlemeBeklemesi = Duration(seconds: 25);
 
+  // --- Sensor gecmisi saklama (Y2) -- bellek ve veritabani AYNI seriyi tutar.
+  //     Gercek cihaz 10 sn'de bir yayinlar (8.640 kayit/gun); ham kaydi tutmak
+  //     10.000 satir sinirini ~28 saatte doldururdu ve "7 gun" trendleri
+  //     bos/yanlis olurdu. Bu yuzden gecmise en fazla dakikada BIR kayit
+  //     yazilir; DURUM DEGISIMLERI (tespit/tedavi/durulama) ise ARADAKI sure
+  //     ne olursa olsun HEMEN yazilir (olay analizi hicbir seyi kacirmaz).
+  //     60 sn x 7 gun = 10.080 kayit/zon ~ repository siniri (10.000 + pay). ---
+  static const Duration gecmisKayitAraligi = Duration(seconds: 60);
+  static const Duration gecmisSaklamaSuresi = Duration(days: 7);
+  static const int gecmisBellekMaksimumKayit = 10500;
+
   // --- Offline mod: cihazin kendi agi/broker baglantisi yokken kuyruga
   //     alinan komutlarin gecerlilik suresi -- bundan eski komutlar
   //     SESSIZCE silinir, otomatik gonderilmez (bkz. models/

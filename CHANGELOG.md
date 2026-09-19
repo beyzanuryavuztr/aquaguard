@@ -66,7 +66,23 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - CI/CD: GitHub Actions üzerinde `flutter analyze --fatal-infos`,
   `flutter test --coverage`, `flutter build web --release`; Python
   katmanı için ayrı `pytest` işi.
-- Test paketi: 391 Flutter testi + Python `pytest` paketi.
+- Test paketi: 409 Flutter testi + Python `pytest` paketi.
+
+### Veri Bütünlüğü (2026-09-19 denetimi)
+
+- **Demo ve gerçek veri artık AYRI veritabanlarında.** Önceden uygulama, modu ne
+  olursa olsun ilk açılışta 12 günlük sentetik geçmiş üretip kalıcı yazıyordu;
+  gerçek moddaki kullanıcı sahte tıkanma/tedavi/istatistikle karışık veri
+  görürdü. Artık sentetik veri yalnızca Demo Modu'nda üretilir ve gerçek veriye
+  karışmaz. **Not:** bu sürümden önce oluşmuş veritabanı "gerçek" depo sayılır;
+  o depoda eski karışık veri olabilir (beta öncesi kurulumlarda uygulama
+  verisini temizleyin).
+- Sensör geçmişi dakikada bir kayıt (durum değişimleri anında) ile 7 gün
+  saklanır; bellekteki geçmişin ilk canlı okumada 100 kayda kırpılması hatası
+  giderildi. Kullanılamayan "30g" seçenekleri kaldırıldı.
+- "Tıkanma olayı" dağılımı artık ardışık tespit okumalarını TEK olay sayar.
+- Ana vana durumu cihazdan raporlanır (`ana_vana_acik`), acil durdurma
+  iletilemeyen komutları açıkça bildirir, komut onayı (ACK) firmware'de var.
 
 ### Güvenlik
 

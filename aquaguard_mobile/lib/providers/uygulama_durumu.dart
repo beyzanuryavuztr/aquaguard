@@ -44,6 +44,8 @@ import '../models/yazi_boyutu.dart';
 import '../repositories/drift_aktivite_bildirim_repository.dart';
 import '../repositories/drift_sensor_okuma_repository.dart';
 import '../repositories/drift_tarla_notu_repository.dart';
+import '../repositories/modlu_repolar.dart';
+import '../services/depolama_servisi.dart';
 import '../services/mqtt_servisi.dart';
 import '../services/veri_migrasyon_servisi.dart';
 import '../services/veritabani.dart';
@@ -75,8 +77,13 @@ class UygulamaDurumu extends ChangeNotifier {
   // yeniden ac" senaryosunu (iki ayri UygulamaDurumu ornegi, AYNI kalici
   // depoyu paylasmali) simule edebilmesi icin; testlerin cogu bunu
   // KULLANMAZ, parametresiz `UygulamaDurumu()` DEGISMEDEN calismaya devam eder.
-  final AquaGuardVeritabani _veritabani;
+  // K7: DEMO ve GERCEK veri AYRI veritabanlarinda tutulur -- sentetik veri
+  // gercek veriyle karismaz (bkz. repositories/modlu_repolar.dart). Disaridan
+  // tek bir veritabani enjekte edilirse (testler) ikisi de ONU kullanir.
+  final AquaGuardVeritabani _veritabani; // gercek (kalici) veri
+  final AquaGuardVeritabani _demoVeritabani;
   final bool _veritabaniSahibi;
+  final VeriModu _veriModu = VeriModu();
 
   final AyarlarProvider _ayarlar = AyarlarProvider();
   late final TarlaProvider _tarla = TarlaProvider(
@@ -88,16 +95,26 @@ class UygulamaDurumu extends ChangeNotifier {
   final BakimProvider _bakim = BakimProvider();
   late final AktiviteBildirimProvider _aktivite = AktiviteBildirimProvider(
     ayarlar: _ayarlar,
-    depo: DriftAktiviteBildirimRepository(_veritabani),
+    depo: ModluAktiviteBildirimRepository(
+      demo: DriftAktiviteBildirimRepository(_demoVeritabani),
+      gercek: DriftAktiviteBildirimRepository(_veritabani),
+      mod: _veriModu,
+    ),
   );
   late final CihazIletisimProvider _cihaz = CihazIletisimProvider(
     tarla: _tarla,
     aktivite: _aktivite,
-    sensorDepo: DriftSensorOkumaRepository(_veritabani),
+    sensorDepo: ModluSensorOkumaRepository(
+      demo: DriftSensorOkumaRepository(_demoVeritabani),
+      gercek: DriftSensorOkumaRepository(_veritabani),
+      mod: _veriModu,
+    ),
+    veriModu: _veriModu,
   );
 
   UygulamaDurumu({AquaGuardVeritabani? veritabani})
     : _veritabani = veritabani ?? AquaGuardVeritabani(),
+      _demoVeritabani = veritabani ?? AquaGuardVeritabani.demo(),
       _veritabaniSahibi = veritabani == null {
     _ayarlar.addListener(notifyListeners);
     _tarla.addListener(notifyListeners);
@@ -135,6 +152,9 @@ class UygulamaDurumu extends ChangeNotifier {
     await _tarla.baslat();
     await _guvenlik.baslat();
     await _bakim.baslat();
+    // Aktivite/gecmis deposu Demo mu Gercek mi? -- providerlar yuklemeden ONCE
+    // bilinmeli (aksi halde yanlis modun verisi yuklenirdi).
+    _veriModu.demo = await DepolamaServisi().demoModuAcikMi();
     await _aktivite.baslat();
     await _cihaz.baslat();
   }
@@ -316,7 +336,12 @@ class UygulamaDurumu extends ChangeNotifier {
     if (_veritabaniSahibi) {
       // Bekleyen ates-et-unut yazimlar bitmeden kapatmak, yarim kalan
       // transaction'lari dusuruyordu (A5) -- once bosalmalarini bekle.
-      unawaited(bekleyenYazimlariBekle().then((_) => _veritabani.close()));
+      unawaited(
+        bekleyenYazimlariBekle().then((_) async {
+          await _veritabani.close();
+          await _demoVeritabani.close();
+        }),
+      );
     }
     super.dispose();
   }

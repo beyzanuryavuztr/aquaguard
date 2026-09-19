@@ -39,6 +39,7 @@ import '../models/demo_hizi.dart';
 import '../models/kuyruklanmis_komut.dart';
 import '../models/sensor_okuma.dart';
 import '../repositories/sensor_okuma_repository.dart';
+import '../repositories/modlu_repolar.dart';
 import '../services/bildirim_servisi.dart';
 import '../services/depolama_servisi.dart';
 import '../services/gecmis_veri_uretici.dart';
@@ -55,13 +56,17 @@ class CihazIletisimProvider extends ChangeNotifier {
   final SensorOkumaRepository _sensorDepo;
   final TarlaProvider _tarla;
   final AktiviteBildirimProvider _aktivite;
+  // Demo/Gercek veri deposu ayrimi (K7, bkz. repositories/modlu_repolar.dart).
+  final VeriModu _veriModu;
 
   CihazIletisimProvider({
     required TarlaProvider tarla,
     required AktiviteBildirimProvider aktivite,
     DepolamaServisi? depolama,
     SensorOkumaRepository? sensorDepo,
+    VeriModu? veriModu,
   }) : _depolama = depolama ?? DepolamaServisi(),
+       _veriModu = veriModu ?? VeriModu(),
        _sensorDepo = sensorDepo ?? SharedPreferencesSensorOkumaRepository(),
        // ignore: prefer_initializing_formals
        _tarla = tarla,
@@ -199,35 +204,18 @@ class CihazIletisimProvider extends ChangeNotifier {
   // bu fonksiyon zon listesini _tarla'dan okur, seed edilen aktiviteleri
   // _aktivite'ye yazar.
 
-  Future<void> baslat() async {
-    unawaited(BildirimServisi.baslat());
-    unawaited(_cihazAgDurumunuIzlemeyeBasla());
-    _kuyruklananKomutlar
-      ..clear()
-      ..addAll(await _depolama.kuyruklananKomutlariGetir());
-    final ayarlar = await _depolama.mqttAyarlariniGetir();
-    _mqttHost = ayarlar.host;
-    _mqttPort = ayarlar.port;
-    _mqttGuvenli = ayarlar.guvenli;
-    final kimlik = await MqttKimlikServisi.oku();
-    _mqttKullaniciAdi = kimlik.kullaniciAdi;
-    _mqttParola = kimlik.parola;
-    _demoModuAktif = await _depolama.demoModuAcikMi();
-    _demoHizi = await _depolama.demoHiziGetir();
-    _sulamasiDurdurulanZonlar
-      ..clear()
-      ..addAll(await _depolama.sulamaKapaliZonlariGetir());
-
-    // Cevrimdisi mod: baglanmadan ONCE son bilinen degerleri yukle,
-    // boylece ekran hicbir zaman bomben acilmiyor.
+  /// AKTIF modun (Demo ya da Gercek) kalici verisini yukler: zon basina sensor
+  /// gecmisi + son okuma. SENTETIK gecmis SADECE Demo Modu'nda uretilir (K7):
+  /// gercek modda bos depo bos kalir -- ekranlar "veri yok" gosterir, sahte
+  /// tikanma olaylari/istatistik uretilmez.
+  Future<void> _modVerisiniYukle() async {
     for (final zon in _tarla.tumZonNumaralari) {
       var gecmis = await _sensorDepo.gecmisiGetir(zon);
 
-      // Bu zon icin HIC gecmis yoksa (gercekten ilk kurulum): sanki sistem
-      // gunlerdir sahada calisiyormus gibi GECMISE DONUK sentetik bir
-      // gecmis uret ve kaydet -- boylece Istatistikler/Aktivite Gecmisi/
-      // trend grafikleri ilk acilista bile bombos degil, dolu gorunur.
-      if (gecmis.isEmpty) {
+      // Demo Modu'nda HIC gecmis yoksa (ilk kurulum): sanki sistem gunlerdir
+      // sahada calisiyormus gibi GECMISE DONUK sentetik bir gecmis uret --
+      // trend grafikleri/istatistikler ilk acilista bile dolu gorunur.
+      if (gecmis.isEmpty && _demoModuAktif) {
         final kronolojikGecmis = GecmisVeriUreticisi.zonGecmisiUret(zon);
         gecmis = kronolojikGecmis.reversed
             .toList(); // depolama EN YENI ONCE bekler
@@ -256,7 +244,44 @@ class CihazIletisimProvider extends ChangeNotifier {
         }
       }
     }
+  }
 
+  /// Demo <-> Gercek gecisinde: onceki modun bellek durumunu at, yeni modun
+  /// kendi kalici verisini yukle (iki mod ASLA karismaz -- K7).
+  Future<void> _modDegistiVerisiniYenile() async {
+    _veriModu.demo = _demoModuAktif;
+    _sonOkumalar.clear();
+    _gecmisler.clear();
+    _tedaviBaslangicZamanlari.clear();
+    _zonCevrimici.clear();
+    await _aktivite.modVerisiniYenidenYukle();
+    await _modVerisiniYukle();
+    await _aktivite.tohumVerisiniKaydet();
+  }
+
+  Future<void> baslat() async {
+    unawaited(BildirimServisi.baslat());
+    unawaited(_cihazAgDurumunuIzlemeyeBasla());
+    _kuyruklananKomutlar
+      ..clear()
+      ..addAll(await _depolama.kuyruklananKomutlariGetir());
+    final ayarlar = await _depolama.mqttAyarlariniGetir();
+    _mqttHost = ayarlar.host;
+    _mqttPort = ayarlar.port;
+    _mqttGuvenli = ayarlar.guvenli;
+    final kimlik = await MqttKimlikServisi.oku();
+    _mqttKullaniciAdi = kimlik.kullaniciAdi;
+    _mqttParola = kimlik.parola;
+    _demoModuAktif = await _depolama.demoModuAcikMi();
+    _veriModu.demo = _demoModuAktif;
+    _demoHizi = await _depolama.demoHiziGetir();
+    _sulamasiDurdurulanZonlar
+      ..clear()
+      ..addAll(await _depolama.sulamaKapaliZonlariGetir());
+
+    // Cevrimdisi mod: baglanmadan ONCE son bilinen degerleri yukle,
+    // boylece ekran hicbir zaman bomben acilmiyor.
+    await _modVerisiniYukle();
     await _aktivite.tohumVerisiniKaydet();
 
     _hazir = true;
@@ -313,6 +338,7 @@ class CihazIletisimProvider extends ChangeNotifier {
     await _depolama.demoModunuAyarla(true);
     _mqtt?.baglantiyiKapat();
     _mqtt = null;
+    await _modDegistiVerisiniYenile();
     _simulasyonuBaslat();
     notifyListeners();
   }
@@ -323,6 +349,7 @@ class CihazIletisimProvider extends ChangeNotifier {
     await _depolama.demoModunuAyarla(false);
     _simulasyon?.durdur();
     _simulasyon = null;
+    await _modDegistiVerisiniYenile();
     notifyListeners();
     await _mqttyeBaglan();
   }
@@ -400,6 +427,21 @@ class CihazIletisimProvider extends ChangeNotifier {
     );
   }
 
+  /// Bir okumanin GECMISE yazilip yazilmayacagi: onceki kayitli okumaya gore
+  /// DURUM degistiyse (tespit/tedavi/durulama/tur) HEMEN, degismediyse
+  /// yalnizca [AyarlarSabitleri.gecmisKayitAraligi] gectiyse.
+  bool _gecmiseYazilmali(SensorOkuma? sonYazilan, SensorOkuma yeni) {
+    if (sonYazilan == null) return true;
+    if (sonYazilan.durum != yeni.durum ||
+        sonYazilan.tikanmaTuru != yeni.tikanmaTuru ||
+        sonYazilan.tedaviAktif != yeni.tedaviAktif ||
+        sonYazilan.durulamaAktif != yeni.durulamaAktif) {
+      return true;
+    }
+    return yeni.zaman.difference(sonYazilan.zaman) >=
+        AyarlarSabitleri.gecmisKayitAraligi;
+  }
+
   /// SADECE test: gercek MQTT'yi beklemeden, cihazdan bir telemetri
   /// mesaji gelmis gibi isler.
   @visibleForTesting
@@ -431,14 +473,23 @@ class CihazIletisimProvider extends ChangeNotifier {
     _sonOkumalar[okuma.zone] = okuma;
     _zonCevrimici[okuma.zone] = true;
 
-    final guncelGecmis = [
-      okuma,
-      ...(_gecmisler[okuma.zone] ?? const <SensorOkuma>[]),
-    ].take(100).toList();
-    _gecmisler[okuma.zone] = guncelGecmis;
-
+    // Son okuma HER telemetride kaydedilir (yeniden aciista anlik gorunum
+    // icin); GECMIS ise dakikada bir + durum degisimlerinde yazilir (Y2).
     unawaited(_sensorDepo.sonOkumayiKaydet(okuma));
-    unawaited(_sensorDepo.gecmiseEkle(okuma));
+    final zonGecmisi = _gecmisler[okuma.zone] ?? const <SensorOkuma>[];
+    if (_gecmiseYazilmali(
+      zonGecmisi.isEmpty ? null : zonGecmisi.first,
+      okuma,
+    )) {
+      // Bellek listesi DB ile AYNI seriyi ve AYNI siniri tutar; eskiden burada
+      // `take(100)` vardi ve acilista yuklenen tum gecmis ilk canli okumada
+      // 100 kayda dusuyordu (trend/istatistikler aniden kisaliyordu).
+      _gecmisler[okuma.zone] = [
+        okuma,
+        ...zonGecmisi,
+      ].take(AyarlarSabitleri.gecmisBellekMaksimumKayit).toList();
+      unawaited(_sensorDepo.gecmiseEkle(okuma));
+    }
 
     notifyListeners();
   }

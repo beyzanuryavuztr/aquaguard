@@ -34,7 +34,7 @@ class DriftSensorOkumaRepository implements SensorOkumaRepository {
   // uretilen 12 GUNLUK sentetik demo gecmisi, bkz. GecmisVeriUreticisi)
   // BILEREK bu sinirdan MUAF: aksi halde taze uretilen demo gecmisinin
   // en eski 5 gunu, kaydedildigi ANDA silinirdi.
-  static const _gecmisMaksimumUzunluk = 10000;
+  static const _gecmisMaksimumUzunluk = 10500;
   static const _gecmisMaksimumSure = Duration(days: 7);
 
   DriftSensorOkumaRepository(this._db);
