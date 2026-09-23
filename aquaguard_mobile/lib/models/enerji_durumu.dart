@@ -1,4 +1,4 @@
-/// AquaGuard - Enerji Durumu Hesaplayıcısı (SİMÜLE)
+/// AquaGuard - Enerji/WiFi Durumu Hesaplayıcısı (SİMÜLE)
 /// ======================================================
 ///
 /// Amac:
@@ -28,7 +28,7 @@ class EnerjiDurumu {
     return 90 - (gun % 10) * 8;
   }
 
-  static bool gsmGucluMu({DateTime? simdi}) {
+  static bool wifiGucluMu({DateTime? simdi}) {
     final gun = (simdi ?? DateTime.now())
         .difference(DateTime(2026, 1, 1))
         .inDays;

@@ -1,13 +1,19 @@
 /*
- * AquaGuard - SIM800L GSM/MQTT Iletisim Katmani
+ * AquaGuard - WiFi/MQTT Iletisim Katmani
  * =================================================
  *
  * Amac:
- *   SIM800L GSM modulu uzerinden GPRS baglantisi kurar ve sensor/teshis/
- *   tedavi verisini MQTT protokolu ile uzak sunucuya (ve oradan Flutter
- *   mobil uygulamasina) yayinlar. Baglanti koptugunda periyodik olarak
- *   yeniden baglanmayi dener; deneme kutuphane icinde BLOKLAYICIDIR, bu
- *   yuzden aktif bir tedavi (pompa) sirasinda ERTELENIR.
+ *   Deneyap Kart'in dahili WiFi radyosu uzerinden bir kablosuz aga baglanir
+ *   ve sensor/teshis/tedavi verisini MQTT protokolu ile uzak sunucuya (ve
+ *   oradan Flutter mobil uygulamasina) yayinlar. Baglanti koptugunda
+ *   periyodik olarak yeniden baglanmayi dener.
+ *
+ *   2026-09-23: Mimari SIM800L/GSM'den WiFi'ye TASINDI (ekip karari --
+ *   sunum/fuar ortaminda WiFi, SIM/operator kapsamasindan daha guvenilir).
+ *   ONEMLI KISIT: WiFi'nin menzili sinirlidir (yonlendiriciden birkac on
+ *   metre) -- GSM'in aksine, kart yonlendiricinin sinyal alaninin DISINDA
+ *   bir tarlada CALISMAZ. Gercek saha kurulumunda bu goz onunde bulundurulmali
+ *   (bkz. README "Bilinen Sinirlamalar").
  *
  * JSON PAYLOAD SEMASI (mock_yayinci.py ve Flutter uygulamasiyla AYNI olmali):
  *   {
@@ -67,20 +73,19 @@
  *                                 {"komut":"normale_dondur"}
  *                               bkz. _komutMesajGeldiginde() asagida.
  *
- * Kutuphaneler: TinyGSM + PubSubClient + ArduinoJson
+ * Kutuphaneler: WiFi (ESP32 cekirdegiyle birlikte gelir) + PubSubClient +
+ *   ArduinoJson
  *
- * Tarih:  2026-09-01
+ * Tarih:  2026-09-01 (WiFi'ye tasinma: 2026-09-23)
  * Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
  */
 
 #ifndef AQUAGUARD_MQTT_HANDLER_H
 #define AQUAGUARD_MQTT_HANDLER_H
 
-#define TINY_GSM_MODEM_SIM800
-
 #include <Arduino.h>
 #include <string.h>
-#include <TinyGsmClient.h>
+#include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "config.h"
@@ -93,10 +98,8 @@
 // GLOBAL NESNELER
 // ============================================================================
 
-static HardwareSerial _sim800Seri(2);   // ESP32 UART2
-static TinyGsm _modem(_sim800Seri);
-static TinyGsmClient _gsmClient(_modem);
-static PubSubClient _mqttClient(_gsmClient);
+static WiFiClient _wifiClient;
+static PubSubClient _mqttClient(_wifiClient);
 
 static unsigned long _sonBaglantiDenemesiMs = 0;
 static const unsigned long BAGLANTI_DENEME_ARALIGI_MS = 15000UL;
@@ -225,14 +228,12 @@ void mqttBaslat() {
   snprintf(_komutTopic, sizeof(_komutTopic), MQTT_KONU_KOMUT, BOLGE_ID);
   snprintf(_komutDurumuTopic, sizeof(_komutDurumuTopic), MQTT_KONU_KOMUT_DURUMU, BOLGE_ID);
 
-  _sim800Seri.begin(SIM800L_BAUD, SERIAL_8N1, SIM800L_RX_PIN, SIM800L_TX_PIN);
-
-  Serial.println(F("[MQTT] SIM800L modemi baslatiliyor..."));
-  _modem.restart();
-
-  Serial.print(F("[MQTT] GPRS'e baglaniliyor: "));
-  Serial.println(GSM_APN);
-  _modem.gprsConnect(GSM_APN, GSM_KULLANICI, GSM_SIFRE);
+  WiFi.mode(WIFI_STA);
+  Serial.print(F("[MQTT] WiFi'ye baglaniliyor: "));
+  Serial.println(WIFI_SSID);
+  // WiFi.begin() BLOKLAMAZ -- baglanti arka planda kurulur, durumu
+  // WiFi.status() ile takip edilir (bkz. mqttBaglantiyiSagla).
+  WiFi.begin(WIFI_SSID, WIFI_SIFRE);
 
   _mqttClient.setServer(MQTT_BROKER_ADRESI, MQTT_BROKER_PORT);
   // KRITIK: PubSubClient varsayilan paket siniri 256 bayttir; telemetri JSON'u
@@ -260,10 +261,11 @@ void mqttBaglantiyiSagla() {
     return;
   }
 
-  // GUVENLIK (K3): gprsConnect/connect BLOKLAYICIDIR (onlarca saniye). Bir
-  // pompa CALISIRKEN bu blokaj tedaviGuncelle()'yi durdurur ve pompa
-  // suresini asabilir -- bu yuzden aktif tedavi bitene kadar yeniden
-  // baglanma denemesi ERTELENIR (veri yayini o sure kesilir, ki bu guvenli).
+  // GUVENLIK (K3, WiFi'de de korunuyor): _mqttClient.connect() TCP baglanti
+  // kurana kadar BEKLER (kotu sinyalde birkac saniye surebilir). Bir pompa
+  // CALISIRKEN bu bekleme tedaviGuncelle()'yi geciktirebilir -- bu yuzden
+  // aktif tedavi bitene kadar yeniden baglanma denemesi ERTELENIR (veri
+  // yayini o sure kesilir, ki bu guvenli).
   if (aktifTedaviGetir() != TEDAVI_YOK) {
     return;
   }
@@ -274,9 +276,11 @@ void mqttBaglantiyiSagla() {
   }
   _sonBaglantiDenemesiMs = simdi;
 
-  if (!_modem.isGprsConnected()) {
-    Serial.println(F("[MQTT] GPRS baglantisi yok, yeniden deneniyor..."));
-    _modem.gprsConnect(GSM_APN, GSM_KULLANICI, GSM_SIFRE);
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println(F("[MQTT] WiFi baglantisi yok, yeniden deneniyor..."));
+    // WiFi.begin() tekrar cagirmak guvenlidir -- ESP32 karisik/eski bir
+    // baglanma denemesini iptal edip yenisini baslatir, BLOKLAMAZ.
+    WiFi.begin(WIFI_SSID, WIFI_SIFRE);
     return;
   }
 

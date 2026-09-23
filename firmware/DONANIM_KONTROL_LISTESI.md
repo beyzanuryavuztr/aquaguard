@@ -1,13 +1,23 @@
 # AquaGuard Firmware — Donanım Entegrasyon Kontrol Listesi
 
-Bu liste Enver için hazırlandı: `firmware/` kodu 2026-09-19'da arduino-cli (ESP32 çekirdeği 3.x, genel
-`esp32:esp32:esp32` kartı; TinyGSM 0.12, PubSubClient 2.8, ArduinoJson 7.4,
-ESP32Servo 3.1, RTClib 2.1) ile DERLENDİ (%31 flash, %7 RAM). Kalan uyarılar: ArduinoJson 7'de
+Bu liste Enver için hazırlandı: `firmware/` kodu 2026-09-23'te arduino-cli (ESP32 çekirdeği 3.x, genel
+`esp32:esp32:esp32` kartı; PubSubClient 2.8, ArduinoJson 7.4, ESP32Servo 3.1,
+RTClib 2.1 — artık TinyGSM YOK, ESP32'nin dahili WiFi kütüphanesi kullanılıyor)
+ile DERLENDİ (%78 flash, %15 RAM — WiFi/TLS yığını TinyGSM'den daha büyük yer
+kaplıyor, ama hâlâ bol marj var). Kalan uyarılar: ArduinoJson 7'de
 `StaticJsonDocument` kullanımdan kalkma uyarısı (kod v6 API'siyle yazıldı;
 v6.21.x sabitlemek uyarıyı kaldırır). Aşağıdaki "MQTT paket boyutu" maddesine bakın.
 Bu yalnızca sözdizimi/kütüphane uyumunu doğrular: Deneyap Kart'a özgü kart
 tanımıyla derleme, pin doğruluğu ve sensör davranışı gerçek donanımda
 ilk kez çalıştırılmadan önce aşağıdaki adımlarla doğrulanmalı.
+
+**2026-09-23 mimari değişikliği**: İletişim SIM800L/GSM'den WiFi'ye taşındı
+(ekip kararı — sunum/fuar ortamında WiFi, SIM kapsama alanından daha
+güvenilir). SIM800L donanımı karttan sökülmek ZORUNDA değil, firmware
+artık onu kullanmıyor. **Önemli kısıt**: WiFi menzili sınırlıdır
+(yönlendiriciden birkaç on metre) — gerçek bir tarlada yönlendirici/hotspot
+yoksa sistem bağlanamaz; GSM'in "her yerde çeker" garantisi kaybedildi. Bu,
+bilinçli bir ödünleşim olarak kabul edildi.
 
 ## 1) Pin Bağlantı Doğrulaması
 
@@ -29,7 +39,7 @@ güncellenmelidir.
 | Ana sulama vanası | GPIO 13 | Röle üzerinden solenoid |
 | SD kart (SPI CS) | GPIO 5 | |
 | RTC (I2C) | SDA=21, SCL=22 | Deneyap Kart revizyonuna göre değişebilir |
-| SIM800L (UART2) | RX=16, TX=17 | |
+| WiFi | dahili radyo, ek pin yok | SSID/şifre `config.h` `WIFI_SSID`/`WIFI_SIFRE` |
 
 **Kritik**: analog sensör pinleri **ADC1 kanallarından** seçilmiştir (ADC2,
 WiFi aktifken güvenilir çalışmaz) — bu kısıtlama Deneyap Kart'ın hangi
@@ -78,6 +88,9 @@ Adımlar:
 Kod flaşlandıktan sonra, karmaşık senaryolara (otonom tedavi vb.) geçmeden
 önce şu sırayla doğrulayın:
 
+0. **WiFi bilgilerini girin**: `config.h`'deki `WIFI_SSID`/`WIFI_SIFRE` hâlâ
+   yer tutucu metinse ("AGINIZI_BURAYA_YAZIN") kart hiçbir ağa bağlanamaz.
+   Flaşlamadan önce gerçek ağ adı/şifresiyle değiştirin.
 1. **Seri port çıktısı**: `Serial.println` mesajlarının (sistem başlatma,
    sensör okuma, teşhis) düzgün göründüğünü doğrulayın.
 2. **Ana vana**: MQTT üzerinden `sulama_durdur`/`sulama_baslat` komutlarını
@@ -98,14 +111,15 @@ Kod flaşlandıktan sonra, karmaşık senaryolara (otonom tedavi vb.) geçmeden
 
 ## 4) Bilinen Sınırlamalar / Dikkat Edilmesi Gerekenler
 
-- **Watchdog + bağlanma ertelemesi (2026-09-19)**: GSM yeniden bağlanma
-  çağrıları (TinyGSM `gprsConnect`, PubSubClient `connect`) kütüphane içinde
-  **bloklayıcıdır**. Bir pompa çalışırken bu, tedavi süresini aşırabilirdi;
-  artık aktif tedavi sürerken yeniden bağlanma **ertelenir** (bu sürede veri
-  yayını kesilir). Ayrıca 120 sn'lik donanım watchdog'u ana döngü kilitlenirse
-  kartı yeniden başlatır (yeniden başlatma pompa pinlerini LOW yapar). Watchdog
-  API'si çekirdek 3.x için derlendi; Deneyap Kart paketi 2.x çekirdek
-  kullanıyorsa `#else` yolu **derlenmedi** — ilk derlemede kontrol edin.
+- **Watchdog + bağlanma ertelemesi (2026-09-19, WiFi'ye taşındı 2026-09-23)**:
+  `WiFi.begin()` bloklamaz (arka planda bağlanır), ama PubSubClient `connect()`
+  TCP bağlantısı kurulana kadar **bekler**. Bir pompa çalışırken bu, tedavi
+  süresini aşırabilirdi; artık aktif tedavi sürerken yeniden bağlanma
+  **ertelenir** (bu sürede veri yayını kesilir). Ayrıca 120 sn'lik donanım
+  watchdog'u ana döngü kilitlenirse kartı yeniden başlatır (yeniden başlatma
+  pompa pinlerini LOW yapar). Watchdog API'si çekirdek 3.x için derlendi;
+  Deneyap Kart paketi 2.x çekirdek kullanıyorsa `#else` yolu **derlenmedi** —
+  ilk derlemede kontrol edin.
 
 Bu proje boyunca yapılan "acımasız hakem" denetim turlarında firmware
 **inceleme yoluyla** (derleme olmadan) düzeltildi. Aşağıdaki değişiklik,

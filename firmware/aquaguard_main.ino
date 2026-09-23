@@ -10,24 +10,27 @@
  *     -> SD karta logla -> MQTT ile yayinla
  *
  *   TASARIM ILKESI: Zamanlama millis() tabanli sayaclarla yapilir, delay()
- *   yalnizca kurulumda (seri port stabilizasyonu) kullanilir. DIKKAT: GSM
- *   yeniden baglanma cagrilari (TinyGSM gprsConnect, PubSubClient connect)
- *   kutuphane icinde BLOKLAYICIDIR; bu yuzden (a) bir pompa calisirken
- *   yeniden baglanma ERTELENIR (mqtt_handler.h), (b) donanim watchdog'u
- *   kilitlenmeye karsi karti yeniden baslatir (bkz. watchdogBaslat).
+ *   yalnizca kurulumda (seri port stabilizasyonu) kullanilir. DIKKAT:
+ *   PubSubClient'in connect() cagrisi TCP baglanti kurana kadar BEKLER;
+ *   bu yuzden (a) bir pompa calisirken yeniden baglanma ERTELENIR
+ *   (mqtt_handler.h), (b) donanim watchdog'u kilitlenmeye karsi karti
+ *   yeniden baslatir (bkz. watchdogBaslat).
+ *
+ *   2026-09-23: Iletisim katmani SIM800L/GSM'den Deneyap Kart'in dahili
+ *   WiFi'sine TASINDI (bkz. mqtt_handler.h basi).
  *
  * ONEMLI - DERLEME / SAHA NOTU:
  *   Bu dosya arduino-cli ile GENEL ESP32 karti icin DERLENDI (2026-09-19),
  *   ama Deneyap Kart tanimiyla derlenmedi ve GERCEK DONANIMDA HIC
  *   CALISTIRILMADI. Kod, Arduino/ESP32
- *   C++ standartlarina ve kullanilan kutuphanelerin (TinyGSM, PubSubClient,
+ *   C++ standartlarina ve kullanilan kutuphanelerin (WiFi, PubSubClient,
  *   ArduinoJson, RTClib, SD, ESP32Servo) bilinen API'lerine uygun sekilde
  *   yazilmistir; ancak gercek Deneyap Kart uzerinde Deneyap Kart IDE'siyle
  *   derlenip fiziksel sensorlerle DOGRULANMASI GEREKIR. Pin numaralari ve
  *   kalibrasyon sabitleri icin config.h basindaki notlara bakiniz.
  *
  * Gerekli kutuphaneler (Deneyap Kart IDE / Arduino IDE Kutuphane Yoneticisi):
- *   - TinyGSM (Volodymyr Shymanskyy)
+ *   - WiFi (ESP32 cekirdegiyle birlikte gelir, ayrica kurulmaz)
  *   - PubSubClient (Nick O'Leary)
  *   - ArduinoJson (Benoit Blanchon), v6+
  *   - RTClib (Adafruit)
@@ -116,10 +119,10 @@ void setup() {
   Serial.println(F("[SISTEM] SD kart / RTC loglama baslatildi."));
 
   mqttBaslat();
-  Serial.println(F("[SISTEM] GSM/MQTT modulu baslatildi."));
+  Serial.println(F("[SISTEM] WiFi/MQTT modulu baslatildi."));
 
-  // Watchdog, modem yeniden baslatma gibi uzun kurulum adimlarindan SONRA
-  // devreye girer (aksi halde kurulum sirasinda kendini yeniden baslatirdi).
+  // Watchdog, WiFi'ye baglanma gibi uzun kurulum adimlarindan SONRA devreye
+  // girer (aksi halde kurulum sirasinda kendini yeniden baslatirdi).
   watchdogBaslat();
   Serial.println(F("[SISTEM] Donanim watchdog aktif."));
 

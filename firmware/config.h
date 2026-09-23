@@ -74,10 +74,13 @@
 #define PIN_I2C_SDA            21
 #define PIN_I2C_SCL            22
 
-// --- SIM800L GSM modulu (ESP32 UART2 uzerinden) ---
-#define SIM800L_RX_PIN         16  // ESP32 RX2 <- SIM800L TXD
-#define SIM800L_TX_PIN         17  // ESP32 TX2 -> SIM800L RXD
-#define SIM800L_BAUD           9600
+// --- WiFi (Deneyap Kart / ESP32 dahili radyo, ek modul gerekmez) ---
+// 2026-09-23: mimari SIM800L/GSM'den WiFi'ye TASINDI (ekip karari -- saha
+// yerine fuar/sunum ortaminda WiFi daha guvenilir; SIM800L donanimi kartta
+// kalabilir ama firmware artik onu KULLANMIYOR). Eski GSM/GPRS pin ve APN
+// tanimlari kaldirildi, bkz. mqtt_handler.h.
+#define WIFI_SSID              "AGINIZI_BURAYA_YAZIN"   // YER TUTUCU
+#define WIFI_SIFRE             "SIFRENIZI_BURAYA_YAZIN" // YER TUTUCU
 
 // ============================================================================
 // 3) SENSOR KALIBRASYON SABITLERI (YER TUTUCU -- saha kalibrasyonu bekliyor)
@@ -242,13 +245,10 @@
 // Donanim watchdog zaman asimi (ms). Ana dongu bu surede ilerlemezse (kilitlenme,
 // beklenmedik bloklama) kart YENIDEN BASLATILIR -- yeniden baslatma pompa
 // pinlerini LOW yapar (tedaviSistemBaslat), yani hata durumunda kimyasal
-// dozlama GUVENLI yone (durma) duser. GSM baglanti denemeleri (TinyGSM
-// gprsConnect ~60 sn bloklayabilir) bunu tetiklemesin diye 120 sn.
+// dozlama GUVENLI yone (durma) duser. WiFi.begin() kendisi bloklamaz (arka
+// planda baglanir), ama _mqttClient.connect() TCP baglanti kurana kadar
+// bekler -- kotu sinyalde birkac saniye surebilir. GSM doneminden kalma
+// genis 120 sn'lik marj WiFi ile de guvenli oldugu icin KORUNDU.
 #define WATCHDOG_ZAMAN_ASIMI_MS 120000UL
-
-// APN bilgisi (SIM karti operatorune gore degisir -- YER TUTUCU)
-#define GSM_APN               "internet"
-#define GSM_KULLANICI         ""
-#define GSM_SIFRE             ""
 
 #endif // AQUAGUARD_CONFIG_H

@@ -6,7 +6,7 @@
 ///   cihazda yerel olarak saklar:
 ///     - Tarla/zon listesi (kullanicinin olusturdugu)
 ///     - MQTT baglanti ayarlari (broker adresi/portu)
-///     - Her zon icin SON BILINEN OKUMA (GSM/internet kesilirse gosterilir)
+///     - Her zon icin SON BILINEN OKUMA (WiFi/internet kesilirse gosterilir)
 ///     - Her zon icin GECMIS KAYITLAR (sinirli sayida, en yeni once)
 ///     - Bildirim tercihleri (4 kategori) ve zon takma adlari
 ///

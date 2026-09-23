@@ -40,7 +40,7 @@ Sahada tıkanma türünü doğrudan belirleyecek bir yöntem literatürde tanım
   - Klor enjeksiyon pompası (DC motor) → biyolojik tıkanma
   - Yüksek basınçlı yıkama valfi (servo motor) → fiziksel tıkanma
 - **Güvenlik:** Mutex kilidi — asit ve klor aynı anda çalışamaz (toksik gaz riski). Her tedavi sonrası zorunlu durulama.
-- **İletişim:** SIM800L GSM modülü, MQTT protokolü
+- **İletişim:** WiFi (Deneyap Kart dahili radyo), MQTT protokolü
 - **Kayıt:** SD kart + RTC modülü (zaman damgalı loglama)
 - **Enerji:** Güneş paneli + LiPo pil
 - **Prototip:** 3+1 bölmeli şeffaf akrilik test düzeneği
@@ -103,7 +103,7 @@ Sahada tıkanma türünü doğrudan belirleyecek bir yöntem literatürde tanım
 | `sensors.h` | 6 sensör okuma fonksiyonları, outlier filtresi, normalizasyon |
 | `decision_engine.h` | Kural tabanlı karar motoru (Python versiyonunun C++ karşılığı) |
 | `treatment.h` | 3 tedavi kanalı kontrolü, mutex kilidi, zorunlu durulama döngüsü |
-| `mqtt_handler.h` | SIM800L üzerinden MQTT bağlantısı, veri gönderme, yeniden bağlanma |
+| `mqtt_handler.h` | WiFi üzerinden MQTT bağlantısı, veri gönderme, yeniden bağlanma |
 | `logger.h` | SD kart + RTC ile zaman damgalı veri ve tedavi geçmişi kaydı |
 
 ### 4.4. Flutter Mobil Uygulama
@@ -118,7 +118,7 @@ Sahada tıkanma türünü doğrudan belirleyecek bir yöntem literatürde tanım
   - Geçmiş loglar (tarih bazlı sensör ve tedavi geçmişi)
   - Ayarlar (MQTT bağlantı, bildirim tercihleri)
 - Tıkanma ve tedavi bildirimleri
-- Çevrimdışı mod: GSM kesilirse son bilinen durumu göster
+- Çevrimdışı mod: WiFi/internet kesilirse son bilinen durumu göster
 - Hedef: önce web/Chrome test, sonra Android
 
 ---

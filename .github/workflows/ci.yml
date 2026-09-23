@@ -72,7 +72,7 @@ jobs:
           arduino-cli config set network.connection_timeout 600s
           arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
           arduino-cli core install esp32:esp32 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-          arduino-cli lib install "PubSubClient" "ArduinoJson" "TinyGSM" "RTClib" "ESP32Servo"
+          arduino-cli lib install "PubSubClient" "ArduinoJson" "RTClib" "ESP32Servo"
       # Yalnizca DERLEME dogrulamasi (genel esp32:esp32:esp32 karti). Deneyap
       # Kart tanimi ve gercek donanim davranisi burada DOGRULANMAZ.
       - name: Derle

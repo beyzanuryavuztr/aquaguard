@@ -63,7 +63,7 @@ void main() {
     },
   );
 
-  testWidgets('EnerjiGostergesi: pil ve GSM tek anlamli metin olarak okunur', (
+  testWidgets('EnerjiGostergesi: pil ve WiFi tek anlamli metin olarak okunur', (
     tester,
   ) async {
     final handle = tester.ensureSemantics();

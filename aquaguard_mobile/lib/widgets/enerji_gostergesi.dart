@@ -1,8 +1,8 @@
-/// AquaGuard - Enerji/GSM Durumu Gostergesi (SIMULE)
+/// AquaGuard - Enerji/WiFi Durumu Gostergesi (SIMULE)
 /// ======================================================
 ///
 /// Amac:
-///   Genel Bakis'ta cihazin guc kaynagi (pil/sebeke) ve GSM sinyal
+///   Genel Bakis'ta cihazin guc kaynagi (pil/sebeke) ve WiFi sinyal
 ///   durumunu ozetleyen kompakt bir rozet.
 ///
 ///   DURUSTLUK NOTU: bu GERCEK bir telemetri degildir -- firmware/MQTT
@@ -31,7 +31,7 @@ class EnerjiGostergesi extends StatelessWidget {
   Widget build(BuildContext context) {
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
     final pil = EnerjiDurumu.pilYuzdesiHesapla();
-    final gsmGuclu = EnerjiDurumu.gsmGucluMu();
+    final wifiGuclu = EnerjiDurumu.wifiGucluMu();
     final pilRenk = pil >= 50
         ? DurumRenkleri.normal
         : pil >= 20
@@ -40,12 +40,12 @@ class EnerjiGostergesi extends StatelessWidget {
 
     return Semantics(
       label: 'Cihaz enerji durumu, simüle gösterge',
-      value: 'Pil yüzde $pil, ${gsmGuclu ? 'GSM güçlü' : 'GSM orta'}',
+      value: 'Pil yüzde $pil, ${wifiGuclu ? 'WiFi güçlü' : 'WiFi orta'}',
       excludeSemantics: true,
       child: _tooltipluGosterge(
         context,
         pil,
-        gsmGuclu,
+        wifiGuclu,
         pilRenk,
         onSurfaceVariant,
       ),
@@ -55,7 +55,7 @@ class EnerjiGostergesi extends StatelessWidget {
   Widget _tooltipluGosterge(
     BuildContext context,
     int pil,
-    bool gsmGuclu,
+    bool wifiGuclu,
     Color pilRenk,
     Color onSurfaceVariant,
   ) {
@@ -88,15 +88,13 @@ class EnerjiGostergesi extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Icon(
-              gsmGuclu
-                  ? Icons.signal_cellular_alt
-                  : Icons.signal_cellular_alt_2_bar,
+              wifiGuclu ? Icons.wifi : Icons.wifi_2_bar,
               size: 16,
               color: onSurfaceVariant,
             ),
             const SizedBox(width: 4),
             Text(
-              gsmGuclu ? 'GSM Güçlü' : 'GSM Orta',
+              wifiGuclu ? 'WiFi Güçlü' : 'WiFi Orta',
               style: TextStyle(fontSize: 12, color: onSurfaceVariant),
             ),
           ],

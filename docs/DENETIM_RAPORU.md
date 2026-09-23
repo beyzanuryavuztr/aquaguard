@@ -8,6 +8,12 @@ olmadığı için o alanlar **doğrulanamadı** (aşağıda "Doğrulanamayanlar"
 
 Durum sütunu: **AÇIK** = düzeltilmedi · **DÜZELTİLDİ** = bu denetimde giderildi.
 
+> **2026-09-23 notu:** İletişim mimarisi SIM800L/GSM'den WiFi'ye taşındı (ekip
+> kararı). Aşağıdaki K3/K4 bulgularındaki "gprsConnect"/"GSM hattı" ifadeleri
+> artık kod karşılığı olarak `WiFi.begin()`/"WiFi" ile değişti; altta yatan
+> güvenlik/bloklama analizi aynı kalıyor (bkz. `CHANGELOG.md` "İletişim
+> Mimarisi" bölümü, `firmware/DONANIM_KONTROL_LISTESI.md`).
+
 ---
 
 ## KRİTİK (güvenlik / yanlış güvence)

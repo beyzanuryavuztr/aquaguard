@@ -5,8 +5,8 @@
  * Amac:
  *   Tum sensor okumalarini ve tedavi olaylarini, RTC modulunden alinan
  *   gercek zaman damgasiyla birlikte SD karta CSV formatinda kaydeder.
- *   GSM baglantisi kesilse bile (SIM800L sinyal kaybi vb.) saha verisi
- *   kaybolmaz; baglanti geri geldiginde gecmis kayitlar incelenebilir.
+ *   WiFi baglantisi kesilse bile saha verisi kaybolmaz; baglanti geri
+ *   geldiginde gecmis kayitlar incelenebilir.
  *
  * Iki ayri log dosyasi tutulur:
  *   /sensor_log.csv   -> her sensor okuma dongusunde bir satir

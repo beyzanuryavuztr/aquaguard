@@ -102,6 +102,21 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - Model Performansı ekranındaki doğruluk standart sapması güncel yeniden
   eğitim çıktısıyla eşitlendi (%89.9 ± %1.5).
 
+### İletişim Mimarisi (2026-09-23)
+
+- Firmware iletişimi **SIM800L/GSM'den WiFi'ye taşındı** (ekip kararı —
+  sunum/fuar ortamında WiFi, SIM kapsama alanından daha güvenilir).
+  `mqtt_handler.h` artık TinyGSM yerine ESP32'nin dahili WiFi kütüphanesini
+  kullanıyor; `config.h`'de `GSM_APN`/`SIM800L_*` yerine `WIFI_SSID`/
+  `WIFI_SIFRE` var. Genel ESP32 kartıyla arduino-cli ile yeniden derlendi
+  (%78 flash, %15 RAM — WiFi/TLS yığını TinyGSM'den daha büyük yer kaplıyor).
+  **Bilinçli ödünleşim:** WiFi menzili sınırlıdır (yönlendiriciden birkaç on
+  metre); GSM'in "her yerde çeker" garantisi kayboldu — gerçek sahada WiFi
+  kapsaması olmayan bir tarlada sistem bağlanamaz.
+- Uygulamadaki simüle "GSM sinyal" göstergesi (`EnerjiGostergesi`,
+  gerçek telemetri değil) tutarlılık için "WiFi sinyal" olarak yeniden
+  adlandırıldı.
+
 ### Bilinen Sınırlamalar
 
 - Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.
