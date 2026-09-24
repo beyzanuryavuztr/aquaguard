@@ -59,7 +59,7 @@ UI o kartı hiç göstermez):
 
 ```json
 {
-  "zaman": "2026-09-18T14:32:07.000Z",
+  "zaman": "2026-09-18 14:32:07",
   "zone": 2,
   "ph": 6.8,
   "ec": 1.42,
@@ -67,33 +67,48 @@ UI o kartı hiç göstermez):
   "turbidite": 3.1,
   "debi": 8.4,
   "delta_basinc": 0.62,
-  "durum": "tespitEdildi",
+  "durum": "tespit_edildi",
   "tikanma_turu": "kimyasal",
-  "guven": 0.87,
-  "guven_kimyasal": 0.87,
-  "guven_biyolojik": 0.06,
-  "guven_fiziksel": 0.07,
-  "tedavi_aktif": "asitDozlama",
+  "guven": 87.0,
+  "guven_kimyasal": 87.0,
+  "guven_biyolojik": 6.0,
+  "guven_fiziksel": 7.0,
+  "tedavi_aktif": "asit_dozlama",
   "durulama_aktif": false,
   "hazne_asit_seviye_yuzde": null,
-  "hazne_klor_seviye_yuzde": null
+  "hazne_klor_seviye_yuzde": null,
+  "ana_vana_acik": true,
+  "sulama_kalan_saniye": 0
 }
 ```
 
-`durum` ∈ `normal | belirsiz | tespitEdildi | bilinmiyor`,
+`durum` ∈ `normal | belirsiz | tespit_edildi | bilinmiyor`,
 `tikanma_turu` ∈ `yok | kimyasal | biyolojik | fiziksel`,
-`tedavi_aktif` ∈ `yok | asitDozlama | klorEnjeksiyon | yuksekBasincliYikama`.
-Mobil uygulama, aynı şemayı `aquaguard/zone{N}/komut` konusuna manuel
-müdahale/durdurma komutları göndermek için de kullanır.
+`tedavi_aktif` ∈ `yok | asit_dozlama | klor_enjeksiyon | yuksek_basincli_yikama
+| besin_sivi | besin_toz` (son ikisi Faz 3, 2026-09-25 — tıkanma teşhisinden
+bağımsız, operatörün manuel başlattığı besin/takviye dozlaması).
+Alan adları tam olarak bu snake_case biçimiyle kabloda (MQTT JSON) gider;
+Dart tarafında `lib/models/sensor_okuma.dart`'taki `fromJson`/`toJson` bu
+biçimle enum'lar arasında çevirir (enum'ların kendisi Dart sözleşmesi
+gereği camelCase'dir, örn. `TedaviTuru.asitDozlama`, ama kabloya hiç
+öyle yazılmaz). Mobil uygulama, aynı komut şemasını `aquaguard/zone{N}/komut`
+konusuna manuel müdahale/durdurma komutları göndermek için de kullanır.
 
 ## Ekran görüntüleri
 
-> Bu depoyu klonlayıp `flutter run -d chrome` ile çalıştırdığınızda göreceğiniz
-> 4 ana ekran: Genel Bakış (zon şeması + sistem sağlığı), Tıkanma Detay
-> (sensör trendleri + gauge), Tedavi Geçmişi (başarı oranı + tespit günlüğü),
-> Ayarlar (Görünüm/erişilebilirlik + MQTT/güvenlik). Ekran görüntüleri henüz
-> bu depoya eklenmedi — `docs/screenshots/` altına gerçek Chrome
-> görüntüleri eklenip buraya bağlanacak (bkz. `CHANGELOG.md`).
+Demo Modu'nda, yayınlanmış web sürümünden alınmış gerçek görüntüler (2026-09-25):
+
+| Genel Bakış | Trend Analizi |
+|---|---|
+| ![Genel Bakış](docs/screenshots/genel_bakis.png) | ![Trend Analizi](docs/screenshots/trend_analizi.png) |
+
+| Tedavi Geçmişi | Ayarlar |
+|---|---|
+| ![Tedavi Geçmişi](docs/screenshots/tedavi_gecmisi.png) | ![Ayarlar](docs/screenshots/ayarlar.png) |
+
+> Zon Detay ekranı (sensör trendleri + gauge) henüz eklenmedi — canlı
+> demoda anlık bildirimler zon kartlarının üzerine bindiği için otomatik
+> ekran görüntüsü alınamadı, elle eklenebilir.
 
 ## Klasör yapısı
 
