@@ -102,21 +102,27 @@ Sahada tıkanma türünü doğrudan belirleyecek bir yöntem literatürde tanım
 | `config.h` | Pin tanımları, eşik değerleri, MQTT ayarları, kalibrasyon sabitleri |
 | `sensors.h` | 6 sensör okuma fonksiyonları, outlier filtresi, normalizasyon |
 | `decision_engine.h` | Kural tabanlı karar motoru (Python versiyonunun C++ karşılığı) |
-| `treatment.h` | 3 tedavi kanalı kontrolü, mutex kilidi, zorunlu durulama döngüsü |
-| `mqtt_handler.h` | WiFi üzerinden MQTT bağlantısı, veri gönderme, yeniden bağlanma |
+| `treatment.h` | 5 tedavi kanalı kontrolü (asit/klor/yıkama + besin sıvı/toz), mutex kilidi, zorunlu durulama döngüsü |
+| `mqtt_handler.h` | WiFi üzerinden MQTT bağlantısı, veri gönderme, yeniden bağlanma, zon-bazlı dozlama izolasyonu |
 | `logger.h` | SD kart + RTC ile zaman damgalı veri ve tedavi geçmişi kaydı |
+| `ana_vana.h` | Ana vana kontrolü + süreli (otomatik kapanan) sulama zamanlayıcısı |
 
 ### 4.4. Flutter Mobil Uygulama
 **Klasör:** `aquaguard_mobile/` (Flutter projesi olarak ayrı oluşturulacak)
 
 - MQTT üzerinden Deneyap Kart'tan canlı sensör verisi alır
-- **Ekranlar:**
+- **Ekranlar (bu liste ilk taslaktır — güncel/tam ekran envanteri için
+  uygulamanın kendisine ve `CHANGELOG.md`'ye bakın):**
   - Tarla seçimi (birden fazla tarla desteği)
   - Zone bazlı dashboard (renk kodlu durum: yeşil/sarı/kırmızı)
   - Tıkanma detay ekranı (tür, güven skoru, önerilen tedavi)
   - Aktif tedavi ekranı (ilerleme göstergesi)
   - Geçmiş loglar (tarih bazlı sensör ve tedavi geçmişi)
   - Ayarlar (MQTT bağlantı, bildirim tercihleri)
+  - **Uzaktan Sulama** (2026-09-24): çiftlik+zon(lar) seçip süreli sulama
+    başlatma — vana süre dolunca kendiliğinden kapanır (bkz. §4.3 sema v3)
+  - **Besin Takviyesi** (2026-09-25): tıkanma teşhisinden bağımsız, operatörün
+    kendi kararıyla sıvı/toz besin takviyesi dozlaması başlatması
 - Tıkanma ve tedavi bildirimleri
 - Çevrimdışı mod: WiFi/internet kesilirse son bilinen durumu göster
 - Hedef: önce web/Chrome test, sonra Android
