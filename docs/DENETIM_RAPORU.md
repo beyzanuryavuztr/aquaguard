@@ -73,7 +73,7 @@ Durum sütunu: **AÇIK** = düzeltilmedi · **DÜZELTİLDİ** = bu denetimde gid
 
 ## Doğrulanamayanlar (donanım/araç gerektirir)
 
-- Pinlerin, kalibrasyonun, sensör okumalarının ve GSM bağlantısının **gerçek Deneyap Kart'ta** çalışması.
+- Pinlerin, kalibrasyonun, sensör okumalarının ve WiFi/MQTT bağlantısının **gerçek Deneyap Kart'ta** çalışması (2026-09-23'te GSM'den WiFi'ye taşındı, bkz. yukarıdaki not).
 - Deneyap Kart'ın kendi kart tanımıyla derleme (yalnızca genel ESP32 ile derlendi).
 - Android release APK'nın gerçekten ağ kurabildiği (izin eklendi, APK üretilmedi).
 - iOS davranışı.
