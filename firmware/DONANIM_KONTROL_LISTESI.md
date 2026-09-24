@@ -40,6 +40,9 @@ güncellenmelidir.
 | SD kart (SPI CS) | GPIO 5 | |
 | RTC (I2C) | SDA=21, SCL=22 | Deneyap Kart revizyonuna göre değişebilir |
 | WiFi | dahili radyo, ek pin yok | SSID/şifre `config.h` `WIFI_SSID`/`WIFI_SIFRE` |
+| 3. sıvı (besin takviyesi) pompası | GPIO 16 | Röle/motor sürücü (Faz 3 — eski SIM800L RX pini, boşta) |
+| Toz+su karıştırıcı motoru | GPIO 17 | Röle/motor sürücü (Faz 3 — eski SIM800L TX pini, boşta) |
+| Toz karışımını ana hatta iten pompa | GPIO 4 | Röle/motor sürücü (Faz 3 — **VARSAYIM**, aşağıya bakın) |
 
 **Kritik**: analog sensör pinleri **ADC1 kanallarından** seçilmiştir (ADC2,
 WiFi aktifken güvenilir çalışmaz) — bu kısıtlama Deneyap Kart'ın hangi
@@ -193,6 +196,23 @@ Diğer, düşük öncelikli/bilinen sınırlamalar (değiştirilmedi, riski dü�
   başında). Flutter uygulaması bunu test etmek için kullanılamaz; sadece
   gerçek donanımda veya birden fazla mock örneğini elle MQTT ile
   izleyerek gözlemlenebilir.
+- **Besin/takviye dozlama (Faz 3) -- 2026-09-25'te firmware'e EKLENDİ**:
+  tıkanma teşhisinden BAĞIMSIZ, operatörün `tedavi_baslat` komutuyla
+  `tedavi_turu:"besin_sivi"` veya `"besin_toz"` göndererek istediği zaman
+  başlatabildiği bir dozlama. AYNI mutex kilidine VE zon-izolasyonuna
+  tabidir (asit/klor/yıkama ile asla aynı anda çalışmaz). `treatment.h`
+  `TedaviTuru` enum'una eklendi; `tedaviTuruBelirle()` (otonom teşhis
+  eşlemesi) bunları ASLA döndürmez, sadece manuel tetiklenir.
+  **KRİTİK, DOĞRULANMAMIŞ VARSAYIM:** toz karışımının ana hatta nasıl
+  itildiği bilinmediği için, kod "karıştırıcı önce çalışır (20 sn),
+  ardından AYRI bir pompa karışımı iter (20 sn)" varsayımıyla yazıldı
+  (`config.h` `PIN_KARISTIRICI_TOZ`/`PIN_POMPA_BESIN_TOZ`,
+  `BESIN_TOZ_KARISTIRMA_SURESI_MS`/`BESIN_TOZ_POMPALAMA_SURESI_MS`).
+  **Enver, gerçek mekanizmayı görünce bunu MUTLAKA doğrulamalı** — eğer
+  gerçekte tek bir aktüatör varsa, veya sıralama farklıysa, `treatment.h`
+  `_aktuatoruAyarla(TEDAVI_BESIN_TOZ, ...)` ve `tedaviGuncelle()` içindeki
+  faz geçiş bloğu güncellenmeli. 3 yeni pin (GPIO 16, 17, 4) eski
+  SIM800L pinlerini ve bir boş pini kullanıyor — DOĞRULANMALI.
 
 ## Kaynak / Tek Kaynak Referansları
 

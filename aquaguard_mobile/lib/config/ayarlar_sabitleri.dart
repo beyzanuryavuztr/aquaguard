@@ -104,6 +104,10 @@ class AyarlarSabitleri {
     TedaviTuru.asitDozlama: 30,
     TedaviTuru.klorEnjeksiyon: 30,
     TedaviTuru.yuksekBasincliYikama: 60,
+    // Faz 3 (2026-09-25) -- firmware/config.h TEDAVI_BESIN_SIVI_SURESI_MS/
+    // TEDAVI_BESIN_TOZ_SURESI_MS (karistirma+pompalama toplami) ile ayni.
+    TedaviTuru.besinSivi: 30,
+    TedaviTuru.besinToz: 40,
   };
 
   static const int durulamaSuresiSaniye = 45;

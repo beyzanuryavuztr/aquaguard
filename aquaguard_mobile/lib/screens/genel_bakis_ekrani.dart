@@ -37,6 +37,7 @@ import '../widgets/zon_semasi.dart';
 import 'aktivite_gecmisi_ekrani.dart';
 import 'ayarlar_ekrani.dart';
 import 'bildirim_gecmisi_ekrani.dart';
+import 'besin_takviyesi_ekrani.dart';
 import 'juri_sunum_ekrani.dart';
 import 'tarla_secim_ekrani.dart';
 import 'uzaktan_sulama_ekrani.dart';
@@ -100,12 +101,34 @@ class GenelBakisEkrani extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const TarlaSecimEkrani()),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.water_drop_outlined),
-            tooltip: 'Uzaktan Sulama',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const UzaktanSulamaEkrani()),
-            ),
+          PopupMenuButton<void>(
+            tooltip: 'Daha fazla',
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                child: const ListTile(
+                  leading: Icon(Icons.water_drop_outlined),
+                  title: Text('Uzaktan Sulama'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const UzaktanSulamaEkrani(),
+                  ),
+                ),
+              ),
+              PopupMenuItem(
+                child: const ListTile(
+                  leading: Icon(Icons.grain_outlined),
+                  title: Text('Besin Takviyesi'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const BesinTakviyesiEkrani(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

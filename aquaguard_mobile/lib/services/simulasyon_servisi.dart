@@ -156,6 +156,24 @@ Iterable<SimAdim> tedaviVeIyilesmeAdimlariUret(
   yield* durulamaVeIyilesmeAdimlariUret(hedefTur, rng);
 }
 
+/// Besin/takviye dozlama (Faz 3, 2026-09-25) -- tikanma_ve_iyilesme_
+/// adimlarini_uret'ten FARKLI: bir tikanma turunu "cozmuyor", operatorun
+/// kendi karariyla (orn. demir eksikligi icin besin takviyesi) baslattigi,
+/// tikanma teshisinden BAGIMSIZ bir islem. Sensorler bu yuzden "normal"
+/// imzasinda kalir (gercek bir kayma simule EDILMEZ, sadece tedaviAktif
+/// alani dolar) -- bkz. python/aquaguard_mock_yayinci.py
+/// besin_dozlama_adimlarini_uret() (AYNI mantik, iki dilde).
+Iterable<SimAdim> besinDozlamaAdimlariUret(
+  TedaviTuru tedavi,
+  math.Random rng,
+) sync* {
+  const tedaviAdim = 3;
+  for (var i = 0; i < tedaviAdim; i++) {
+    yield SimAdim(_tamOrnekUret('normal', 'normal', 0.0, rng), tedavi, false);
+  }
+  yield* durulamaVeIyilesmeAdimlariUret('normal', rng);
+}
+
 /// Sonsuz bir senaryo akisi: normal -> kotulesme -> tedavi -> durulama ->
 /// iyilesme, ardindan yeni rastgele bir tikanma turuyle tekrar basa doner.
 Iterable<SimAdim> senaryoAdimlariUret(math.Random rng) sync* {
@@ -298,6 +316,24 @@ class SimulasyonServisi {
     _rnglar[zone] = rng;
     _iteratorlar[zone] = tedaviVeIyilesmeAdimlariUret(
       _turAdi(tur),
+      rng,
+    ).followedBy(senaryoAdimlariUret(rng)).iterator;
+    _zonMesgulMu[zone] = true;
+    return true;
+  }
+
+  /// Besin/takviye dozlama (Faz 3, 2026-09-25): manuelTedaviBaslat ile AYNI
+  /// mutex kuralini uygular, ama tikanma turune degil DOGRUDAN bir
+  /// TedaviTuru'ye (besinSivi/besinToz) baglanir -- bu ikisi hicbir
+  /// TikanmaTuru'ye karsilik gelmez (operatorun herhangi bir zamanda,
+  /// tikanma durumundan bagimsiz baslatabilecegi bir islemdir).
+  bool besinDozlamaBaslat(int zone, TedaviTuru tedavi) {
+    if (!zonlar.contains(zone)) return false;
+    if (zonMesgulMu(zone)) return false;
+    final rng = _rnglar[zone] ?? math.Random();
+    _rnglar[zone] = rng;
+    _iteratorlar[zone] = besinDozlamaAdimlariUret(
+      tedavi,
       rng,
     ).followedBy(senaryoAdimlariUret(rng)).iterator;
     _zonMesgulMu[zone] = true;

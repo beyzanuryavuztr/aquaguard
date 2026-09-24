@@ -152,6 +152,28 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
   henüz denenmedi. Bilinçli/dokümante edilmiş sınırlamalar için bkz.
   `firmware/DONANIM_KONTROL_LISTESI.md`.
 
+### Besin/Takviye Dozlama (2026-09-25) — Faz 3
+
+- Yeni **"Besin Takviyesi"** ekranı (Genel Bakış'ın "⋮" menüsünde, Uzaktan
+  Sulama'nın yanında): tıkanma tedavisinden tamamen bağımsız, operatörün
+  kendi kararıyla (örn. ziraat mühendisinin önerdiği bir takviye) bir sıvı
+  veya toz maddeyi sulama suyuna katmasını sağlar. Çiftlik + hedef zon(lar)
+  seçilir, "Sıvı" veya "Toz Takviye Başlat" ile tetiklenir — süre sabittir.
+- Yeni iki `TedaviTuru`: `besinSivi`, `besinToz` — asit/klor/yıkama ile
+  **aynı güvenlik kilidine (mutex) ve zon-izolasyonuna** tabidir, hiçbir
+  zaman otonom tetiklenmez (`tedaviTuruBelirle` bunları asla döndürmez).
+  Mevcut `tedavi_baslat` MQTT komutu yeniden kullanıldı — yeni bir komut
+  eklenmedi.
+- **Açıkça işaretlenmiş varsayım:** toz karışımının ana hatta nasıl
+  itildiği (ayrı bir pompa mı, yoksa başka bir mekanizma mı) donanım henüz
+  netleşmediği için **bilinmiyor** — kod "önce karıştır (20 sn), sonra ayrı
+  bir pompayla it (20 sn)" varsayımıyla yazıldı, projenin mevcut "yer
+  tutucu pin" disipliniyle tutarlı şekilde `DONANIM_KONTROL_LISTESI.md`'de
+  büyük harflerle işaretlendi. Gerçek mekanizma farklıysa `treatment.h`
+  güncellenmeli.
+- Python mock ve Flutter tarafında da (demo modu dahil) aynı iki tedavi
+  türü desteklendi — 54 Python testi, 440 Flutter testi geçiyor.
+
 ### Bilinen Sınırlamalar
 
 - Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.

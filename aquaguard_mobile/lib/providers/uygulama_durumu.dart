@@ -299,6 +299,8 @@ class UygulamaDurumu extends ChangeNotifier {
 
   Future<KomutSonucu> manuelTedaviBaslat(int zone, TedaviTuru tedavi) =>
       _cihaz.manuelTedaviBaslat(zone, tedavi);
+  Future<KomutSonucu> besinDozlamaBaslat(int zone, TedaviTuru tedavi) =>
+      _cihaz.besinDozlamaBaslat(zone, tedavi);
   Future<void> manuelTedaviDurdur(int zone) => _cihaz.manuelTedaviDurdur(zone);
   Future<void> manuelNormaleDondur(int zone) =>
       _cihaz.manuelNormaleDondur(zone);

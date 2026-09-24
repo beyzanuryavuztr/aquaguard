@@ -41,4 +41,11 @@ const Map<String, String> yardimMetinleri = {
       'kapatsanız bile su boşa akmaya devam etmez. Sulama sürerken bir '
       'tıkanma tespit edilirse, sistem sizin müdahalenize gerek kalmadan '
       'otomatik olarak teşhis koyup uygun tedaviyi uygular.',
+  'besin_takviyesi':
+      'Tıkanma tedavisinden tamamen bağımsız bir özellik: örneğin ziraat '
+      'mühendisinin önerdiği bir besin takviyesini (sıvı veya toz) sulama '
+      'suyuna katmak için kullanılır. Çiftlik ve hedef zon(lar)ı seçip '
+      '"Sıvı" veya "Toz Takviye Başlat" butonuna basmanız yeterli -- süre '
+      'sabittir, ayarlamanıza gerek yok. Zon zaten bir tedavi/durulama '
+      'sürdürüyorsa istek güvenlik amacıyla reddedilir.',
 };

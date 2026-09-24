@@ -104,6 +104,11 @@ TEDAVI_ESLEME = {
 # bulmak icin (bkz. _komut_isle()).
 TUR_ESLEME_TERS = {tedavi: tur for tur, tedavi in TEDAVI_ESLEME.items()}
 
+# Besin/takviye dozlama (Faz 3, 2026-09-25) -- tikanma turuyle ESLESMEZ
+# (bkz. firmware/treatment.h TEDAVI_BESIN_SIVI/TEDAVI_BESIN_TOZ, ASLA
+# otonom tetiklenmezler, sadece operator "tedavi_baslat" ile manuel secer).
+BESIN_TEDAVI_TURLERI = {"besin_sivi", "besin_toz"}
+
 # Senaryo fazlarinin adim sayilari (her adim bir MQTT yayinina karsilik gelir)
 FAZ_ADIM_SAYILARI = {
     "normal": 4,
@@ -181,6 +186,28 @@ def tedavi_ve_iyilesme_adimlarini_uret(hedef_tur: str, rng: np.random.Generator)
     yield from durulama_ve_iyilesme_adimlarini_uret(hedef_tur, rng)
 
 
+def besin_dozlama_adimlarini_uret(tedavi_adi: str, rng: np.random.Generator):
+    """
+    Besin/takviye dozlama (Faz 3, 2026-09-25) icin senaryo kuyrugu --
+    tikanma_ve_iyilesme_adimlarini_uret'ten FARKLI: bir tikanma turunu
+    "cozmuyor", operatorun kendi karariyla (orn. demir eksikligi icin
+    besin takviyesi) baslattigi, tikanma teshisinden BAGIMSIZ bir islem.
+    Sensorler bu yuzden "normal" imzasinda kalir (kaynak=hedef="normal",
+    ilerleme=0 -- gercek bir kayma simule EDILMEZ, sadece tedavi_aktif
+    alani dolar). Ardindan gercek firmware ile AYNI kural: zorunlu
+    durulama (mutex kurali istisna tanimiyor) + normal senaryoya donus.
+    """
+    adim_sayisi = FAZ_ADIM_SAYILARI["tedavi"]
+    for _ in range(adim_sayisi):
+        ornek = _tam_ornek_uret("normal", "normal", 0.0, rng)
+        yield ornek, "tedavi", tedavi_adi, False
+
+    adim_sayisi = FAZ_ADIM_SAYILARI["durulama"]
+    for _ in range(adim_sayisi):
+        ornek = _tam_ornek_uret("normal", "normal", 0.0, rng)
+        yield ornek, "durulama", "yok", True
+
+
 def senaryo_adimlarini_uret(rng: np.random.Generator):
     """
     Sonsuz bir uretec (generator): her cagrida bir sonraki simulasyon adimini
@@ -250,6 +277,16 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict, istemci=None,
             _ack_gonder(False)
             return
         tedavi_turu = mesaj_json.get("tedavi_turu")
+        if tedavi_turu in BESIN_TEDAVI_TURLERI:
+            # Faz 3 (2026-09-25): besin/takviye dozlama -- tikanma turuyle
+            # ILGISI YOK (bkz. besin_dozlama_adimlarini_uret dosya ici notu).
+            print(f"[Komut] Operatör: '{tedavi_turu}' besin dozlaması manuel başlatılıyor.")
+            calisma_durumu["uretec"] = itertools.chain(
+                besin_dozlama_adimlarini_uret(tedavi_turu, rng),
+                senaryo_adimlarini_uret(rng),
+            )
+            _ack_gonder(True)
+            return
         hedef_tur = TUR_ESLEME_TERS.get(tedavi_turu)
         if hedef_tur is None:
             print(f"[Komut] Gecersiz/eksik tedavi_turu: {tedavi_turu!r}, yoksayildi.")

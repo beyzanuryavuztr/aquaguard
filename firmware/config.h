@@ -68,6 +68,23 @@
 #define PIN_POMPA_KLOR        26   // Klor enjeksiyon pompasi (DC motor surucu/role)
 #define PIN_SERVO_YIKAMA      14   // Yuksek basincli yikama valfi (servo motor, PWM)
 
+// --- Besin/takviye dozlama aktuatorleri (2026-09-25, Faz 3 -- tikanma
+//     teshisinden BAGIMSIZ, operatorun kendi karariyla -- orn. demir
+//     eksikligi icin ziraatcinin onerdigi bir ilaci suya katmak) ---
+// PIN_POMPA_BESIN_SIVI/PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ, GSM'den
+// WiFi'ye gecisle (2026-09-23) bosa cikan SIM800L pinlerini (16, 17) ve
+// bir bos pini (4) kullanir. YER TUTUCU -- Enver, toz haznesi/karistirici
+// mekanizmasinin GERCEK devresini kurunca dogrulamali/degistirmeli.
+#define PIN_POMPA_BESIN_SIVI  16   // 3. sivi (besin/takviye) dozlama pompasi
+// KRITIK VARSAYIM (dogrulanmali -- bkz. DONANIM_KONTROL_LISTESI.md): toz
+// haznesindeki karistirici, karisim suya karisirken calisir; karisim
+// hazir olunca AYRI bir pompa onu ana hatta iter. Eger gercek mekanizma
+// bunun yerine tek bir aktuator veya basinc farkiyla kendiliginden akis
+// kullaniyorsa, bu iki tanim ve _aktuatoruAyarla(TEDAVI_BESIN_TOZ, ...)
+// buna gore guncellenmelidir.
+#define PIN_KARISTIRICI_TOZ   17   // Toz+su karistirici motoru
+#define PIN_POMPA_BESIN_TOZ    4   // Karisimi ana hatta iten pompa
+
 // --- Ana sulama vanasi (operator MQTT komutuyla acar/kapatir -- bkz.
 //     mqtt_handler.h "sulama_durdur"/"sulama_baslat", TEDAVI aktuatorlerinden
 //     BAGIMSIZ: zonun butun sulamasini keser, tedavi/teshis akisiyla ilgisi
@@ -220,6 +237,15 @@
 #define TEDAVI_KLOR_SURESI_MS    30000UL   // Klor enjeksiyon pompasi calisma suresi
 #define TEDAVI_YIKAMA_SURESI_MS  60000UL   // Yuksek basincli yikama suresi
 #define DURULAMA_SURESI_MS       45000UL   // Her tedavi sonrasi zorunlu durulama
+
+// --- Besin/takviye dozlama sureleri (Faz 3, YER TUTUCU) ---
+#define TEDAVI_BESIN_SIVI_SURESI_MS  30000UL   // 3. sivi pompasi calisma suresi
+// Toz: KARISTIRMA (su+toz karisir) tamamlaninca POMPALAMA (ana hatta
+// itme) baslar -- iki fazli, bkz. treatment.h _aktuatoruAyarla(TEDAVI_BESIN_TOZ).
+#define BESIN_TOZ_KARISTIRMA_SURESI_MS  20000UL   // Karistirici calisma suresi
+#define BESIN_TOZ_POMPALAMA_SURESI_MS   20000UL   // Pompa calisma suresi (karistirmadan SONRA)
+#define TEDAVI_BESIN_TOZ_SURESI_MS \
+  (BESIN_TOZ_KARISTIRMA_SURESI_MS + BESIN_TOZ_POMPALAMA_SURESI_MS)
 
 // --- Uzaktan/sureli sulama (2026-09-24) ---
 // Ciftci uygulamadan "X dakika sula" diye baslatabilir (bkz. ana_vana.h

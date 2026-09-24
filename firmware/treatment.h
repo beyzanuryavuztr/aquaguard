@@ -48,19 +48,31 @@ enum TedaviTuru {
   TEDAVI_YOK,
   TEDAVI_ASIT,
   TEDAVI_KLOR,
-  TEDAVI_YIKAMA
+  TEDAVI_YIKAMA,
+  // Besin/takviye dozlama (Faz 3, 2026-09-25) -- tikanma teshisinden
+  // BAGIMSIZ, SADECE operatorun manuel komutuyla baslar (bkz.
+  // tedaviTuruBelirle() -- bu ikisini ASLA dondurmez, otonom tetiklenmezler).
+  // Ayni GUVENLIK KILIDINE (mutex) tabidirler -- asit/klor/yikama ile ASLA
+  // ayni anda calismazlar (hepsi ayni paylasimli ana hatta enjekte ediyor).
+  TEDAVI_BESIN_SIVI,
+  TEDAVI_BESIN_TOZ
 };
 
 const char* tedaviAdiGetir(TedaviTuru tedavi) {
   switch (tedavi) {
-    case TEDAVI_ASIT:    return "asit_dozlama";
-    case TEDAVI_KLOR:    return "klor_enjeksiyon";
-    case TEDAVI_YIKAMA:  return "yuksek_basincli_yikama";
-    default:              return "yok";
+    case TEDAVI_ASIT:       return "asit_dozlama";
+    case TEDAVI_KLOR:       return "klor_enjeksiyon";
+    case TEDAVI_YIKAMA:     return "yuksek_basincli_yikama";
+    case TEDAVI_BESIN_SIVI: return "besin_sivi";
+    case TEDAVI_BESIN_TOZ:  return "besin_toz";
+    default:                 return "yok";
   }
 }
 
-// Tikanma turunden uygun tedaviye esleme (brief SS3'teki tedavi tablosu)
+// Tikanma turunden uygun tedaviye esleme (brief SS3'teki tedavi tablosu).
+// BILEREK SADECE 3 klasik tedaviyi dondurur -- besin/takviye dozlama
+// tikanma teshisiyle TETIKLENMEZ, sadece operator elle baslatabilir
+// (bkz. mqtt_handler.h "besin_dozlama_baslat").
 TedaviTuru tedaviTuruBelirle(TikanmaTuru tur) {
   switch (tur) {
     case TUR_KIMYASAL:  return TEDAVI_ASIT;
@@ -77,6 +89,8 @@ TedaviTuru tedaviTuruAyristir(const char* ad) {
   if (strcmp(ad, "asit_dozlama") == 0)              return TEDAVI_ASIT;
   if (strcmp(ad, "klor_enjeksiyon") == 0)           return TEDAVI_KLOR;
   if (strcmp(ad, "yuksek_basincli_yikama") == 0)    return TEDAVI_YIKAMA;
+  if (strcmp(ad, "besin_sivi") == 0)                return TEDAVI_BESIN_SIVI;
+  if (strcmp(ad, "besin_toz") == 0)                 return TEDAVI_BESIN_TOZ;
   return TEDAVI_YOK;
 }
 
@@ -91,17 +105,29 @@ static unsigned long _durulamaBaslangicMs = 0;
 
 static Servo _yikamaServo;
 
+// TEDAVI_BESIN_TOZ icin iki fazli akisin HANGI fazda oldugunu tutar --
+// karistirma fazinda false, pompalama fazina geciste true'ya doner (bkz.
+// tedaviGuncelle() ici faz gecis kontrolu). Diger tum tedaviler tek fazli
+// oldugu icin bu degiskeni kullanmaz.
+static bool _tozPompalamaFazindaMi = false;
+
 // Bir tedavi turunun konfigurasyondaki suresini dondurur
 static unsigned long _tedaviSuresiGetir(TedaviTuru tedavi) {
   switch (tedavi) {
-    case TEDAVI_ASIT:    return TEDAVI_ASIT_SURESI_MS;
-    case TEDAVI_KLOR:    return TEDAVI_KLOR_SURESI_MS;
-    case TEDAVI_YIKAMA:  return TEDAVI_YIKAMA_SURESI_MS;
-    default:              return 0;
+    case TEDAVI_ASIT:       return TEDAVI_ASIT_SURESI_MS;
+    case TEDAVI_KLOR:       return TEDAVI_KLOR_SURESI_MS;
+    case TEDAVI_YIKAMA:     return TEDAVI_YIKAMA_SURESI_MS;
+    case TEDAVI_BESIN_SIVI: return TEDAVI_BESIN_SIVI_SURESI_MS;
+    case TEDAVI_BESIN_TOZ:  return TEDAVI_BESIN_TOZ_SURESI_MS;
+    default:                 return 0;
   }
 }
 
-// Aktuatoru fiziksel olarak ac/kapat -- SADECE bu fonksiyon pinlere dokunur
+// Aktuatoru fiziksel olarak ac/kapat -- SADECE bu fonksiyon pinlere dokunur.
+// TEDAVI_BESIN_TOZ ISTISNADIR: iki fazli (once karistir, sonra pompala) --
+// acik=true SADECE karistiriciyi baslatir (pompa fazina gecis
+// tedaviGuncelle() icinde, bkz. asagida). acik=false (bitis/acil durdurma)
+// HER IKI aktuatoru de guvenlik icin kapatir, hangi fazda olursa olsun.
 static void _aktuatoruAyarla(TedaviTuru tedavi, bool acik) {
   switch (tedavi) {
     case TEDAVI_ASIT:
@@ -112,6 +138,19 @@ static void _aktuatoruAyarla(TedaviTuru tedavi, bool acik) {
       break;
     case TEDAVI_YIKAMA:
       _yikamaServo.write(acik ? 90 : 0);   // 0=kapali, 90=acik (mekanizmaya gore ayarlanmali)
+      break;
+    case TEDAVI_BESIN_SIVI:
+      digitalWrite(PIN_POMPA_BESIN_SIVI, acik ? HIGH : LOW);
+      break;
+    case TEDAVI_BESIN_TOZ:
+      if (acik) {
+        _tozPompalamaFazindaMi = false;
+        digitalWrite(PIN_KARISTIRICI_TOZ, HIGH);
+        digitalWrite(PIN_POMPA_BESIN_TOZ, LOW);
+      } else {
+        digitalWrite(PIN_KARISTIRICI_TOZ, LOW);
+        digitalWrite(PIN_POMPA_BESIN_TOZ, LOW);
+      }
       break;
     default:
       break;
@@ -132,6 +171,15 @@ void tedaviSistemBaslat() {
   _yikamaServo.setPeriodHertz(50);
   _yikamaServo.attach(PIN_SERVO_YIKAMA, 500, 2400);
   _yikamaServo.write(0);   // baslangicta valf kapali
+
+  // Besin/takviye dozlama (Faz 3) -- bkz. config.h PIN_POMPA_BESIN_SIVI/
+  // PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ dosya basi "KRITIK VARSAYIM" notu.
+  pinMode(PIN_POMPA_BESIN_SIVI, OUTPUT);
+  pinMode(PIN_KARISTIRICI_TOZ, OUTPUT);
+  pinMode(PIN_POMPA_BESIN_TOZ, OUTPUT);
+  digitalWrite(PIN_POMPA_BESIN_SIVI, LOW);
+  digitalWrite(PIN_KARISTIRICI_TOZ, LOW);
+  digitalWrite(PIN_POMPA_BESIN_TOZ, LOW);
 
   _aktifTedavi = TEDAVI_YOK;
   _durulamaAktif = false;
@@ -207,9 +255,20 @@ bool tedaviGuncelle() {
 
   // 1) Aktif bir tedavi varsa: suresi doldu mu kontrol et
   if (_aktifTedavi != TEDAVI_YOK) {
+    // TEDAVI_BESIN_TOZ ISTISNASI: karistirma fazi bitince (pompalama fazina
+    // henuz gecilmediyse) karistiriciyi kapat, pompayi baslat -- tedavinin
+    // KENDISI bitmedi, sadece ic fazi degisti (bkz. _aktuatoruAyarla dosya
+    // ici "iki fazli" notu).
+    if (_aktifTedavi == TEDAVI_BESIN_TOZ && !_tozPompalamaFazindaMi &&
+        simdi - _tedaviBaslangicMs >= BESIN_TOZ_KARISTIRMA_SURESI_MS) {
+      _tozPompalamaFazindaMi = true;
+      digitalWrite(PIN_KARISTIRICI_TOZ, LOW);
+      digitalWrite(PIN_POMPA_BESIN_TOZ, HIGH);
+    }
+
     unsigned long suresi = _tedaviSuresiGetir(_aktifTedavi);
     if (simdi - _tedaviBaslangicMs >= suresi) {
-      _aktuatoruAyarla(_aktifTedavi, false);   // pompayi/valfi kapat
+      _aktuatoruAyarla(_aktifTedavi, false);   // pompayi/valfi/karistiriciyi kapat
       _aktifTedavi = TEDAVI_YOK;
       _durulamaAktif = true;                    // zorunlu durulamaya gec
       _durulamaBaslangicMs = simdi;

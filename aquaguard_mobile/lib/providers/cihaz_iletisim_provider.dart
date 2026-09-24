@@ -653,6 +653,44 @@ class CihazIletisimProvider extends ChangeNotifier {
     return sonuc;
   }
 
+  /// Besin/takviye dozlama (Faz 3, 2026-09-25) -- manuelTedaviBaslat'tan
+  /// FARKLI: tikanma teshisinden TAMAMEN BAGIMSIZDIR, operator "belirsiz"
+  /// durumu beklemeden HER ZAMAN baslatabilir. AYNI guvenlik kilidine
+  /// (mutex) tabidir -- zon zaten bir tedavi/durulama surduruyorsa reddedilir.
+  Future<KomutSonucu> besinDozlamaBaslat(int zone, TedaviTuru tedavi) async {
+    final guncelOkuma = _sonOkumalar[zone];
+    final zatenMesgulMu =
+        guncelOkuma != null &&
+        (guncelOkuma.tedaviAktif != TedaviTuru.yok ||
+            guncelOkuma.durulamaAktif);
+
+    KomutSonucu sonuc;
+    if (_demoModuAktif) {
+      final basarili = _simulasyon?.besinDozlamaBaslat(zone, tedavi) ?? false;
+      sonuc = basarili ? KomutSonucu.uygulandi : KomutSonucu.reddedildi;
+    } else if (zatenMesgulMu) {
+      sonuc = KomutSonucu.reddedildi;
+    } else {
+      sonuc = await _komutGonderVeOnayBekle(zone, {
+        'komut': 'tedavi_baslat',
+        'tedavi_turu': tedaviKoduGetir(tedavi),
+      });
+    }
+
+    final mesaj = switch (sonuc) {
+      KomutSonucu.uygulandi =>
+        'Zon $zone: Operatör "${tedaviEtiketi(tedavi)}" dozlamasını manuel olarak başlattı',
+      KomutSonucu.reddedildi =>
+        'Zon $zone: "${tedaviEtiketi(tedavi)}" dozlaması REDDEDİLDİ '
+            '(mutex kilidi — zon zaten bir tedavi/durulama sürdürüyor)',
+      KomutSonucu.zamanAsimi =>
+        'Zon $zone: "${tedaviEtiketi(tedavi)}" komutu için cihazdan yanıt '
+            'alınamadı (zaman aşımı) — bağlantıyı kontrol edin',
+    };
+    _manuelMudahaleKaydet(zone, mesaj);
+    return sonuc;
+  }
+
   Future<KomutSonucu> _komutGonderVeOnayBekle(
     int zone,
     Map<String, dynamic> komut,

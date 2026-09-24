@@ -209,4 +209,90 @@ void main() {
       },
     );
   });
+
+  group(
+    'UygulamaDurumu besinDozlamaBaslat (Faz 3, 2026-09-25 -- tikanma '
+    'teshisinden bagimsiz besin/takviye dozlama)',
+    () {
+      setUp(() => SharedPreferences.setMockInitialValues({}));
+
+      test('aktivite gecmisine dogru mesajla manuelMudahale kaydi ekler', () async {
+        final durum = UygulamaDurumu();
+        await durum.baslat();
+
+        final sonuc = await durum.besinDozlamaBaslat(1, TedaviTuru.besinSivi);
+
+        expect(sonuc, KomutSonucu.uygulandi);
+        expect(durum.aktiviteGecmisi.first.tur, AktiviteTuru.manuelMudahale);
+        expect(durum.aktiviteGecmisi.first.mesaj, contains('Operatör'));
+        expect(
+          durum.aktiviteGecmisi.first.mesaj,
+          contains('Besin Takviyesi (Sıvı)'),
+        );
+
+        durum.dispose();
+      });
+
+      test('her iki besin turu de (sivi/toz) basariyla baslar', () async {
+        final durum = UygulamaDurumu();
+        await durum.baslat();
+
+        final sivi = await durum.besinDozlamaBaslat(1, TedaviTuru.besinSivi);
+        final toz = await durum.besinDozlamaBaslat(2, TedaviTuru.besinToz);
+
+        expect(sivi, KomutSonucu.uygulandi);
+        expect(toz, KomutSonucu.uygulandi);
+
+        durum.dispose();
+      });
+
+      test(
+        'zon zaten bir tedavi surdururken REDDEDILIR (asit/klor/yikama ile '
+        'AYNI mutex kilidine tabi)',
+        () async {
+          final durum = UygulamaDurumu();
+          await durum.baslat();
+
+          final ilkBasarili = await durum.manuelTedaviBaslat(
+            1,
+            TedaviTuru.asitDozlama,
+          );
+          final besinSonucu = await durum.besinDozlamaBaslat(
+            1,
+            TedaviTuru.besinToz,
+          );
+
+          expect(ilkBasarili, KomutSonucu.uygulandi);
+          expect(besinSonucu, KomutSonucu.reddedildi);
+          expect(durum.aktiviteGecmisi.first.mesaj, contains('REDDEDİLDİ'));
+          expect(durum.aktiviteGecmisi.first.mesaj, contains('mutex'));
+
+          durum.dispose();
+        },
+      );
+
+      test(
+        'besin dozlama surerken normal tedavi (asit) de REDDEDILIR '
+        '(kilit CIFT YONLU calismali)',
+        () async {
+          final durum = UygulamaDurumu();
+          await durum.baslat();
+
+          final besinBasarili = await durum.besinDozlamaBaslat(
+            1,
+            TedaviTuru.besinSivi,
+          );
+          final tedaviSonucu = await durum.manuelTedaviBaslat(
+            1,
+            TedaviTuru.klorEnjeksiyon,
+          );
+
+          expect(besinBasarili, KomutSonucu.uygulandi);
+          expect(tedaviSonucu, KomutSonucu.reddedildi);
+
+          durum.dispose();
+        },
+      );
+    },
+  );
 }

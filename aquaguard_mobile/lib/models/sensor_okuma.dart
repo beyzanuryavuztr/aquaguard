@@ -20,8 +20,19 @@ enum TeshisDurumu { normal, belirsiz, tespitEdildi, bilinmiyor }
 /// Tikanma turu
 enum TikanmaTuru { yok, kimyasal, biyolojik, fiziksel }
 
-/// Aktif tedavi turu
-enum TedaviTuru { yok, asitDozlama, klorEnjeksiyon, yuksekBasincliYikama }
+/// Aktif tedavi turu.
+/// besinSivi/besinToz (Faz 3, 2026-09-25): tikanma teshisinden BAGIMSIZ,
+/// operatorun kendi karariyla (orn. besin takviyesi) manuel baslattigi
+/// dozlama -- AYNI guvenlik kilidine (mutex) tabidir, asit/klor/yikama
+/// ile ASLA ayni anda calismaz. bkz. firmware/treatment.h TedaviTuru.
+enum TedaviTuru {
+  yok,
+  asitDozlama,
+  klorEnjeksiyon,
+  yuksekBasincliYikama,
+  besinSivi,
+  besinToz,
+}
 
 TeshisDurumu durumAyristir(String? deger) {
   switch (deger) {
@@ -57,6 +68,10 @@ TedaviTuru tedaviAyristir(String? deger) {
       return TedaviTuru.klorEnjeksiyon;
     case 'yuksek_basincli_yikama':
       return TedaviTuru.yuksekBasincliYikama;
+    case 'besin_sivi':
+      return TedaviTuru.besinSivi;
+    case 'besin_toz':
+      return TedaviTuru.besinToz;
     default:
       return TedaviTuru.yok;
   }
@@ -84,6 +99,10 @@ String tedaviKoduGetir(TedaviTuru tedavi) {
       return 'klor_enjeksiyon';
     case TedaviTuru.yuksekBasincliYikama:
       return 'yuksek_basincli_yikama';
+    case TedaviTuru.besinSivi:
+      return 'besin_sivi';
+    case TedaviTuru.besinToz:
+      return 'besin_toz';
   }
 }
 
@@ -117,6 +136,9 @@ String turEtiketi(TikanmaTuru tur) {
 /// manuel mudahale ekraninda operator bir TEDAVI secer (ekipmanla eslesir),
 /// ic mantik (simulasyon/demo) bunu ilgili tikanma turune cevirmelidir.
 /// simulasyon_servisi.dart'taki _tedaviEslemesi() ile TERSI yonde ayni eslemedir.
+/// besinSivi/besinToz HICBIR tikanma turune karsilik gelmez (TikanmaTuru.yok
+/// doner) -- bunlar `manuelTedaviBaslat` DEGIL, ayri `besinDozlamaBaslat`
+/// yolundan gecer (bkz. providers/cihaz_iletisim_provider.dart).
 TikanmaTuru tedaviyeKarsilikGelenTur(TedaviTuru tedavi) {
   switch (tedavi) {
     case TedaviTuru.asitDozlama:
@@ -126,6 +148,8 @@ TikanmaTuru tedaviyeKarsilikGelenTur(TedaviTuru tedavi) {
     case TedaviTuru.yuksekBasincliYikama:
       return TikanmaTuru.fiziksel;
     case TedaviTuru.yok:
+    case TedaviTuru.besinSivi:
+    case TedaviTuru.besinToz:
       return TikanmaTuru.yok;
   }
 }
@@ -140,6 +164,10 @@ String tedaviEtiketi(TedaviTuru tedavi) {
       return 'Klor Enjeksiyonu';
     case TedaviTuru.yuksekBasincliYikama:
       return 'Yüksek Basınçlı Yıkama';
+    case TedaviTuru.besinSivi:
+      return 'Besin Takviyesi (Sıvı)';
+    case TedaviTuru.besinToz:
+      return 'Besin Takviyesi (Toz)';
   }
 }
 

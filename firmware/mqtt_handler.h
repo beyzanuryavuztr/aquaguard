@@ -31,7 +31,8 @@
  *     "guven_kimyasal": 12.4,
  *     "guven_biyolojik": 94.2,
  *     "guven_fiziksel": 3.1,
- *     "tedavi_aktif":  "yok" | "asit_dozlama" | "klor_enjeksiyon" | "yuksek_basincli_yikama",
+ *     "tedavi_aktif":  "yok" | "asit_dozlama" | "klor_enjeksiyon" | "yuksek_basincli_yikama"
+ *                      | "besin_sivi" | "besin_toz",
  *     "durulama_aktif": false,
  *     "ana_vana_acik":  true,
  *     "sulama_kalan_saniye": 0
@@ -76,8 +77,19 @@
  *                               mudahalesi (mobil uygulama) buraya JSON komut
  *                               yollar, RETAINED DEGILDIR:
  *                                 {"komut":"tedavi_baslat","tedavi_turu":"asit_dozlama"}
+ *                                 {"komut":"tedavi_baslat","tedavi_turu":"besin_sivi"}   (Faz 3)
+ *                                 {"komut":"tedavi_baslat","tedavi_turu":"besin_toz"}    (Faz 3)
  *                                 {"komut":"tedavi_durdur"}
  *                                 {"komut":"normale_dondur"}
+ *                                 {"komut":"sulama_baslat","sure_dakika":30}   (opsiyonel)
+ *                                 {"komut":"sulama_durdur"}
+ *                               "besin_sivi"/"besin_toz" (2026-09-25, Faz 3): tikanma
+ *                               teshisinden BAGIMSIZ, operatorun kendi karariyla (orn.
+ *                               besin takviyesi) manuel baslattigi dozlama -- AYNI
+ *                               guvenlik kilidine (mutex) VE zon-izolasyonuna tabidir,
+ *                               asit/klor/yikama ile ASLA ayni anda calismaz. bkz.
+ *                               treatment.h TedaviTuru, config.h PIN_POMPA_BESIN_SIVI/
+ *                               PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ (donanim YER TUTUCU).
  *                               bkz. _komutMesajGeldiginde() asagida.
  *
  * Kutuphaneler: WiFi (ESP32 cekirdegiyle birlikte gelir) + PubSubClient +

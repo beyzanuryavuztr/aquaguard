@@ -25,12 +25,14 @@ import numpy as np
 import pytest
 
 from aquaguard_mock_yayinci import (
+    BESIN_TEDAVI_TURLERI,
     FAZ_ADIM_SAYILARI,
     SULAMA_MAKS_SURE_DK,
     TEDAVI_ESLEME,
     TUR_ESLEME_TERS,
     _komut_isle,
     _mesaj_olustur,
+    besin_dozlama_adimlarini_uret,
     durulama_ve_iyilesme_adimlarini_uret,
     senaryo_adimlarini_uret,
     tedavi_ve_iyilesme_adimlarini_uret,
@@ -106,6 +108,29 @@ class TestDurulamaVeIyilesmeAdimlariUret:
         assert adimlar[-1][3] is False  # iyilesme adiminda durulama bitmis olmali
 
 
+class TestBesinDozlamaAdimlariUret:
+    # Faz 3 (2026-09-25): tikanma turuyle ILGISI YOK -- sensorler "normal"
+    # imzasinda kalmali (gercek bir kayma simule edilmez), sadece
+    # tedavi_aktif alani besin turunu tasimali.
+    def test_tedavi_fazi_dogru_tedavi_adiyla_baslar_sonra_durulamaya_gecer(self):
+        rng = np.random.default_rng(7)
+        uretec = besin_dozlama_adimlarini_uret("besin_sivi", rng)
+        adimlar = list(itertools.islice(uretec, 5))  # 3 tedavi + 2 durulama
+
+        ilk_uc = adimlar[: FAZ_ADIM_SAYILARI["tedavi"]]
+        assert all(a[1] == "tedavi" and a[2] == "besin_sivi" for a in ilk_uc)
+        assert all(a[3] is False for a in ilk_uc)
+
+        kalan = adimlar[FAZ_ADIM_SAYILARI["tedavi"]:]
+        assert all(a[1] == "durulama" and a[3] is True for a in kalan)
+
+    def test_her_iki_besin_turu_de_calisir(self):
+        for tedavi_adi in BESIN_TEDAVI_TURLERI:
+            rng = np.random.default_rng(1)
+            ilk_adim = next(besin_dozlama_adimlarini_uret(tedavi_adi, rng))
+            assert ilk_adim[2] == tedavi_adi
+
+
 class TestKomutIsle:
     def _durum(self, seed=42, guncel_tur=None):
         # calistir()'in gercek baslangic sozlugu ile AYNI anahtarlar --
@@ -141,6 +166,30 @@ class TestKomutIsle:
         calisma_durumu = self._durum()
         eski_uretec = calisma_durumu["uretec"]
         _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "olmayan_tur"}, calisma_durumu)
+        assert calisma_durumu["uretec"] is eski_uretec
+
+    # Faz 3 (2026-09-25): besin/takviye dozlama -- tikanma turuyle
+    # ESLESMEZ, TUR_ESLEME_TERS'te YOKTUR, ayri bir kod yolundan gecer.
+    def test_tedavi_baslat_besin_turleri_icin_ureteci_dogru_kurar(self):
+        for tedavi_turu in BESIN_TEDAVI_TURLERI:
+            calisma_durumu = self._durum()
+            _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": tedavi_turu}, calisma_durumu)
+            ilk_adim = next(calisma_durumu["uretec"])
+            assert ilk_adim[1] == "tedavi"
+            assert ilk_adim[2] == tedavi_turu
+
+    def test_tedavi_baslat_besin_turu_ana_vana_kapaliyken_REDDEDILIR(self):
+        calisma_durumu = self._durum()
+        calisma_durumu["sulama_acik"] = False
+        eski_uretec = calisma_durumu["uretec"]
+        _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "besin_sivi"}, calisma_durumu)
+        assert calisma_durumu["uretec"] is eski_uretec
+
+    def test_tedavi_baslat_besin_turu_baska_tedavi_surerken_REDDEDILIR(self):
+        calisma_durumu = self._durum()
+        calisma_durumu["tedavi_aktif"] = "asit_dozlama"
+        eski_uretec = calisma_durumu["uretec"]
+        _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "besin_toz"}, calisma_durumu)
         assert calisma_durumu["uretec"] is eski_uretec
 
     # ACIMASIZ DENETIM DUZELTMESI (2026-09-14): asagidaki iki test,
