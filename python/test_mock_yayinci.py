@@ -19,12 +19,14 @@ Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 """
 
 import itertools
+import time
 
 import numpy as np
 import pytest
 
 from aquaguard_mock_yayinci import (
     FAZ_ADIM_SAYILARI,
+    SULAMA_MAKS_SURE_DK,
     TEDAVI_ESLEME,
     TUR_ESLEME_TERS,
     _komut_isle,
@@ -226,6 +228,38 @@ class TestKomutIsle:
         _komut_isle({"komut": "sulama_durdur"}, calisma_durumu)
         assert calisma_durumu["uretec"] is eski_uretec
 
+    # SEMA v3 (2026-09-24): sureli sulama ("ciftci evinden sulama baslatsin").
+    def test_sulama_baslat_sure_dakika_ile_zamanlayici_kurar(self):
+        calisma_durumu = self._durum()
+        oncesi = time.monotonic()
+        _komut_isle({"komut": "sulama_baslat", "sure_dakika": 20}, calisma_durumu)
+        assert calisma_durumu["sulama_acik"] is True
+        kapanma = calisma_durumu["sulama_kapanma_zamani"]
+        assert kapanma is not None
+        # ~20 dakika = 1200 sn sonrasi olmali (birkac saniyelik test suresi payi ile)
+        assert 1195 <= (kapanma - oncesi) <= 1205
+
+    def test_sulama_baslat_sure_dakika_olmadan_zamanlayici_kurmaz(self):
+        calisma_durumu = self._durum()
+        _komut_isle({"komut": "sulama_baslat"}, calisma_durumu)
+        assert calisma_durumu["sulama_acik"] is True
+        assert calisma_durumu["sulama_kapanma_zamani"] is None
+
+    def test_sulama_baslat_asiri_uzun_sure_UST_SINIRA_KIRPILIR(self):
+        calisma_durumu = self._durum()
+        oncesi = time.monotonic()
+        _komut_isle({"komut": "sulama_baslat", "sure_dakika": 5000}, calisma_durumu)
+        kapanma = calisma_durumu["sulama_kapanma_zamani"]
+        beklenen = oncesi + SULAMA_MAKS_SURE_DK * 60
+        assert abs(kapanma - beklenen) <= 5
+
+    def test_sulama_durdur_zamanlayiciyi_da_temizler(self):
+        calisma_durumu = self._durum()
+        _komut_isle({"komut": "sulama_baslat", "sure_dakika": 30}, calisma_durumu)
+        assert calisma_durumu["sulama_kapanma_zamani"] is not None
+        _komut_isle({"komut": "sulama_durdur"}, calisma_durumu)
+        assert calisma_durumu["sulama_kapanma_zamani"] is None
+
 
 class TestMesajOlustur:
     def test_sema_firmware_ile_tutarli_alanlari_icerir(self):
@@ -245,6 +279,7 @@ class TestMesajOlustur:
             "durum", "tikanma_turu", "guven", "guven_kimyasal", "guven_biyolojik",
             "guven_fiziksel", "tedavi_aktif", "durulama_aktif",
             "hazne_asit_seviye_yuzde", "hazne_klor_seviye_yuzde", "ana_vana_acik",
+            "sulama_kalan_saniye",
         }
         assert beklenen_alanlar.issubset(mesaj.keys())
         assert mesaj["zone"] == 1
@@ -253,6 +288,21 @@ class TestMesajOlustur:
         assert mesaj["hazne_asit_seviye_yuzde"] == 100.0
         assert mesaj["hazne_klor_seviye_yuzde"] == 100.0
         assert mesaj["ana_vana_acik"] is True
+        assert mesaj["sulama_kalan_saniye"] == 0
+
+    def test_sulama_kalan_saniye_parametresi_mesaja_yansir(self):
+        rng = np.random.default_rng(6)
+        ornek = next(senaryo_adimlarini_uret(rng))[0]
+        teshis = kural_tabanli_teshis(ornek)
+
+        import json
+
+        mesaj = json.loads(_mesaj_olustur(
+            ornek, teshis, zone=1, tedavi_aktif="yok", durulama_aktif=False,
+            hazne_asit_yuzde=100.0, hazne_klor_yuzde=100.0,
+            sulama_kalan_saniye=845,
+        ))
+        assert mesaj["sulama_kalan_saniye"] == 845
 
     def test_vana_kapaliyken_ana_vana_acik_false_yayinlanir(self):
         rng = np.random.default_rng(6)

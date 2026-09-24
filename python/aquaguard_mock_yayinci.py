@@ -31,6 +31,13 @@ Amac:
     YAPMAYI DURDURUR (gercek cihazda sensor okumasi anlamsiz hale geldigi
     icin firmware de ayni sekilde teshis dongusunu atlar).
 
+    SEMA v3 (2026-09-24, "ciftci evinden sulama baslatsin" ozelligi):
+    "sulama_baslat" komutu artik opsiyonel "sure_dakika" alani tasiyabilir
+    (SULAMA_MAKS_SURE_DK ile kirpilir). Verilirse, ana vana o sure sonunda
+    KENDILIGINDEN kapanir -- zamanlayici SUNUCUDA/CIHAZDA calisir, telefon
+    uygulamasi kapansa bile su bosa akmaya devam etmez. Kalan sure
+    "sulama_kalan_saniye" alaniyla yayinlanir (uygulamada geri sayim icin).
+
 Senaryo mantigi (bir "hikaye" dongusu):
     1) NORMAL   - sensorler normal deger etrafinda dalgalanir
     2) KOTULESME - rastgele secilen bir tikanma turune dogru kademeli kayma
@@ -95,6 +102,9 @@ FAZ_ADIM_SAYILARI = {
 }
 
 DEMO_GURULTU_CARPANI = 0.5  # Egitim verisindeki gurultuden daha dusuk (temiz demo icin)
+
+# firmware/config.h SULAMA_MAKS_SURE_DK ile BIREBIR AYNI olmali (tek kaynak).
+SULAMA_MAKS_SURE_DK = 180
 
 # ---------------------------------------------------------------------------
 # 2) SENARYO / SIMULASYON MANTIGI
@@ -254,10 +264,22 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict, istemci=None,
     elif komut == "sulama_durdur":
         print("[Komut] Operatör: ana vana MANUEL kapatıldı, sulama durdu.")
         calisma_durumu["sulama_acik"] = False
+        calisma_durumu["sulama_kapanma_zamani"] = None
         _ack_gonder(True)
     elif komut == "sulama_baslat":
-        print("[Komut] Operatör: ana vana yeniden açıldı, sulama başladı.")
+        # SEMA v3 (2026-09-24): opsiyonel "sure_dakika" -- verilmemisse
+        # (0/None) suresiz acilir (eski davranis). Verilmisse
+        # SULAMA_MAKS_SURE_DK ile kirpilip o sure sonunda bu mock da
+        # firmware'deki gibi KENDILIGINDEN kapatir (bkz. ana ilmek).
+        sure_dakika = mesaj_json.get("sure_dakika") or 0
         calisma_durumu["sulama_acik"] = True
+        if sure_dakika > 0:
+            sure_dakika = min(sure_dakika, SULAMA_MAKS_SURE_DK)
+            calisma_durumu["sulama_kapanma_zamani"] = time.monotonic() + sure_dakika * 60
+            print(f"[Komut] Operatör: ana vana yeniden açıldı, {sure_dakika} dakika süreli sulama başladı.")
+        else:
+            calisma_durumu["sulama_kapanma_zamani"] = None
+            print("[Komut] Operatör: ana vana yeniden açıldı, sulama başladı (süresiz).")
         _ack_gonder(True)
     else:
         print(f"[Komut] Bilinmeyen komut: {komut!r}")
@@ -271,7 +293,8 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict, istemci=None,
 def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
                     durulama_aktif: bool, hazne_asit_yuzde: float,
                     hazne_klor_yuzde: float,
-                    ana_vana_acik: bool = True) -> str:
+                    ana_vana_acik: bool = True,
+                    sulama_kalan_saniye: int = 0) -> str:
     """firmware/mqtt_handler.h basindaki JSON semasiyla BIREBIR AYNI alanlar.
 
     guven_kimyasal/guven_biyolojik/guven_fiziksel alanlari, karar motorunun
@@ -310,6 +333,8 @@ def _mesaj_olustur(ornek: dict, teshis: dict, zone: int, tedavi_aktif: str,
         # SEMA v2 (2026-09-19): ana vananin GERCEK durumu -- gercek firmware
         # da yayinlar; uygulama vana durumunu bununla esitler.
         "ana_vana_acik": bool(ana_vana_acik),
+        # SEMA v3 (2026-09-24): sureli sulama geri sayimi, sureli baslatilmadiysa 0.
+        "sulama_kalan_saniye": int(sulama_kalan_saniye),
     }
     return json.dumps(mesaj, ensure_ascii=False)
 
@@ -332,6 +357,10 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
         "rng": rng,
         "guncel_tur": None,
         "sulama_acik": True,
+        # None = sureli sulama zamanlayicisi YOK. Sayiysa, time.monotonic()
+        # bu degere ulasinca ana ilmek vanayi OTOMATIK kapatir (bkz. asagida,
+        # firmware/ana_vana.h anaVanaZamanlayiciyiGuncelle ile ayni desen).
+        "sulama_kapanma_zamani": None,
         # _komut_isle()'in "tedavi_baslat" mutex kontrolu icin -- ana
         # dongude her adimda guncellenir (bkz. asagida).
         "tedavi_aktif": "yok",
@@ -397,6 +426,18 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
     sayac = 0
     try:
         while True:
+            # Sureli sulama -- suresi dolduysa firmware'deki
+            # anaVanaZamanlayiciyiGuncelle() ile AYNI davranis: otomatik kapat.
+            kapanma_zamani = calisma_durumu["sulama_kapanma_zamani"]
+            if (
+                kapanma_zamani is not None
+                and calisma_durumu["sulama_acik"]
+                and time.monotonic() >= kapanma_zamani
+            ):
+                calisma_durumu["sulama_acik"] = False
+                calisma_durumu["sulama_kapanma_zamani"] = None
+                print("[SULAMA] Süreli sulama tamamlandı, vana otomatik kapatıldı.")
+
             if not calisma_durumu["sulama_acik"]:
                 # Ana vana kapali: senaryo uretecini ILERLETME (donduralm
                 # kalsin) ve yeni veri yayinlama -- firmware/ana_vana.h ile
@@ -418,11 +459,17 @@ def calistir(broker: str, port: int, zone: int, aralik_sn: float, adim_sayisi: i
                 calisma_durumu["hazne_klor_yuzde"] = max(
                     0.0, calisma_durumu["hazne_klor_yuzde"] - 0.4
                 )
+            kalan_saniye = 0
+            if calisma_durumu["sulama_kapanma_zamani"] is not None:
+                kalan_saniye = max(
+                    0, int(calisma_durumu["sulama_kapanma_zamani"] - time.monotonic())
+                )
             mesaj = _mesaj_olustur(
                 ornek, teshis, zone, tedavi_aktif, durulama_aktif,
                 calisma_durumu["hazne_asit_yuzde"],
                 calisma_durumu["hazne_klor_yuzde"],
                 ana_vana_acik=calisma_durumu["sulama_acik"],
+                sulama_kalan_saniye=kalan_saniye,
             )
 
             istemci.publish(veri_konusu, mesaj, qos=1, retain=True)

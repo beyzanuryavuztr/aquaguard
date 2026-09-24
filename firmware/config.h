@@ -212,6 +212,15 @@
 #define TEDAVI_YIKAMA_SURESI_MS  60000UL   // Yuksek basincli yikama suresi
 #define DURULAMA_SURESI_MS       45000UL   // Her tedavi sonrasi zorunlu durulama
 
+// --- Uzaktan/sureli sulama (2026-09-24) ---
+// Ciftci uygulamadan "X dakika sula" diye baslatabilir (bkz. ana_vana.h
+// anaVanayiSureliAc). Yanlislikla/kotu niyetle asiri uzun bir sure
+// girilirse (orn. 5000 dakika) bu deger su israfina/kontrolsuz suren bir
+// akisa karsi UST SINIR olarak kirpar. Flutter tarafi da AYNI degeri
+// kullanir (config/ayarlar_sabitleri.dart) -- kullaniciya girmeden once
+// uyari gosterilir, tek kaynak ilkesi.
+#define SULAMA_MAKS_SURE_DK      180UL   // 3 saat
+
 // ============================================================================
 // 7) MQTT AYARLARI (YER TUTUCU -- gercek broker bilgisiyle degistirilmeli)
 // ============================================================================

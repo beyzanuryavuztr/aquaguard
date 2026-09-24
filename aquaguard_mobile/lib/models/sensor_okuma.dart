@@ -178,6 +178,12 @@ class SensorOkuma {
   // kendi tahminini korur.
   final bool? anaVanaAcik;
 
+  // SURELI SULAMA GERI SAYIMI (sema v3, 2026-09-24): "sulama_baslat"
+  // komutu bir sure_dakika ile baslatildiysa, vananin kendiliginden
+  // kapanmasina kalan saniye. Alan hic gelmezse (eski firmware) null;
+  // gelip 0 ise sureli bir sulama YOK demektir (suresiz acik/kapali).
+  final int? sulamaKalanSaniye;
+
   const SensorOkuma({
     required this.zaman,
     required this.zone,
@@ -198,6 +204,7 @@ class SensorOkuma {
     this.hazneAsitSeviyeYuzde,
     this.hazneKlorSeviyeYuzde,
     this.anaVanaAcik,
+    this.sulamaKalanSaniye,
   });
 
   /// Ucunun turu icin guven yuzdesini isimle sorgulamak icin yardimci (grafik cizimlerinde kullanislidir).
@@ -236,6 +243,7 @@ class SensorOkuma {
       anaVanaAcik: json['ana_vana_acik'] is bool
           ? json['ana_vana_acik'] as bool
           : null,
+      sulamaKalanSaniye: (json['sulama_kalan_saniye'] as num?)?.toInt(),
     );
   }
 
@@ -260,6 +268,7 @@ class SensorOkuma {
     'hazne_asit_seviye_yuzde': hazneAsitSeviyeYuzde,
     'hazne_klor_seviye_yuzde': hazneKlorSeviyeYuzde,
     'ana_vana_acik': anaVanaAcik,
+    'sulama_kalan_saniye': sulamaKalanSaniye,
   };
 
   /// toJson() ile kaydedilmis (dolayisiyla Turkce string kodlari degil,
@@ -300,6 +309,7 @@ class SensorOkuma {
       anaVanaAcik: json['ana_vana_acik'] is bool
           ? json['ana_vana_acik'] as bool
           : null,
+      sulamaKalanSaniye: (json['sulama_kalan_saniye'] as num?)?.toInt(),
     );
   }
 

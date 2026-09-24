@@ -104,6 +104,23 @@ void main() {
     });
   });
 
+  group('sulama_kalan_saniye (sema v3, sureli sulama geri sayimi)', () {
+    test('alan hic yoksa null doner (uydurma 0 degil)', () {
+      final okuma = SensorOkuma.fromJson({});
+      expect(okuma.sulamaKalanSaniye, isNull);
+    });
+
+    test('alan mevcutsa dogru tam sayi olarak ayristirilir', () {
+      final okuma = SensorOkuma.fromJson({'sulama_kalan_saniye': 845});
+      expect(okuma.sulamaKalanSaniye, 845);
+    });
+
+    test('0 gelirse (sureli sulama yok) 0 olarak korunur, null OLMAZ', () {
+      final okuma = SensorOkuma.fromJson({'sulama_kalan_saniye': 0});
+      expect(okuma.sulamaKalanSaniye, 0);
+    });
+  });
+
   group('fromCacheJson (kalici depo formatı) - eksik/gecersiz alanlar', () {
     test('bos haritada enum alanlari kendi guvenli varsayilanlarina duser', () {
       final okuma = SensorOkuma.fromCacheJson({});

@@ -33,11 +33,18 @@
  *     "guven_fiziksel": 3.1,
  *     "tedavi_aktif":  "yok" | "asit_dozlama" | "klor_enjeksiyon" | "yuksek_basincli_yikama",
  *     "durulama_aktif": false,
- *     "ana_vana_acik":  true
+ *     "ana_vana_acik":  true,
+ *     "sulama_kalan_saniye": 0
  *   }
  *
  *   ana_vana_acik (SEMA v2, 2026-09-19): ana sulama vanasinin GERCEK durumu.
  *   Uygulama vana durumunu tahmin etmek yerine bununla esitler (K1/Y3).
+ *
+ *   sulama_kalan_saniye (SEMA v3, 2026-09-24): "sulama_baslat" komutu bir
+ *   "sure_dakika" ile (sureli) baslatildiysa, vananin KENDILIGINDEN
+ *   kapanmasina kalan saniye; sureli bir sulama YOKSA 0. Uygulama bunu
+ *   geri sayim gostermek icin kullanir. bkz. ana_vana.h
+ *   anaVanaKalanSaniyeGetir().
  *
  *   guven_* alanlari, kural katmaninin UC tikanma turunu de ne kadar olasi
  *   gordugunu tasir (aciklanabilirlik) -- mobil uygulamadaki "Neden bu
@@ -204,11 +211,21 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
     Serial.println(F("[Komut] Operator: ana vana MANUEL kapatildi, sulama durdu."));
     basarili = true;
   } else if (strcmp(komut, "sulama_baslat") == 0) {
-    anaVanayiAc();
+    // Opsiyonel "sure_dakika" alani -- verilmemisse (0) suresiz acilir
+    // (eski davranis). Verilmisse, vana SULAMA_MAKS_SURE_DK ile kirpilip
+    // o sure sonunda KENDILIGINDEN kapanir (bkz. ana_vana.h anaVanayiSureliAc).
+    long sureDakika = belge["sure_dakika"] | 0L;
+    anaVanayiSureliAc(sureDakika);
     // Eger yarim kalmis bir durulama varsa, flow GERCEKTEN geri geldigi
     // bu andan itibaren suresi SIFIRDAN baslar (bkz. treatment.h).
     durulamaZamanlayicisiniSifirla();
-    Serial.println(F("[Komut] Operator: ana vana yeniden acildi, sulama basladi."));
+    if (sureDakika > 0) {
+      Serial.print(F("[Komut] Operator: ana vana yeniden acildi, "));
+      Serial.print(sureDakika);
+      Serial.println(F(" dakika sureli sulama basladi."));
+    } else {
+      Serial.println(F("[Komut] Operator: ana vana yeniden acildi, sulama basladi (suresiz)."));
+    }
     basarili = true;
   } else {
     Serial.print(F("[Komut] Bilinmeyen komut: "));
@@ -354,6 +371,8 @@ void veriYayinla(const SensorOkumalari& okuma, const TeshisSonucu& teshis,
   // Ana vana durumu CIHAZDAN raporlanir -- uygulama vana durumunu tahmin
   // etmek yerine bununla esitler (bkz. Flutter SensorOkuma.anaVanaAcik).
   belge["ana_vana_acik"] = anaVanaAcikMi();
+  // Sureli sulama geri sayimi (SEMA v3) -- sureli baslatilmadiysa 0.
+  belge["sulama_kalan_saniye"] = anaVanaKalanSaniyeGetir();
 
   char cikti[768];
   size_t uzunluk = serializeJson(belge, cikti, sizeof(cikti));

@@ -759,6 +759,56 @@ class CihazIletisimProvider extends ChangeNotifier {
     );
   }
 
+  // Demo modunda, gercek firmware'in yaptigi "sure dolunca kendiliginden
+  // kapat" davranisini (bkz. firmware/ana_vana.h anaVanaZamanlayiciyiGuncelle)
+  // taklit eden istemci-tarafi zamanlayicilar. Gercek modda BUNA GEREK YOK
+  // -- zamanlayici KARTTA calisir (bkz. dosya basi "sureli sulama" notu).
+  final Map<int, Timer> _demoSulamaZamanlayicilari = {};
+
+  /// Uzaktan/sureli sulama baslatma ("çiftçi evinden sulama başlatsın").
+  /// [dakika] <= 0 ise suresiz baslatir (sulamayiBaslat ile ayni etki,
+  /// ama -- ondan farkli olarak -- zon o an "manuel durdurulmus" olmasa
+  /// BILE calisir, cunku bu YENI bir baslatma eylemi, "durdurulani geri
+  /// acma" degil). [dakika], [AyarlarSabitleri.sulamaMaksSureDakika] ile
+  /// kirpilir (firmware/config.h SULAMA_MAKS_SURE_DK ile ayni ust sinir).
+  Future<bool> sulamayiSureliBaslat(int zone, int dakika) async {
+    final kirpilmisDakika = dakika > 0
+        ? (dakika > AyarlarSabitleri.sulamaMaksSureDakika
+              ? AyarlarSabitleri.sulamaMaksSureDakika
+              : dakika)
+        : 0;
+
+    _sulamasiDurdurulanZonlar.remove(zone);
+    _vanaKomutZamanlari[zone] = DateTime.now();
+    unawaited(_depolama.sulamaKapaliZonlariniKaydet(_sulamasiDurdurulanZonlar));
+
+    bool basarili;
+    _demoSulamaZamanlayicilari.remove(zone)?.cancel();
+    if (_demoModuAktif) {
+      _simulasyon?.sulamayiDevamEttir(zone);
+      if (kirpilmisDakika > 0) {
+        _demoSulamaZamanlayicilari[zone] = Timer(
+          Duration(minutes: kirpilmisDakika),
+          () => sulamayiDurdur(zone),
+        );
+      }
+      basarili = true;
+    } else {
+      basarili = await _komutGonderVeyaKuyrukla(zone, {
+        'komut': 'sulama_baslat',
+        if (kirpilmisDakika > 0) 'sure_dakika': kirpilmisDakika,
+      });
+    }
+
+    _manuelMudahaleKaydet(
+      zone,
+      kirpilmisDakika > 0
+          ? 'Zon $zone: Operatör $kirpilmisDakika dakika süreli sulama başlattı'
+          : 'Zon $zone: Operatör sulamayı (ana vana) yeniden başlattı',
+    );
+    return basarili;
+  }
+
   // ============================================================================
   // ACIL DURDURMA (tum sistem geneli guvenlik supabi)
   // ============================================================================
@@ -891,6 +941,9 @@ class CihazIletisimProvider extends ChangeNotifier {
     _mqtt?.baglantiyiKapat();
     _simulasyon?.durdur();
     _baglantiAboneligi?.cancel();
+    for (final zamanlayici in _demoSulamaZamanlayicilari.values) {
+      zamanlayici.cancel();
+    }
     super.dispose();
   }
 }

@@ -8,6 +8,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:aquaguard_mobile/config/ayarlar_sabitleri.dart';
 import 'package:aquaguard_mobile/models/aktivite_kaydi.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
 import 'package:aquaguard_mobile/services/simulasyon_servisi.dart';
@@ -135,4 +136,78 @@ void main() {
       durum2.dispose();
     });
   });
+
+  group(
+    'UygulamaDurumu sulamayiSureliBaslat (uzaktan/sureli sulama, 2026-09-24)',
+    () {
+      setUp(() => SharedPreferences.setMockInitialValues({}));
+
+      test('durdurulmus bir zonu sureyle baslatir, aktivite kaydi dakikayi icerir', () async {
+        final durum = UygulamaDurumu();
+        await durum.baslat();
+        await durum.sulamayiDurdur(2);
+
+        final basarili = await durum.sulamayiSureliBaslat(2, 20);
+
+        expect(basarili, isTrue);
+        expect(durum.sulamasiDurduruldu(2), isFalse);
+        expect(durum.aktiviteGecmisi.first.tur, AktiviteTuru.manuelMudahale);
+        expect(durum.aktiviteGecmisi.first.mesaj, contains('20 dakika'));
+
+        durum.dispose();
+      });
+
+      test(
+        'sulamayiBaslat\'tan farkli olarak, zon ONCEDEN durdurulmamis '
+        'olsa BILE calisir (yeni bir baslatma eylemidir)',
+        () async {
+          final durum = UygulamaDurumu();
+          await durum.baslat();
+          // Zon 1 zaten acik (varsayilan) -- sulamayiBaslat() bu durumda
+          // no-op olurdu, ama sulamayiSureliBaslat calismali.
+          expect(durum.sulamasiDurduruldu(1), isFalse);
+
+          final basarili = await durum.sulamayiSureliBaslat(1, 15);
+
+          expect(basarili, isTrue);
+          expect(durum.aktiviteGecmisi.first.mesaj, contains('15 dakika'));
+
+          durum.dispose();
+        },
+      );
+
+      test('0 veya negatif dakika suresiz baslatma olarak islenir', () async {
+        final durum = UygulamaDurumu();
+        await durum.baslat();
+
+        await durum.sulamayiSureliBaslat(1, 0);
+
+        expect(
+          durum.aktiviteGecmisi.first.mesaj,
+          contains('yeniden başlattı'),
+        );
+        expect(durum.aktiviteGecmisi.first.mesaj, isNot(contains('dakika süreli')));
+
+        durum.dispose();
+      });
+
+      test(
+        'asiri uzun sure (SULAMA_MAKS_SURE_DK ustu) kirpilir, aktivite '
+        'kaydinda KIRPILMIS deger gorunur',
+        () async {
+          final durum = UygulamaDurumu();
+          await durum.baslat();
+
+          await durum.sulamayiSureliBaslat(1, 5000);
+
+          expect(
+            durum.aktiviteGecmisi.first.mesaj,
+            contains('${AyarlarSabitleri.sulamaMaksSureDakika} dakika'),
+          );
+
+          durum.dispose();
+        },
+      );
+    },
+  );
 }

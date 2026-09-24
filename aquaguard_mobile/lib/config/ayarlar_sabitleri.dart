@@ -108,6 +108,12 @@ class AyarlarSabitleri {
 
   static const int durulamaSuresiSaniye = 45;
 
+  // --- Sureli sulama (firmware/config.h SULAMA_MAKS_SURE_DK ve
+  //     python/aquaguard_mock_yayinci.py SULAMA_MAKS_SURE_DK ile BIREBIR
+  //     AYNI olmali -- tek kaynak. Kullanici bundan uzun bir sure giremez,
+  //     girmeye calisirsa form bunu reddeder/kirpar. ---
+  static const int sulamaMaksSureDakika = 180;
+
   // --- Cevrimdisi kabul edilme suresi: bu sureden uzun mesaj gelmezse
   //     baglanti "cevrimdisi" sayilir ve son bilinen durum gosterilir ---
   static const Duration cevrimdisiEsigi = Duration(seconds: 30);

@@ -34,4 +34,11 @@ const Map<String, String> yardimMetinleri = {
       'Kullanıcı profilinizi, görünüm tercihlerinizi, gerçek donanım '
       'bağlantısını (Demo Modu kapalıyken) ve bildirim/güvenlik '
       'ayarlarınızı buradan yönetirsiniz.',
+  'uzaktan_sulama':
+      'Tarladan uzaktayken bile sulama başlatabilirsiniz: bir çiftlik ve '
+      'sulanacak zon(lar)ı seçin, süreyi (dakika) girin, "Sula" butonuna '
+      'basın. Süre dolunca vana kendiliğinden kapanır -- uygulamayı '
+      'kapatsanız bile su boşa akmaya devam etmez. Sulama sürerken bir '
+      'tıkanma tespit edilirse, sistem sizin müdahalenize gerek kalmadan '
+      'otomatik olarak teşhis koyup uygun tedaviyi uygular.',
 };

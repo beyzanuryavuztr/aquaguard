@@ -137,6 +137,7 @@ void loop() {
   esp_task_wdt_reset();   // ana dongu yasiyor -- watchdog'u besle
   // Non-blocking durum makineleri -- HER turda ilerletilmeli
   tedaviGuncelle();
+  anaVanaZamanlayiciyiGuncelle();   // sureli sulama -- suresi dolani kapat
   mqttDonguyuIsle();
 
   unsigned long simdi = millis();

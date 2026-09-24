@@ -305,6 +305,8 @@ class UygulamaDurumu extends ChangeNotifier {
 
   Future<void> sulamayiDurdur(int zone) => _cihaz.sulamayiDurdur(zone);
   Future<void> sulamayiBaslat(int zone) => _cihaz.sulamayiBaslat(zone);
+  Future<bool> sulamayiSureliBaslat(int zone, int dakika) =>
+      _cihaz.sulamayiSureliBaslat(zone, dakika);
   Future<List<int>> acilDurdurmaTetikle() => _cihaz.acilDurdurmaTetikle();
 
   Future<void> demoSenaryosuTetikle(DemoSenaryosu senaryo) =>

@@ -117,6 +117,26 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
   gerçek telemetri değil) tutarlılık için "WiFi sinyal" olarak yeniden
   adlandırıldı.
 
+### Uzaktan/Süreli Sulama (2026-09-24) — sema v3
+
+- Yeni **"Uzaktan Sulama"** ekranı (Genel Bakış'taki damla ikonu): çiftçi
+  bir çiftlik + bir veya birden fazla zon seçip, kaç dakika sulama
+  yapılacağını girip tek dokunuşla başlatabiliyor.
+- `sulama_baslat` MQTT komutu artık opsiyonel `sure_dakika` alanı taşıyor.
+  Zamanlayıcı **kartın kendisinde** çalışıyor (telefonda değil) — uygulama
+  kapansa/bağlantı kesilse bile vana süresi dolunca kendiliğinden kapanıyor.
+  Üst sınır (`SULAMA_MAKS_SURE_DK`/`sulamaMaksSureDakika` = 180 dakika)
+  firmware/Python/Dart'ta aynı değerle kırpılıyor (tek kaynak ilkesi).
+  Kalan süre `sulama_kalan_saniye` alanıyla yayınlanıyor.
+  Bu sulama sürerken bir tıkanma tespit edilirse otonom teşhis/tedavi
+  değişmeden çalışmaya devam ediyor (ek bir entegrasyon gerekmedi).
+- **Bilinçli kapsam sınırı:** bu ekran, tıkanma teşhisinden bağımsız,
+  operatörün kendi kararıyla tetiklediği bir sulama başlatma aracıdır —
+  "hangi zonun ilaç haznesinin diğer zonlardan izole edilmesi" gibi
+  çok-zonlu dozlama güvenlik sıralaması ve bitki besleme/gübreleme dozlama
+  özelliği (ayrı sıvı/toz hazneleri) **ayrı, sonraki fazlarda** ele alınacak
+  — bu sürümde henüz yok.
+
 ### Bilinen Sınırlamalar
 
 - Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.

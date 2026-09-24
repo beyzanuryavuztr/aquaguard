@@ -155,6 +155,15 @@ Diğer, düşük öncelikli/bilinen sınırlamalar (değiştirilmedi, riski dü�
   raporlanır. **Gerçek donanımda henüz denenmedi** -- ilk testte bir komut
   gönderip uygulamada "Uygulandı"/"REDDEDİLDİ" (zaman aşımı DEĞİL) çıktığını
   doğrulayın.
+- **Süreli sulama (sema v3) -- 2026-09-24'te firmware'e EKLENDİ**:
+  `sulama_baslat` komutu artık opsiyonel `sure_dakika` alanı taşıyabilir
+  (`config.h` `SULAMA_MAKS_SURE_DK=180` ile kırpılır). Verilirse vana o süre
+  sonunda **kartın kendisi** tarafından (telefon değil) kapatılır --
+  `ana_vana.h` `anaVanaZamanlayiciyiGuncelle()`, `loop()` içinde her turda
+  çağrılır. Kalan süre `sulama_kalan_saniye` alanıyla yayınlanır. **Gerçek
+  donanımda henüz denenmedi** -- ilk testte kısa bir süre (örn. 1 dakika)
+  ile sulama başlatıp vananın gerçekten kendiliğinden kapandığını, bu sırada
+  ana döngünün (sensör okuma vb.) kilitlenmediğini doğrulayın.
 
 ## Kaynak / Tek Kaynak Referansları
 

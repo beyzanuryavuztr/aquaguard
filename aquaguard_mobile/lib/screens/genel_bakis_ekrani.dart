@@ -39,6 +39,7 @@ import 'ayarlar_ekrani.dart';
 import 'bildirim_gecmisi_ekrani.dart';
 import 'juri_sunum_ekrani.dart';
 import 'tarla_secim_ekrani.dart';
+import 'uzaktan_sulama_ekrani.dart';
 import 'tikanma_detay_ekrani.dart';
 
 class GenelBakisEkrani extends StatelessWidget {
@@ -97,6 +98,13 @@ class GenelBakisEkrani extends StatelessWidget {
             tooltip: 'Çiftlikler',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const TarlaSecimEkrani()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.water_drop_outlined),
+            tooltip: 'Uzaktan Sulama',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const UzaktanSulamaEkrani()),
             ),
           ),
         ],
