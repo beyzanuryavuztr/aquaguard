@@ -38,6 +38,7 @@ from aquaguard_mock_yayinci import (
     tedavi_ve_iyilesme_adimlarini_uret,
 )
 from aquaguard_karar_motoru import kural_tabanli_teshis
+from aquaguard_veri_uretici import SENSOR_IMZALARI
 
 
 def _fazlari_al(uretec, adet):
@@ -191,6 +192,26 @@ class TestKomutIsle:
         eski_uretec = calisma_durumu["uretec"]
         _komut_isle({"komut": "tedavi_baslat", "tedavi_turu": "besin_toz"}, calisma_durumu)
         assert calisma_durumu["uretec"] is eski_uretec
+
+    # ACIMASIZ DENETIM (2026-09-25): besin dozlama surerken "tedavi_durdur"
+    # gelirse, ESKI kod "guncel_tur"u (en son GERCEK tikanma turu, besin
+    # dozlama tarafindan hic guncellenmeyen bir alan) kullanip durulama
+    # fazinda SAHTE bir kimyasal/biyolojik/fiziksel kaymaya interpolasyon
+    # yapiyordu -- sensorler zaten "normal" iken yanlis bir gorsel sinyaldi.
+    def test_tedavi_durdur_besin_dozlama_surerken_sahte_kaymaya_INTERPOLASYON_YAPMAZ(self):
+        calisma_durumu = self._durum(guncel_tur="kimyasal")  # ONCEKI gercek tikanmadan kalma
+        calisma_durumu["tedavi_aktif"] = "besin_sivi"
+        _komut_isle({"komut": "tedavi_durdur"}, calisma_durumu)
+
+        ilk_adim = next(calisma_durumu["uretec"])
+        assert ilk_adim[1] == "durulama"
+        # "normal"den "normal"e interpolasyon -- kimyasal imzasina KAYMAZ.
+        ornek = ilk_adim[0]
+        kimyasal_ph_ort = SENSOR_IMZALARI["kimyasal"]["ph"][0]
+        normal_ph_ort = SENSOR_IMZALARI["normal"]["ph"][0]
+        # normal ile kimyasal pH ortalamalari belirgin sekilde farkli
+        # (test verisinin kendi varsayimi) -- deger normale COK daha yakin olmali.
+        assert abs(ornek["ph"] - normal_ph_ort) < abs(ornek["ph"] - kimyasal_ph_ort)
 
     # ACIMASIZ DENETIM DUZELTMESI (2026-09-14): asagidaki iki test,
     # firmware/mqtt_handler.h'nin uyguladigi ayni iki guvenlik kontrolunun

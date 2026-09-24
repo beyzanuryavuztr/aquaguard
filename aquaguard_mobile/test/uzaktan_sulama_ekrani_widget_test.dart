@@ -108,4 +108,38 @@ void main() {
 
     durum.dispose();
   });
+
+  testWidgets(
+    'ust siniri asan sure GIRILDIGINDE, basari mesaji GERCEKTE calisacak '
+    '(kirpilmis) sureyi gosterir -- girilen ham degeri DEGIL '
+    '(acimasiz denetim, 2026-09-25 -- kullaniciyi yaniltmamali)',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
+      await pumpEkran(tester, durum);
+
+      final ilkTarlaZonlari = durum.tarlaProvider.tarlalar.first.zonNumaralari;
+      await tester.tap(
+        find.text(durum.tarlaProvider.zonAdiGetir(ilkTarlaZonlari.first)),
+      );
+      await tester.pump();
+
+      // Ust sinirin (180) COK uzerinde bir deger girildi.
+      await tester.enterText(find.byType(TextFormField), '500');
+      await tester.pump();
+      await tester.tap(find.text('1 zonu sula'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tester.takeException(), isNull);
+      // "500 dakikalık" DEGIL, gercekte calisacak "180 dakikalık" gorunmeli.
+      expect(find.textContaining('180 dakikalık sulama başlatıldı'), findsOneWidget);
+      expect(find.textContaining('500 dakikalık sulama başlatıldı'), findsNothing);
+      // Kullaniciya kirpildigi ACIKCA soylenmeli, sessizce olmamali.
+      expect(find.textContaining('500 dk'), findsOneWidget);
+      expect(find.textContaining('düşürüldü'), findsOneWidget);
+
+      durum.dispose();
+    },
+  );
 }

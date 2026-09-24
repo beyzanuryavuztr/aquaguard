@@ -299,6 +299,21 @@ def _komut_isle(mesaj_json: dict, calisma_durumu: dict, istemci=None,
         )
         _ack_gonder(True)
     elif komut == "tedavi_durdur":
+        # ACIMASIZ DENETIM (2026-09-25): besin dozlama surerken erken
+        # durdurulursa, "guncel_tur" (en son GERCEK tikanma turu, besin
+        # dozlamanin KENDISI hicbir zaman guncellemez) kullanilirsa,
+        # durulama fazi SAHTE bir kimyasal/biyolojik/fiziksel kaymaya
+        # dogru interpolasyon yapardi -- sensorler zaten "normal" iken
+        # bu yanlis bir gorsel sinyal olurdu. tedavi_aktif (HER ADIMDA
+        # guncellenir, besin turleri dahil) daha dogru bir kaynak.
+        if calisma_durumu.get("tedavi_aktif") in BESIN_TEDAVI_TURLERI:
+            print("[Komut] Operatör: aktif besin dozlaması erken durduruluyor.")
+            calisma_durumu["uretec"] = itertools.chain(
+                durulama_ve_iyilesme_adimlarini_uret("normal", rng),
+                senaryo_adimlarini_uret(rng),
+            )
+            _ack_gonder(True)
+            return
         guncel_tur = calisma_durumu.get("guncel_tur") or "fiziksel"
         print(f"[Komut] Operatör: aktif tedavi erken durduruluyor (tür={guncel_tur}).")
         calisma_durumu["uretec"] = itertools.chain(

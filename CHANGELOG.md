@@ -174,6 +174,37 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
 - Python mock ve Flutter tarafında da (demo modu dahil) aynı iki tedavi
   türü desteklendi — 54 Python testi, 440 Flutter testi geçiyor.
 
+### Acımasız Denetim — Faz 1-3 üzerinde bulunan 3 gerçek hata (2026-09-25)
+
+Faz 1-3'ü teslim ettikten hemen sonra istenen ek bir "acımasızca incele"
+turunda, kendi yazdığım koda karşı üç gerçek (küçük ama gerçek) hata
+bulundu ve düzeltildi:
+
+- **Süreli sulamada yanıltıcı başarı mesajı:** kullanıcı 180 dakika üst
+  sınırından fazla bir süre girdiğinde (örn. 500), provider/firmware bunu
+  sessizce 180'e kırpıyordu ama ekran hâlâ "500 dakikalık sulama
+  başlatıldı" diyordu — kullanıcı gerçekte ne kadar süreceğini yanlış
+  bilirdi. Artık ekran gerçekte çalışacak (kırpılmış) süreyi gösteriyor ve
+  kırpma olduysa bunu açıkça belirtiyor.
+- **Python mock'ta besin dozlaması erken durdurulunca sahte sensör kayması:**
+  `tedavi_durdur` komutu, besin dozlaması sürerken gelirse en son GERÇEK
+  tıkanma türünü (`guncel_tur`, besin dozlamayla hiç güncellenmeyen bir
+  alan) kullanıp durulama fazında var olmayan bir kimyasal/biyolojik/
+  fiziksel kaymaya doğru interpolasyon yapıyordu. Artık besin dozlaması
+  doğru tespit edilip "normal"den "normal"e (kaymasız) durulama yapılıyor.
+- **Mutex Kilit Göstergesi, besin dozlaması sürerken yanıltıcıydı:** widget
+  sadece asit/klor/yıkama'yı biliyor; besin dozlaması aktifken 3 kanalın da
+  "kilitli" göründüğü ama HİÇBİRİNİN "aktif" görünmediği, açıklamasız bir
+  durum oluşuyordu. Artık besin dozlaması sürerken nedenini açıklayan bir
+  not gösteriliyor.
+
+**Dokümante edilmiş, düzeltilmemiş bir mimari sınırlama:** `firmware/config.h`
+`TOPLAM_ZON_SAYISI=4` sabiti, zon-izolasyonunun (Faz 2) kaç zonu kapsayacağını
+belirliyor — uygulamadaki çiftlik/zon modeli ise serbest metin/sayı kabul
+ediyor. Sistemde gerçekte 4'ten fazla zon veya 1-4 dışında numaralandırılmış
+bir zon varsa, izolasyon o zonları KAPSAMAZ. Şu anki varsayılan kurulum
+(4 zon, 1-4 numaralı) için sorun yok; bkz. `firmware/DONANIM_KONTROL_LISTESI.md`.
+
 ### Bilinen Sınırlamalar
 
 - Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.

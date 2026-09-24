@@ -190,6 +190,12 @@ Diğer, düşük öncelikli/bilinen sınırlamalar (değiştirilmedi, riski dü�
   olduğu netleşip gerçek donanımda test edilene kadar **doğrulanamayan bir
   risktir** — Python mock'ta da BİLEREK simüle edilmedi (bkz. mock'un
   dosya başı notu).
+  **Ayrıca (acımasız denetim, 2026-09-25):** `TOPLAM_ZON_SAYISI=4` sabiti
+  izolasyonun kaç zonu kapsayacağını belirler — uygulamadaki çiftlik/zon
+  modeli ise SERBEST sayı kabul eder. Sistemde gerçekten 4'ten fazla zon
+  ya da 1-4 dışında numaralandırılmış bir zon varsa, izolasyon o zonları
+  KAPSAMAZ (dozlama sırasında o zonun vanası kapatılmaz). **Enver/Beyzanur:
+  gerçek zon sayısı 4 ve numaralandırma 1-4 değilse bu sabiti güncelleyin.**
 - **Python mock ile PARİTE NOTU:** yukarıdaki zon-izolasyonu SADECE
   firmware'de var — `aquaguard_mock_yayinci.py` çok-süreçli (multi-process)
   MQTT koordinasyonu simüle etmiyor (kasıtlı kapsam dışı, gerekçe dosya

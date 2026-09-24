@@ -188,28 +188,41 @@ class _UzaktanSulamaEkraniState extends State<UzaktanSulamaEkrani> {
   }
 
   Future<void> _sulamayiBaslat(BuildContext context, String tarlaAdi) async {
-    final dakika = int.tryParse(_sureController.text.trim()) ?? 0;
-    if (dakika <= 0) {
+    final girilenDakika = int.tryParse(_sureController.text.trim()) ?? 0;
+    if (girilenDakika <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Geçerli bir süre (dakika) girin')),
       );
       return;
     }
+    // ACIMASIZ DENETIM (2026-09-25): provider/firmware sessizce
+    // AyarlarSabitleri.sulamaMaksSureDakika'ya KIRPIYOR (bkz.
+    // sulamayiSureliBaslat) -- ekran bunu bilmeden kullanicinin GIRDIGI
+    // (kirpilmemis) degeri basari mesajinda gostermeye devam ederse,
+    // kullanici "500 dakika baslatildi" sanip 180 dakika sonra sessizce
+    // durdugunu fark etmeyebilirdi. Ayni kirpme burada da uygulanip
+    // GERCEKTE calisacak sureyi gostermek icin.
+    final dakika = girilenDakika > AyarlarSabitleri.sulamaMaksSureDakika
+        ? AyarlarSabitleri.sulamaMaksSureDakika
+        : girilenDakika;
 
     setState(() => _baslatiliyor = true);
     final cihaz = context.read<CihazIletisimProvider>();
     final zonlar = List<int>.from(_seciliZonlar);
     var basariliSayisi = 0;
     for (final zon in zonlar) {
-      final basarili = await cihaz.sulamayiSureliBaslat(zon, dakika);
+      final basarili = await cihaz.sulamayiSureliBaslat(zon, girilenDakika);
       if (basarili) basariliSayisi++;
     }
 
     if (!context.mounted) return;
     setState(() => _baslatiliyor = false);
 
+    final kirpildiNotu = girilenDakika > dakika
+        ? ' (girdiğiniz $girilenDakika dk, üst sınır $dakika dk\'ya düşürüldü)'
+        : '';
     final mesaj = basariliSayisi == zonlar.length
-        ? '$tarlaAdi: $basariliSayisi zonda $dakika dakikalık sulama başlatıldı'
+        ? '$tarlaAdi: $basariliSayisi zonda $dakika dakikalık sulama başlatıldı$kirpildiNotu'
         : '$tarlaAdi: ${zonlar.length} zondan sadece $basariliSayisi tanesine '
               'komut gönderilebildi (bağlantı yok, kuyruğa alındı)';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mesaj)));

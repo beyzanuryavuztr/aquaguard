@@ -12,6 +12,15 @@
 ///   Yeni bir state GEREKMEZ: `okuma.tedaviAktif` zaten hangi kanalin aktif
 ///   oldugunu bilgilendirmeye yeter.
 ///
+///   ACIMASIZ DENETIM DUZELTMESI (2026-09-25): Faz 3'te ayni mutex'e
+///   TedaviTuru.besinSivi/besinToz de eklendi, ama BU 3 IKONLUK GORSEL
+///   onlari temsil etmiyor (ekran daralmasin diye 5'e cikarilmadi -- bkz.
+///   asagidaki not). Eski kod, besin dozlama aktifken 3 kanalin da
+///   "aktifMi=false, kilitliMi=true" gorunmesine, yani HICBIRI aktif
+///   gozukmeden UCU DE kilitli gozukmesine yol aciyordu -- operator "neden
+///   hicbiri calismiyor ama hepsi kilitli?" diye sasirirdi. Simdi bu
+///   durumda ayri bir aciklama satiri gosteriliyor.
+///
 /// Tarih:  2026-09-04
 library;
 
@@ -34,6 +43,9 @@ class MutexKilitGostergesi extends StatelessWidget {
       'Yıkama',
     ),
   ];
+
+  bool get _besinDozlamaAktifMi =>
+      aktifTedavi == TedaviTuru.besinSivi || aktifTedavi == TedaviTuru.besinToz;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +73,36 @@ class MutexKilitGostergesi extends StatelessWidget {
               'Güvenlik gereği aynı anda yalnızca bir tedavi kanalı çalışabilir.',
               style: TextStyle(fontSize: 12, color: onSurfaceVariant),
             ),
+            if (_besinDozlamaAktifMi) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: DurumRenkleri.tedaviAktif.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.grain_outlined,
+                      size: 16,
+                      color: DurumRenkleri.tedaviAktif,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${tedaviEtiketi(aktifTedavi)} sürüyor — bu yüzden '
+                        'aşağıdaki 3 kanal da geçici olarak kilitli.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: DurumRenkleri.tedaviAktif,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             Row(
               children: [
