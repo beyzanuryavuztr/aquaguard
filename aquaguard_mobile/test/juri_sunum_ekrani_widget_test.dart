@@ -274,4 +274,73 @@ void main() {
       durum.dispose();
     },
   );
+
+  testWidgets(
+    'Genel Bakış\'ta ZATEN gösterilmekte olan bir SnackBar, Jüri Sunum '
+    'Modu\'na geçildiği an temizlenir (suresi dolmasini beklemez)',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+            ChangeNotifierProvider.value(value: durum.tarlaProvider),
+            ChangeNotifierProvider.value(value: durum.bakimProvider),
+            ChangeNotifierProvider.value(value: durum.aktiviteProvider),
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ],
+          child: _uygulamaSarici(const AnaKabuk()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Kabuk hala GUNCEL rotadayken bir bildirim gelir -- SnackBar
+      // gosterilir (suresi 4 sn, henuz KAPANMAMIS olacak).
+      durum.aktiviteProvider.aktiviteKaydiEkle(
+        AktiviteKaydi(
+          zaman: DateTime.now(),
+          zone: 1,
+          mesaj: 'Test: gecis aninda hala gosterilen bildirim',
+          tur: AktiviteTuru.tespit,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text('Test: gecis aninda hala gosterilen bildirim'),
+        ),
+        findsOneWidget,
+      );
+
+      // SnackBar suresi DOLMADAN (4 sn) Jüri Sunum Modu'na gecilir.
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const JuriSunumEkrani()),
+      );
+      await tester.pump();
+      // SnackBar'in kapanma animasyonunun (clearSnackBars) TAMAMEN
+      // bitmesini bekle -- pumpAndSettle DEGIL (Genel Bakış'taki nabiz
+      // animasyonu asla durulmaz), sabit sureli birkac pump yeterli.
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Jüri Sunum Modu'), findsOneWidget);
+      // Eski SnackBar, suresi dolmamis olsa da ARTIK GORUNMEMELI --
+      // Geri/Ileri butonlarinin ustune binmemesi icin ekran acilir
+      // acilmaz temizlenir.
+      expect(
+        find.text('Test: gecis aninda hala gosterilen bildirim'),
+        findsNothing,
+      );
+
+      durum.dispose();
+    },
+  );
 }

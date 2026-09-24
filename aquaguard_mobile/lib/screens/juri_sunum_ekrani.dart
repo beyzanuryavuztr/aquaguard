@@ -41,6 +41,21 @@ class JuriSunumEkrani extends StatefulWidget {
 class _JuriSunumEkraniState extends State<JuriSunumEkrani> {
   int _adimIndeksi = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Kabuk, bu ekran ustteyken YENI bir canli bildirim SnackBar'i
+    // GOSTERMEZ (bkz. ana_kabuk.dart), ama Genel Bakış'tan buraya
+    // gecerken ZATEN gosterilmekte olan bir SnackBar (suresi 4 sn) kendi
+    // suresini doldurana kadar ekranda KALMAYA devam eder -- demo Hizli/
+    // Turbo modda hemen her geciste boyle biri "tam o anda" gosterilmis
+    // olur. Ekran acilir acilmaz mevcut/kuyruktaki SnackBar'i temizleyerek
+    // Geri/Ileri butonlarinin ustune binmesini engeller.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
+    });
+  }
+
   void _ileriGit() {
     if (_adimIndeksi < sunumAdimlari.length - 1) {
       setState(() => _adimIndeksi++);
