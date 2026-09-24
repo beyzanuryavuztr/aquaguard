@@ -38,6 +38,18 @@ Amac:
     uygulamasi kapansa bile su bosa akmaya devam etmez. Kalan sure
     "sulama_kalan_saniye" alaniyla yayinlanir (uygulamada geri sayim icin).
 
+    KAPSAM DISI (2026-09-25, bilincli): firmware/mqtt_handler.h'ye eklenen
+    "zon-bazli dozlama izolasyonu" (bir zon tedavi baslatinca DIGER
+    zonlarin vanasini gecici kapatma -- ekip karari: dozlama pompalari
+    ortak ana hatta enjekte ediyor) bu mock'ta UYGULANMADI. Bu, cok-surecli
+    (multi-process, her zon ayri bir "python aquaguard_mock_yayinci.py
+    --zone N" cagrisi) bir MQTT koordinasyonu gerektirir -- mock'un asil
+    amaci (Flutter uygulamasini tek bir zonun veri akisina karsi test
+    etmek) icin gereksiz karmasiklik. Bu davranis SADECE gercek donanimda
+    (veya birden fazla mock ornegini MQTT Explorer gibi bir aracla elle
+    izleyerek) gozlemlenebilir -- bkz. firmware/DONANIM_KONTROL_LISTESI.md
+    "Python mock ile PARITE NOTU".
+
 Senaryo mantigi (bir "hikaye" dongusu):
     1) NORMAL   - sensorler normal deger etrafinda dalgalanir
     2) KOTULESME - rastgele secilen bir tikanma turune dogru kademeli kayma

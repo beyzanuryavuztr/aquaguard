@@ -136,7 +136,15 @@ void setup() {
 void loop() {
   esp_task_wdt_reset();   // ana dongu yasiyor -- watchdog'u besle
   // Non-blocking durum makineleri -- HER turda ilerletilmeli
-  tedaviGuncelle();
+  bool durulamaSimdiBitti = tedaviGuncelle();
+  if (durulamaSimdiBitti) {
+    // ZON IZOLASYONU (2026-09-25): tedavi + zorunlu durulama TAM olarak
+    // bitti (mutex serbest kaldi) -- dozlama icin gecici kapatilmis DIGER
+    // zonlarin vanalarini simdi geri ac (bkz. mqtt_handler.h
+    // tedaviBaslatZonIzoleyerek / _digerZonlarinVanasiniAyarla).
+    _digerZonlarinVanasiniAyarla(true);
+    Serial.println(F("[SULAMA] Durulama tamamlandi, izole edilmis diger zonlarin vanalari yeniden aciliyor."));
+  }
   anaVanaZamanlayiciyiGuncelle();   // sureli sulama -- suresi dolani kapat
   mqttDonguyuIsle();
 
@@ -174,7 +182,11 @@ void islemDongusunuCalistir() {
     // GERCEKTEN CALISAN bir pompa varsa aninda durdur.
     if (aktifTedaviGetir() != TEDAVI_YOK) {
       tedaviAcilDurdur();
-      Serial.println(F("[GUVENLIK] Ana vana kapali -- suren tedavi ANINDA durduruldu (akis yok)."));
+      // ZON IZOLASYONU: acil durdurma, normal durulama-tamamlanma akisini
+      // ATLAR (bkz. tedaviGuncelle() donus degeri yorumu) -- izole edilmis
+      // diger zonlar burada ELLE geri acilmazsa SONSUZA KADAR kapali kalir.
+      _digerZonlarinVanasiniAyarla(true);
+      Serial.println(F("[GUVENLIK] Ana vana kapali -- suren tedavi ANINDA durduruldu (akis yok), diger zonlar geri acildi."));
     } else if (durulamaAktifMi()) {
       // Vana kapaliyken durulama suresi ILERLEMESIN (akissiz gecen sure
       // durulama sayilmaz) -- bu blok periyodik olarak (OKUMA_ARALIGI_MS
@@ -214,10 +226,13 @@ void islemDongusunuCalistir() {
       Serial.println(F("[TEDAVI] Tikanma tespit edildi ama baska bir tedavi/durulama surdugu icin BEKLETILIYOR (mutex kilidi)."));
     } else {
       TedaviTuru gerekliTedavi = tedaviTuruBelirle(_sonTeshis.tur);
-      bool baslatildi = tedaviBaslat(gerekliTedavi);
+      // ZON IZOLASYONU (2026-09-25): dozlama pompalari ortak ana hatta
+      // enjekte ettigi icin, DIGER zonlarin vanalari once kapatilir (bkz.
+      // mqtt_handler.h tedaviBaslatZonIzoleyerek).
+      bool baslatildi = tedaviBaslatZonIzoleyerek(gerekliTedavi);
 
       if (baslatildi) {
-        Serial.print(F("[TEDAVI] BASLATILDI: "));
+        Serial.print(F("[TEDAVI] BASLATILDI (diger zonlar izole edildi): "));
         Serial.println(tedaviAdiGetir(gerekliTedavi));
 
         tedaviLogla(gerekliTedavi, tedaviSuresiGetir(gerekliTedavi), _sonTeshis.tur, _sonTeshis.guven);

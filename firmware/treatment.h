@@ -198,7 +198,11 @@ bool tedaviErkenDurdur() {
 // (non-blocking durum makinesini ilerletir: tedavi -> durulama -> bosta)
 // ============================================================================
 
-void tedaviGuncelle() {
+// Donus degeri: bu cagrida durulama TAM OLARAK bitip mutex'in serbest
+// kaldigi an ise true (SADECE o tek turda) -- cagiran taraf (aquaguard_main.ino)
+// bunu, dozlama icin gecici kapatilmis DIGER zon vanalarini yeniden acmak
+// icin kullanir (bkz. mqtt_handler.h "digerZonlarinVanasiniAyarla").
+bool tedaviGuncelle() {
   unsigned long simdi = millis();
 
   // 1) Aktif bir tedavi varsa: suresi doldu mu kontrol et
@@ -210,15 +214,17 @@ void tedaviGuncelle() {
       _durulamaAktif = true;                    // zorunlu durulamaya gec
       _durulamaBaslangicMs = simdi;
     }
-    return;
+    return false;
   }
 
   // 2) Durulama suruyorsa: suresi doldu mu kontrol et
   if (_durulamaAktif) {
     if (simdi - _durulamaBaslangicMs >= DURULAMA_SURESI_MS) {
       _durulamaAktif = false;   // mutex serbest kaldi, yeni tedavi baslatilabilir
+      return true;
     }
   }
+  return false;
 }
 
 // ============================================================================

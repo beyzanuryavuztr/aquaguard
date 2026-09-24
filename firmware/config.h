@@ -40,6 +40,15 @@
 #define BOLGE_ID 1                  // Bu Deneyap Kart'in izledigi zon numarasi
 #define CIHAZ_ADI "AquaGuard-Zone1" // MQTT client-id ve loglarda kullanilir
 
+// Sistemdeki TOPLAM zon sayisi (1..TOPLAM_ZON_SAYISI numaralandirilir).
+// Zon-bazli dozlama izolasyonu icin gerekli (bkz. mqtt_handler.h
+// "digerZonlarinVanasiniAyarla" -- ekip karari 2026-09-25: dozlama
+// pompalari ORTAK ana hatta enjekte ediyor, zon vanalari damlama
+// hatlarini ayiriyor. Bir zona dozlama yapilirken DIGER zonlarin
+// vanalari GECICI kapatilir, aksi halde ilac paylasimli hatta karisip
+// TUM zonlara gider).
+#define TOPLAM_ZON_SAYISI 4
+
 // ============================================================================
 // 2) PIN TANIMLARI (YER TUTUCU -- Enver dogrulamali)
 // ============================================================================

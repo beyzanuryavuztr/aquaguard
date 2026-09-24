@@ -137,6 +137,21 @@ Bu dosya, AquaGuard projesindeki önemli değişiklikleri belgeler. Biçim
   özelliği (ayrı sıvı/toz hazneleri) **ayrı, sonraki fazlarda** ele alınacak
   — bu sürümde henüz yok.
 
+### Zon-Bazlı Dozlama İzolasyonu (2026-09-25) — Faz 2
+
+- Ekip kararı: dozlama pompaları (asit/klor/vb.) **ortak** bir ana hatta
+  enjekte ediyor, her zonun kendi damlama hattı başındaki bir vana suyun/
+  ilacın o zona gidip gitmeyeceğini belirliyor. Bu yüzden bir zon tedavi
+  (asit/klor/yıkama) başlattığında — otonom teşhisle ya da operatörün
+  manuel komutuyla — firmware artık önce **diğer tüm zonların** vanasını
+  geçici kapatıyor (mevcut zon-bazlı `sulama_durdur`/`sulama_baslat`
+  komutları yeniden kullanılıyor), tedavi+durulama tamamen bitince geri
+  açıyor. Acil durdurma bu akışı atladığı için, iki güvenlik çağrı
+  noktasında da diğer zonları elle geri açma eklendi.
+  **Sadece firmware'de** — arduino-cli ile derlendi, gerçek donanımda
+  henüz denenmedi. Bilinçli/dokümante edilmiş sınırlamalar için bkz.
+  `firmware/DONANIM_KONTROL_LISTESI.md`.
+
 ### Bilinen Sınırlamalar
 
 - Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.

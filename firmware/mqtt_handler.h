@@ -142,6 +142,65 @@ void _komutDurumuYayinla(const char* komutId, bool basarili) {
   _mqttClient.publish(_komutDurumuTopic, (const uint8_t*)cikti, uzunluk, false);
 }
 
+// ============================================================================
+// ZON-BAZLI DOZLAMA IZOLASYONU (2026-09-25, ekip karari)
+// ============================================================================
+//
+// FIZIKSEL VARSAYIM (Enver ile dogrulanmali -- bkz. DONANIM_KONTROL_LISTESI.md):
+// dozlama pompalari (asit/klor/vb.) ORTAK bir ana hatta enjekte ediyor; her
+// zonun kendi damlama hatti basindaki bir vana, o zona su/ilac gidip
+// gitmeyecegini belirliyor. Bu yuzden bir zona dozlama yapilirken DIGER
+// zonlarin vanalari kapatilmazsa, ilac PAYLASIMLI hatta karisip TUM
+// zonlara (istenmeyen sekilde) gider.
+//
+// COZUM: bu kart, kendi zonu (BOLGE_ID) icin bir tedavi baslatmadan HEMEN
+// once, DIGER TUM zonlarin komut konusuna "sulama_durdur" yayinlar (var
+// olan zon-bazli MQTT semasi TEKRAR KULLANILIR -- ister bu zonlari BASKA
+// fiziksel kartlar yonetsin, ister AYNI kart yonetsin, fark etmez: hangi
+// kart o zonun komut konusuna abone ise vanayi kapatir). Tedavi + durulama
+// TAMAMEN bitince ayni zonlara "sulama_baslat" yayinlanir.
+//
+// BILINCLI SINIRLAMA (dogruluk icin acikca yazildi): bu, ACK BEKLEMEYEN
+// "ates et ve devam et" bir koordinasyondur -- diger zonlarin vanasinin
+// GERCEKTEN kapandigini TEYIT ETMEDEN dozlamaya baslar. Gercek zamanli
+// senkron bir el sikisma (handshake) non-blocking tek-ilmekli bir tasarimda
+// onemli bir karmasiklik/gecikme riski tasirdi; MQTT+vana tepki suresi
+// (tipik olarak <1 sn) 30 saniyelik dozlama suresine kiyasla kucuk bir
+// paydir. Gercek donanimda ilk testte, izolasyonun GERCEKTEN zamaninda
+// calistigi (vana kapanmadan pompa baslamadigi) OLCULMELIDIR.
+void _digerZonlarinVanasiniAyarla(bool acik) {
+  const char* komut = acik ? "sulama_baslat" : "sulama_durdur";
+  StaticJsonDocument<64> govde;
+  govde["komut"] = komut;
+  char cikti[64];
+  size_t uzunluk = serializeJson(govde, cikti, sizeof(cikti));
+
+  char hedefTopic[48];
+  for (int zon = 1; zon <= TOPLAM_ZON_SAYISI; zon++) {
+    if (zon == BOLGE_ID) continue;   // kendi zonumuz -- tedaviBaslat zaten yonetiyor
+    snprintf(hedefTopic, sizeof(hedefTopic), MQTT_KONU_KOMUT, zon);
+    _mqttClient.publish(hedefTopic, (const uint8_t*)cikti, uzunluk, false);
+  }
+}
+
+// tedaviBaslat()'in izolasyon-farkinda sarmalayicisi -- OTONOM (karar
+// motoru) VE MANUEL (operator komutu) tedavi baslatma yollarinin IKISI DE
+// bunu cagirmali, dogrudan tedaviBaslat() DEGIL (bkz. aquaguard_main.ino,
+// _komutMesajGeldiginde "tedavi_baslat").
+bool tedaviBaslatZonIzoleyerek(TedaviTuru tedavi) {
+  if (tedavi == TEDAVI_YOK || tedaviMesgulMu()) {
+    return false;   // erken cikis -- gereksiz yere diger zonlari kapatma
+  }
+  _digerZonlarinVanasiniAyarla(false);
+  bool basladi = tedaviBaslat(tedavi);
+  if (!basladi) {
+    // Beklenmeyen yaris durumu (mutex bu iki satir arasinda mesgul oldu) --
+    // guvenlik: diger zonlari HEMEN geri ac, kapali birakma.
+    _digerZonlarinVanasiniAyarla(true);
+  }
+  return basladi;
+}
+
 void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
   StaticJsonDocument<320> belge;
   DeserializationError hata = deserializeJson(belge, payload, uzunluk);
@@ -171,9 +230,9 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
       if (tedavi == TEDAVI_YOK) {
         Serial.println(F("[Komut] Gecersiz/eksik tedavi_turu, yoksayildi."));
       } else {
-        basarili = tedaviBaslat(tedavi);
+        basarili = tedaviBaslatZonIzoleyerek(tedavi);
         Serial.println(basarili
-            ? F("[Komut] Operator: manuel tedavi baslatildi.")
+            ? F("[Komut] Operator: manuel tedavi baslatildi (diger zonlar izole edildi).")
             : F("[Komut] Operator: manuel tedavi REDDEDILDI (mutex mesgul)."));
       }
     }
@@ -198,7 +257,11 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
     // ariza/beklenmeyen durumdur).
     if (aktifTedaviGetir() != TEDAVI_YOK) {
       tedaviAcilDurdur();
-      Serial.println(F("[GUVENLIK] Ana vana kapatiliyor -- suren tedavi ANINDA durduruldu (akis yok)."));
+      // ZON IZOLASYONU: bkz. aquaguard_main.ino ayni yorumun ikizi -- acil
+      // durdurma normal durulama-bitti akisini atlar, izole edilmis diger
+      // zonlar elle geri acilmali.
+      _digerZonlarinVanasiniAyarla(true);
+      Serial.println(F("[GUVENLIK] Ana vana kapatiliyor -- suren tedavi ANINDA durduruldu (akis yok), diger zonlar geri acildi."));
     } else if (durulamaAktifMi()) {
       // SADECE zorunlu durulama suruyor (pompa zaten kapali) -- akissiz
       // durulamaya devam EDILEMEZ ama mutex SIFIRLANMAZ (bkz.

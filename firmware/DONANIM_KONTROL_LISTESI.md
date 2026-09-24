@@ -164,6 +164,35 @@ Diğer, düşük öncelikli/bilinen sınırlamalar (değiştirilmedi, riski dü�
   donanımda henüz denenmedi** -- ilk testte kısa bir süre (örn. 1 dakika)
   ile sulama başlatıp vananın gerçekten kendiliğinden kapandığını, bu sırada
   ana döngünün (sensör okuma vb.) kilitlenmediğini doğrulayın.
+- **Zon-bazlı dozlama izolasyonu -- 2026-09-25'te firmware'e EKLENDİ**
+  (ekip kararı: dozlama pompaları **ortak** ana hatta enjekte ediyor,
+  fiziksel olarak doğrulanmalı): bir zon otonom veya manuel olarak bir
+  tedavi (asit/klor/yıkama) başlattığında, kart önce **diğer tüm zonların**
+  komut konusuna `sulama_durdur` yayınlar (`mqtt_handler.h`
+  `tedaviBaslatZonIzoleyerek`/`_digerZonlarinVanasiniAyarla`,
+  `config.h` `TOPLAM_ZON_SAYISI=4`), tedavi+durulama tamamen bitince
+  `sulama_baslat` ile geri açar. Acil durdurma (`tedaviAcilDurdur`) bu
+  akışı atladığı için, iki çağrı noktasında da (aquaguard_main.ino vana-
+  kapalı güvenlik yedeği, mqtt_handler.h `sulama_durdur` işleyicisi) ELLE
+  geri açma eklendi.
+  **Bilinçli/dokümante edilmiş sınırlama:** bu, ACK BEKLEMEYEN "ateş et ve
+  devam et" bir koordinasyondur — diğer zonların vanasının gerçekten
+  kapandığını teyit etmeden dozlamaya başlar (MQTT+vana tepki süresi
+  tipik <1 sn, 30 sn'lik dozlama süresine kıyasla küçük bir pay).
+  **Ayrıca çözülmemiş, gerçek bir açık nokta:** eğer sistemde GERÇEKTEN
+  4 ayrı fiziksel kart varsa (tek kart değil), iki zon TEORİK olarak aynı
+  anda otonom tedavi başlatabilir — her kartın kendi mutex'i BAĞIMSIZ
+  çalışıyor, birbirini gerçek zamanlı engellemiyor (sadece birbirinin
+  vanasını kapatıyor, kendi dozlama kararını değil). Bu, kaç fiziksel kart
+  olduğu netleşip gerçek donanımda test edilene kadar **doğrulanamayan bir
+  risktir** — Python mock'ta da BİLEREK simüle edilmedi (bkz. mock'un
+  dosya başı notu).
+- **Python mock ile PARİTE NOTU:** yukarıdaki zon-izolasyonu SADECE
+  firmware'de var — `aquaguard_mock_yayinci.py` çok-süreçli (multi-process)
+  MQTT koordinasyonu simüle etmiyor (kasıtlı kapsam dışı, gerekçe dosya
+  başında). Flutter uygulaması bunu test etmek için kullanılamaz; sadece
+  gerçek donanımda veya birden fazla mock örneğini elle MQTT ile
+  izleyerek gözlemlenebilir.
 
 ## Kaynak / Tek Kaynak Referansları
 
