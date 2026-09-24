@@ -6,13 +6,34 @@
 // (aktivite gecmisine kayit dustugunu) dogrular.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:aquaguard_mobile/l10n/app_localizations.dart';
+import 'package:aquaguard_mobile/models/aktivite_kaydi.dart';
 import 'package:aquaguard_mobile/models/sunum_adimi.dart';
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
+import 'package:aquaguard_mobile/screens/ana_kabuk.dart';
 import 'package:aquaguard_mobile/screens/juri_sunum_ekrani.dart';
+
+// AnaKabuk'un IndexedStack'i TUM sekmeleri (Ayarlar dahil) hemen kurar --
+// Ayarlar'daki GorunumDilKarti (i18n pilot ekrani) AppLocalizations.of(context)!
+// cagirir, bu yuzden AnaKabuk'u iceren her test localizationsDelegates
+// saglamali (bkz. giris_ekrani_widget_test.dart ayni desen).
+Widget _uygulamaSarici(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
+  );
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -159,4 +180,98 @@ void main() {
 
     durum.dispose();
   });
+
+  testWidgets(
+    'AnaKabuk uzerine PUSH edilmisken canli bildirim SnackBar olarak '
+    'gosterilmez (Geri/Ileri butonlarinin ustune binmesin diye); '
+    'geri donulunce sonraki bildirim yine gosterilir',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+            ChangeNotifierProvider.value(value: durum.tarlaProvider),
+            ChangeNotifierProvider.value(value: durum.bakimProvider),
+            ChangeNotifierProvider.value(value: durum.aktiviteProvider),
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+          ],
+          child: _uygulamaSarici(const AnaKabuk()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const JuriSunumEkrani()),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Jüri Sunum Modu'), findsOneWidget);
+
+      // Kabuk hala monteli (IndexedStack) ama artik GUNCEL rota degil --
+      // bu bildirim SnackBar olarak GORUNMEMELI (Jüri Sunum Modu'nun
+      // Geri/Ileri butonlarinin ustune binmemesi icin).
+      durum.aktiviteProvider.aktiviteKaydiEkle(
+        AktiviteKaydi(
+          zaman: DateTime.now(),
+          zone: 1,
+          mesaj: 'Test: kabuk arka plandayken gelen bildirim',
+          tur: AktiviteTuru.tespit,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('Test: kabuk arka plandayken gelen bildirim'),
+        findsNothing,
+      );
+      // Yine de kalici gecmise/rozete islenmis olmali -- sadece toast
+      // bastirildi, veri kaybolmadi.
+      expect(
+        durum.aktiviteProvider.bildirimGecmisi.any(
+          (k) => k.mesaj == 'Test: kabuk arka plandayken gelen bildirim',
+        ),
+        isTrue,
+      );
+
+      // Jüri Sunum Modu'ndan geri donulunce Kabuk yeniden GUNCEL rota olur.
+      // pumpAndSettle DEGIL: alttaki Genel Bakış (ZonSemasi nabiz animasyonu)
+      // surekli calisiyor, asla "durulmaz" (bkz. giris_ekrani_widget_test.dart
+      // ayni not).
+      navigator.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      durum.aktiviteProvider.aktiviteKaydiEkle(
+        AktiviteKaydi(
+          zaman: DateTime.now(),
+          zone: 1,
+          mesaj: 'Test: kabuk guncel rotadayken gelen bildirim',
+          tur: AktiviteTuru.tespit,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tester.takeException(), isNull);
+      // findsOneWidget DEGIL: mesaj hem SnackBar'da (toast) hem Genel
+      // Bakış'in "Son Aktiviteler" listesinde (kalici) ayni anda gorunur --
+      // burada asil kontrol edilen, SnackBar'in GERCEKTEN gosterildigi.
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text('Test: kabuk guncel rotadayken gelen bildirim'),
+        ),
+        findsOneWidget,
+      );
+
+      durum.dispose();
+    },
+  );
 }

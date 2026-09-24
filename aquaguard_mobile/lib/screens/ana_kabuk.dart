@@ -108,12 +108,26 @@ class _AnaKabukState extends State<AnaKabuk> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         for (final kayit in bildirimler) {
           if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(kayit.mesaj),
-              duration: const Duration(seconds: 4),
-            ),
-          );
+          // SnackBar, ScaffoldMessenger paylasimli oldugu icin BURADAN
+          // tetiklense bile o an EKRANDA GORUNEN (Navigator yiginin en
+          // ustundeki) Scaffold'un altina "yapisir" -- Kabuk'un UZERINE
+          // Zon Detay/Ayarlar/Jüri Sunum Modu gibi bir ekran PUSH
+          // edilmisse, canli bildirim o ekranin sabit kontrollerinin
+          // (orn. Jüri Sunum Modu'nun Geri/Ileri butonlari) UZERINE biner.
+          // Kabuk kendi rotasinin GUNCEL (en ustte) olup olmadigini
+          // kontrol ederek, sadece Genel Bakis/sekmeler seviyesindeyken
+          // SnackBar gosterir -- bildirim yine de Bildirim Gecmisi'ne
+          // kaydedilir ve (asagida) OS bildirimi olarak gonderilir, sadece
+          // baska bir ekranin ustune binen rahatsiz edici toast atlanir.
+          final kabukGuncelRotada = ModalRoute.of(context)?.isCurrent ?? true;
+          if (kabukGuncelRotada) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(kayit.mesaj),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
           // Yerel bildirim (SnackBar sadece on plandayken gorunur) --
           // BildirimServisi kendi icinde try/catch ile korunur, burada
           // ek bir hata isleme gerekmez. Sessiz saatte (kritik haric)
