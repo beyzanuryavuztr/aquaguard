@@ -101,35 +101,6 @@ class GenelBakisEkrani extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const TarlaSecimEkrani()),
             ),
           ),
-          PopupMenuButton<void>(
-            tooltip: 'Daha fazla',
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                child: const ListTile(
-                  leading: Icon(Icons.water_drop_outlined),
-                  title: Text('Uzaktan Sulama'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const UzaktanSulamaEkrani(),
-                  ),
-                ),
-              ),
-              PopupMenuItem(
-                child: const ListTile(
-                  leading: Icon(Icons.grain_outlined),
-                  title: Text('Besin Takviyesi'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const BesinTakviyesiEkrani(),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
       body: !cihaz.hazir
@@ -190,6 +161,10 @@ class GenelBakisEkrani extends StatelessWidget {
                           ),
                         ),
                       ),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
+                      child: _HizliEylemlerBolumu(),
+                    ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                       child: Text(
@@ -389,6 +364,46 @@ class GenelBakisEkrani extends StatelessWidget {
       floatingActionButton: cihaz.hazir && tumZonlar.isNotEmpty
           ? const AcilDurdurmaFab()
           : null,
+    );
+  }
+}
+
+/// Uzaktan Sulama ve Besin Takviyesi'ne DOĞRUDAN, YAZILI erişim.
+///
+/// ACIMASIZ DENETIM (2026-09-25): bu iki eylem daha önce sadece AppBar'daki
+/// etiketsiz "⋮" (Daha fazla) menüsünün İÇİNDEYDİ -- AppBar'da zaten
+/// Yardım/Bildirim/Jüri Sunum/Çiftlikler ikonlarıyla birlikte 4-5 ikon
+/// yan yana sıkışık duruyordu, "⋮" ikonu görsel olarak hiçbir ipucu
+/// vermiyordu. Kullanıcı gerçek uygulamada denedi ve özelliği BULAMADI
+/// ("sulama başlat... hala yok") -- kod çalışıyordu ama keşfedilemiyordu.
+/// Artık ana ekranın gövdesinde, yazılı iki buton olarak duruyor.
+class _HizliEylemlerBolumu extends StatelessWidget {
+  const _HizliEylemlerBolumu();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const UzaktanSulamaEkrani()),
+            ),
+            icon: const Icon(Icons.water_drop_outlined),
+            label: const Text('Sulama Başlat'),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const BesinTakviyesiEkrani()),
+            ),
+            icon: const Icon(Icons.grain_outlined),
+            label: const Text('Besin Takviyesi'),
+          ),
+        ),
+      ],
     );
   }
 }
