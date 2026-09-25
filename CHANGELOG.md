@@ -205,6 +205,57 @@ ediyor. Sistemde gerçekte 4'ten fazla zon veya 1-4 dışında numaralandırılm
 bir zon varsa, izolasyon o zonları KAPSAMAZ. Şu anki varsayılan kurulum
 (4 zon, 1-4 numaralı) için sorun yok; bkz. `firmware/DONANIM_KONTROL_LISTESI.md`.
 
+### Firmware Denetimi — SD Kart Günlüğü (2026-09-25)
+
+- Baştan sona yeniden okunan firmware kodunda bulunan bir gerçek eksiklik
+  düzeltildi: **manuel komutla** (otonom teşhis olmadan) başlatılan HER
+  tedavi — asit/klor/yıkama ve Faz 3'teki besin sıvı/toz dahil — SD karttaki
+  denetim günlüğüne (`tedaviLogla`) hiç yazılmıyordu; yalnızca otonom
+  teşhisle tetiklenen tedaviler loglanıyordu. Artık manuel tedaviler de
+  `guven=0`/tür kaydı olmadan (bu, satırın otonom değil manuel olduğunun
+  CSV kuralı) loglanıyor. arduino-cli ile yeniden derlendi (%78 flash, %15
+  RAM — önceki derlemelerle tutarlı).
+
+### Ekran Görüntüleri (2026-09-25)
+
+- README'deki ekran görüntüleri artık gerçek (canlı GitHub Pages
+  dağıtımından Playwright ile alınmış) görseller — Genel Bakış, Tedavi
+  Geçmişi, Trend Analizi, Ayarlar. Zon Detay ekran görüntüsü, canlı demonun
+  bildirim SnackBar'larının zon kartlarının üzerine gelmesi nedeniyle
+  otomatik olarak güvenilir şekilde alınamadı; bu eksiklik README'de açıkça
+  belirtildi (uydurulmadı). Ayrıca MQTT veri şeması örneğindeki eski
+  camelCase alan adları (`tespitEdildi` vb.) gerçek kablo formatı olan
+  snake_case (`tespit_edildi` vb.) ile düzeltildi.
+
+### Hava Durumu Tabanlı Basit Sulama Önerisi (2026-09-25) — Faz 4
+
+- Kullanıcının doğrudan talebi üzerine: Uzaktan Sulama ekranına, seçili
+  çiftliğin GPS konumu (harita özelliğiyle eklenen `enlem`/`boylam` alanı)
+  varsa **Open-Meteo**'dan (API anahtarı gerektirmeyen, ücretsiz, küçük
+  ölçekli kullanım için tasarlanmış bir servis) yarının hava tahminini
+  çeken ve bitki türüne göre basit, kural tabanlı bir sulama önerisi
+  ("erteleyebilirsiniz" / "normal" / "artırabilirsiniz") gösteren bir kart
+  eklendi. Bu özellik daha önce "güvenilmez/anahtarlı harici API'den kaçın"
+  ilkesi gereğince ertelenmişti; Open-Meteo bu varsayımı değiştirdiği için
+  yeniden değerlendirildi.
+- **Dürüstlük notu (istatistiksel trend tahmini ile aynı disiplin):** bu,
+  gerçek bir agronomik model (evapotranspirasyon/Penman-Monteith, toprak
+  nem sensörü, bitki gelişim evresi) DEĞİLDİR — yarınki yağış ihtimali +
+  sıcaklık + kaba bitki türü kategorisine göre basit bir yön verir. Kart
+  her zaman "basit, kural tabanlı bir öneridir — profesyonel tarım
+  danışmanlığının yerine geçmez" notuyla gösterilir.
+- Çiftlikte GPS konumu yoksa API HİÇ çağrılmaz, sadece konum ekleme daveti
+  gösterilir. Ağ hatası/zaman aşımı/bozuk yanıt durumunda servis her zaman
+  `null` döner ve uygulama ÇÖKMEDEN "şu an alınamadı" mesajı gösterir —
+  hiçbir zaman sahte/varsayılan bir öneri uydurulmaz.
+- Yeni `BitkiTuru` alanı (sebze/meyve ağacı/tarla bitkisi/diğer), çiftlik
+  profiline eklendi; operatör kartın üzerindeki seçiciyle değiştirebilir.
+- Yeni bağımlılık: `http` paketi (`package:http/testing.dart`
+  `MockClient` ile ağa hiç çıkmadan test edildi). 5 yeni test dosyası —
+  model round-trip, JSON ayrıştırma (eksik/bozuk veriye karşı dayanıklılık),
+  öneri kural mantığının tüm dalları, servisin 4 ağ senaryosu (başarı/HTTP
+  hatası/bozuk JSON/bağlantı istisnası), widget entegrasyonu.
+
 ### Bilinen Sınırlamalar
 
 - Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.

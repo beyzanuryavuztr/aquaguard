@@ -26,6 +26,7 @@ import '../config/ayarlar_sabitleri.dart';
 import '../providers/cihaz_iletisim_provider.dart';
 import '../providers/tarla_provider.dart';
 import '../widgets/duyarli_icerik.dart';
+import '../widgets/sulama_onerisi_karti.dart';
 import '../widgets/yardim_butonu.dart';
 
 class UzaktanSulamaEkrani extends StatefulWidget {
@@ -102,6 +103,11 @@ class _UzaktanSulamaEkraniState extends State<UzaktanSulamaEkrani> {
                   ),
                   const SizedBox(height: 20),
                   if (seciliTarla != null) ...[
+                    SulamaOnerisiKarti(
+                      key: ValueKey('oneri_${seciliTarla.id}'),
+                      tarla: seciliTarla,
+                    ),
+                    const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

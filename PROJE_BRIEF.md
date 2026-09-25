@@ -123,6 +123,10 @@ Sahada tıkanma türünü doğrudan belirleyecek bir yöntem literatürde tanım
     başlatma — vana süre dolunca kendiliğinden kapanır (bkz. §4.3 sema v3)
   - **Besin Takviyesi** (2026-09-25): tıkanma teşhisinden bağımsız, operatörün
     kendi kararıyla sıvı/toz besin takviyesi dozlaması başlatması
+  - **Hava Durumu Tabanlı Sulama Önerisi** (2026-09-25): çiftliğin GPS
+    konumu varsa Open-Meteo'dan (API anahtarı gerekmez) yarının tahminini
+    çekip bitki türüne göre basit, kural tabanlı bir öneri gösterir —
+    gerçek bir agronomik model değildir, Uzaktan Sulama ekranında görünür
 - Tıkanma ve tedavi bildirimleri
 - Çevrimdışı mod: WiFi/internet kesilirse son bilinen durumu göster
 - Hedef: önce web/Chrome test, sonra Android

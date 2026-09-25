@@ -17,6 +17,8 @@
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
+import 'bitki_turu.dart';
+
 class Tarla {
   final String id;
   final String ad;
@@ -32,6 +34,11 @@ class Tarla {
   // digerinin YANLISLIKLA silinmesi riskini tasirdi.
   final double? enlem;
   final double? boylam;
+  // BITKI TURU (opsiyonel, Faz 4, 2026-09-25): sadece hava durumu tabanli
+  // basit sulama onerisi (bkz. models/sulama_onerisi.dart) icin kullanilir
+  // -- sensor/teshis mantigina hicbir etkisi yoktur. null = "diger/
+  // belirtilmedi" (notr oneri).
+  final BitkiTuru? bitkiTuru;
 
   const Tarla({
     required this.id,
@@ -42,6 +49,7 @@ class Tarla {
     this.fotografBase64,
     this.enlem,
     this.boylam,
+    this.bitkiTuru,
   });
 
   bool get gpsKonumuVarMi => enlem != null && boylam != null;
@@ -55,6 +63,7 @@ class Tarla {
     bool fotografiKaldir = false,
     double? enlem,
     double? boylam,
+    BitkiTuru? bitkiTuru,
   }) {
     return Tarla(
       id: id,
@@ -67,6 +76,7 @@ class Tarla {
           : (fotografBase64 ?? this.fotografBase64),
       enlem: enlem ?? this.enlem,
       boylam: boylam ?? this.boylam,
+      bitkiTuru: bitkiTuru ?? this.bitkiTuru,
     );
   }
 
@@ -79,6 +89,7 @@ class Tarla {
     'fotografBase64': fotografBase64,
     'enlem': enlem,
     'boylam': boylam,
+    'bitkiTuru': bitkiTuru == null ? null : bitkiTuruKoduGetir(bitkiTuru!),
   };
 
   factory Tarla.fromJson(Map<String, dynamic> json) => Tarla(
@@ -92,6 +103,9 @@ class Tarla {
     fotografBase64: json['fotografBase64'] as String?,
     enlem: (json['enlem'] as num?)?.toDouble(),
     boylam: (json['boylam'] as num?)?.toDouble(),
+    bitkiTuru: json['bitkiTuru'] == null
+        ? null
+        : bitkiTuruAyristir(json['bitkiTuru'] as String?),
   );
 
   /// Uygulama ilk acildiginda (kayitli tarla yokken) gosterilecek varsayilan
