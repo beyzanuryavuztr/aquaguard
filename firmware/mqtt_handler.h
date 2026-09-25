@@ -4,16 +4,19 @@
  *
  * Amac:
  *   Deneyap Kart'in dahili WiFi radyosu uzerinden bir kablosuz aga baglanir
- *   ve sensor/teshis/tedavi verisini MQTT protokolu ile uzak sunucuya (ve
- *   oradan Flutter mobil uygulamasina) yayinlar. Baglanti koptugunda
- *   periyodik olarak yeniden baglanmayi dener.
+ *   ve TOPLAM_ZON_SAYISI zonun HEPSININ sensor/teshis/tedavi verisini MQTT
+ *   protokolu ile uzak sunucuya (ve oradan Flutter mobil uygulamasina)
+ *   yayinlar. Baglanti koptugunda periyodik olarak yeniden baglanmayi dener.
  *
- *   2026-09-23: Mimari SIM800L/GSM'den WiFi'ye TASINDI (ekip karari --
- *   sunum/fuar ortaminda WiFi, SIM/operator kapsamasindan daha guvenilir).
- *   ONEMLI KISIT: WiFi'nin menzili sinirlidir (yonlendiriciden birkac on
- *   metre) -- GSM'in aksine, kart yonlendiricinin sinyal alaninin DISINDA
- *   bir tarlada CALISMAZ. Gercek saha kurulumunda bu goz onunde bulundurulmali
- *   (bkz. README "Bilinen Sinirlamalar").
+ *   2026-09-25 BUYUK DUZELTME: onceki tasarim "4 ayri Deneyap Kart, her biri
+ *   kendi BOLGE_ID'sine ait TEK bir topic setine yayin yapiyor" varsayiyordu.
+ *   Enver'in notu + kullanici onayiyla DOGRULANDI: gercekte TEK kart TUM 4
+ *   zonun topic'lerine (veri/durum/komut/komut_durumu) yayin/abonelik yapar.
+ *   MQTT SEMASI (disaridan -- uygulama/mock acisindan) DEGISMEDI, sadece
+ *   YAYINLAYAN tarafin fiziksel olarak tek cihaz olmasi ic mimariyi degistirdi.
+ *
+ *   2026-09-23: Iletisim katmani SIM800L/GSM'den Deneyap Kart'in dahili
+ *   WiFi'sine TASINDI (bkz. mqtt_handler.h basi).
  *
  * JSON PAYLOAD SEMASI (mock_yayinci.py ve Flutter uygulamasiyla AYNI olmali):
  *   {
@@ -25,6 +28,7 @@
  *     "turbidite":     3.97,
  *     "debi":          3.90,
  *     "delta_basinc":  0.12,
+ *     "sicaklik_ham_voltaj": 1.65,
  *     "durum":         "normal" | "belirsiz" | "tespit_edildi",
  *     "tikanma_turu":  "yok" | "kimyasal" | "biyolojik" | "fiziksel",
  *     "guven":         94.2,
@@ -38,64 +42,38 @@
  *     "sulama_kalan_saniye": 0
  *   }
  *
- *   ana_vana_acik (SEMA v2, 2026-09-19): ana sulama vanasinin GERCEK durumu.
- *   Uygulama vana durumunu tahmin etmek yerine bununla esitler (K1/Y3).
+ *   sicaklik_ham_voltaj (2026-09-25, YENI, opsiyonel): A0 pininin HAM
+ *   voltaji -- santigrat DEGIL, kalibre edilmedi (bkz. sensors.h
+ *   sicaklikOkuHamVoltaj() dosya ici notu). Sadece Enver/Beyzanur'un
+ *   sensorun gercekten calisip calismadigini gormesi icin.
  *
- *   sulama_kalan_saniye (SEMA v3, 2026-09-24): "sulama_baslat" komutu bir
- *   "sure_dakika" ile (sureli) baslatildiysa, vananin KENDILIGINDEN
- *   kapanmasina kalan saniye; sureli bir sulama YOKSA 0. Uygulama bunu
- *   geri sayim gostermek icin kullanir. bkz. ana_vana.h
- *   anaVanaKalanSaniyeGetir().
+ *   ana_vana_acik / sulama_kalan_saniye: ARTIK O ZONUN KENDI vanasinin
+ *   durumu (bkz. ana_vana.h, zon-bazli) -- tek bir paylasimli "ana vana"
+ *   degil.
  *
- *   guven_* alanlari, kural katmaninin UC tikanma turunu de ne kadar olasi
- *   gordugunu tasir (aciklanabilirlik) -- mobil uygulamadaki "Neden bu
- *   karar?" panelinin veri kaynagidir. Tikanma yoksa (durum=normal) ucu de 0'dir.
- *
- *   SEMA v2 NOTU (2026-09-16; komut_durumu + ana_vana_acik 2026-09-19'da
- *   UYGULANDI, hazne alanlari HENUZ YOK): Flutter tarafi (models/
- *   sensor_okuma.dart) artik opsiyonel "hazne_asit_seviye_yuzde" ve
- *   "hazne_klor_seviye_yuzde" alanlarini da OKUYABILIYOR (null-safe --
- *   alan JSON'da yoksa UI ilgili karti gostermez). Bu firmware HENUZ bu
- *   alanlari YAYINLAMIYOR cunku gercek donanimda bir hazne seviye sensoru
- *   YOK (bkz. config.h). Fiziksel bir seviye sensoru (ornegin bir
- *   ultrasonik veya siamano float switch) eklendiginde, bu iki alan
- *   `belge["hazne_asit_seviye_yuzde"]`/`belge["hazne_klor_seviye_yuzde"]`
- *   olarak asagidaki JSON olusturma bolumune eklenmelidir -- python/
- *   aquaguard_mock_yayinci.py zaten (illustratif/demo amacli) bu alanlari
- *   yayinliyor, gercek sema BUNUNLA eslesmelidir.
- *
- * Konu (topic) semasi:
- *   aquaguard/zone{N}/veri   -> yukaridaki JSON, RETAINED (son mesaj brokerda
- *                               saklanir; yeni baglanan istemci -- ornegin
- *                               Flutter uygulamasi -- aninda son durumu alir)
- *   aquaguard/zone{N}/durum  -> "online" / "offline" (Last Will Testament ile
- *                               cihazin baglanti durumu izlenebilir)
- *   aquaguard/zone{N}/komut_durumu -> her komuta ACK/NACK yaniti (QoS0, retained
- *                               DEGIL): {"komut_id":"...","durum":"tamamlandi"|"reddedildi"}
- *                               komut_id yoksa yanit gonderilmez. bkz. _komutDurumuYayinla().
- *   aquaguard/zone{N}/komut  -> SADECE ABONE OLUNUR (yayinlanmaz). Operator
- *                               mudahalesi (mobil uygulama) buraya JSON komut
- *                               yollar, RETAINED DEGILDIR:
+ * Konu (topic) semasi -- HER zon icin ayri (N = 1..TOPLAM_ZON_SAYISI):
+ *   aquaguard/zone{N}/veri   -> yukaridaki JSON, RETAINED
+ *   aquaguard/zone{N}/durum  -> "online" / "offline"
+ *   aquaguard/zone{N}/komut_durumu -> ACK/NACK: {"komut_id","durum":"tamamlandi"|"reddedildi"}
+ *   aquaguard/zone{N}/komut  -> SADECE ABONE OLUNUR. Operator mudahalesi:
  *                                 {"komut":"tedavi_baslat","tedavi_turu":"asit_dozlama"}
- *                                 {"komut":"tedavi_baslat","tedavi_turu":"besin_sivi"}   (Faz 3)
- *                                 {"komut":"tedavi_baslat","tedavi_turu":"besin_toz"}    (Faz 3)
  *                                 {"komut":"tedavi_durdur"}
  *                                 {"komut":"normale_dondur"}
- *                                 {"komut":"sulama_baslat","sure_dakika":30}   (opsiyonel)
+ *                                 {"komut":"sulama_baslat","sure_dakika":30}
  *                                 {"komut":"sulama_durdur"}
- *                               "besin_sivi"/"besin_toz" (2026-09-25, Faz 3): tikanma
- *                               teshisinden BAGIMSIZ, operatorun kendi karariyla (orn.
- *                               besin takviyesi) manuel baslattigi dozlama -- AYNI
- *                               guvenlik kilidine (mutex) VE zon-izolasyonuna tabidir,
- *                               asit/klor/yikama ile ASLA ayni anda calismaz. bkz.
- *                               treatment.h TedaviTuru, config.h PIN_POMPA_BESIN_SIVI/
- *                               PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ (donanim YER TUTUCU).
- *                               bkz. _komutMesajGeldiginde() asagida.
+ *
+ *   DURUM (online/offline) SINIRLAMASI: MQTT'nin Last Will Testament (LWT)
+ *   ozelligi CONNECT paketi basina SADECE TEK bir topic destekler. Bu kart
+ *   TEK bir MQTT baglantisiyla 4 zonu temsil ettigi icin, LWT SADECE Zon
+ *   1'in durum topic'ine kayitlidir -- baglanti BEKLENMEDIK sekilde koparsa
+ *   (guc kesintisi vb.) sadece zone1/durum otomatik "offline" olur, 2-4
+ *   OLMAZ (bilinen/kabul edilen sinirlama). Basarili baglanmada HEPSINE
+ *   elle "online" yayinlanir.
  *
  * Kutuphaneler: WiFi (ESP32 cekirdegiyle birlikte gelir) + PubSubClient +
  *   ArduinoJson
  *
- * Tarih:  2026-09-01 (WiFi'ye tasinma: 2026-09-23)
+ * Tarih:  2026-09-01 (WiFi'ye tasinma: 2026-09-23, tek-kart/4-zon: 2026-09-25)
  * Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
  */
 
@@ -112,13 +90,6 @@
 #include "decision_engine.h"
 #include "treatment.h"
 #include "ana_vana.h"
-// ACIMASIZ DENETIM (2026-09-25): logger.h burada ACIKCA include edilmeli --
-// daha once SADECE aquaguard_main.ino'nun kendi #include SIRASINA (logger.h,
-// mqtt_handler.h'den ONCE) guvenerek tedaviLogla() cagirilabiliyordu, bu
-// KIRILGAN bir bagimliliktir (biri o sirayi degistirirse sessizce derleme
-// hatasi verir). Include guard'lar (logger.h zaten kendi ic bagimliliklarini
-// -- config/sensors/decision_engine/treatment -- ayni sekilde tekrar
-// include ediyor) tekrar-tanimlama sorunu cikarmaz.
 #include "logger.h"
 
 // ============================================================================
@@ -131,39 +102,32 @@ static PubSubClient _mqttClient(_wifiClient);
 static unsigned long _sonBaglantiDenemesiMs = 0;
 static const unsigned long BAGLANTI_DENEME_ARALIGI_MS = 15000UL;
 
-static char _durumTopic[48];
-static char _veriTopic[48];
-static char _komutTopic[48];
-static char _komutDurumuTopic[56];
+// 1-indeksli topic dizileri (dizin 0 kullanilmaz).
+static char _veriTopic[TOPLAM_ZON_SAYISI + 1][32];
+static char _durumTopic[TOPLAM_ZON_SAYISI + 1][32];
+static char _komutTopic[TOPLAM_ZON_SAYISI + 1][32];
+static char _komutDurumuTopic[TOPLAM_ZON_SAYISI + 1][40];
 
 // ============================================================================
 // OPERATOR KOMUTLARI (bkz. dosya basindaki JSON sema aciklamasi)
 // ============================================================================
-//
-// PubSubClient'in callback imzasi TUM abone olunan konular icin ORTAKTIR --
-// bu cihaz sadece _komutTopic'e abone oldugu icin ek bir konu kontrolüne
-// gerek yoktur, ama ileride baska bir konuya abone olunursa `topic`
-// parametresi kontrol edilmelidir.
-// Komut sonucunu (ACK/NACK) cihazdan uygulamaya bildirir (SEMA v2).
-// Uygulama her komuta benzersiz bir "komut_id" ekler ve bu konudan yanit
-// bekler; yanit gelmezse 30 sn sonra "zaman asimi" gosterir. komut_id
-// yoksa (eski istemci / elle test) sessizce atlanir. Yayin basarisiz olursa
-// (baglanti koptu vb.) komutun UYGULANMASINI etkilemez -- sadece geri
-// bildirim kaybolur.
-void _komutDurumuYayinla(const char* komutId, bool basarili) {
+
+// zon: yanit hangi zonun komut_durumu topic'ine gidecek.
+void _komutDurumuYayinla(int zon, const char* komutId, bool basarili) {
   if (komutId == nullptr || komutId[0] == '\0') {
     return;
   }
+  if (zon < 1 || zon > TOPLAM_ZON_SAYISI) return;
   StaticJsonDocument<192> yanit;
   yanit["komut_id"] = komutId;
   yanit["durum"] = basarili ? "tamamlandi" : "reddedildi";
   char cikti[192];
   size_t uzunluk = serializeJson(yanit, cikti, sizeof(cikti));
-  _mqttClient.publish(_komutDurumuTopic, (const uint8_t*)cikti, uzunluk, false);
+  _mqttClient.publish(_komutDurumuTopic[zon], (const uint8_t*)cikti, uzunluk, false);
 }
 
 // ============================================================================
-// ZON-BAZLI DOZLAMA IZOLASYONU (2026-09-25, ekip karari)
+// ZON-BAZLI DOZLAMA IZOLASYONU (2026-09-25)
 // ============================================================================
 //
 // FIZIKSEL VARSAYIM (Enver ile dogrulanmali -- bkz. DONANIM_KONTROL_LISTESI.md):
@@ -173,55 +137,47 @@ void _komutDurumuYayinla(const char* komutId, bool basarili) {
 // zonlarin vanalari kapatilmazsa, ilac PAYLASIMLI hatta karisip TUM
 // zonlara (istenmeyen sekilde) gider.
 //
-// COZUM: bu kart, kendi zonu (BOLGE_ID) icin bir tedavi baslatmadan HEMEN
-// once, DIGER TUM zonlarin komut konusuna "sulama_durdur" yayinlar (var
-// olan zon-bazli MQTT semasi TEKRAR KULLANILIR -- ister bu zonlari BASKA
-// fiziksel kartlar yonetsin, ister AYNI kart yonetsin, fark etmez: hangi
-// kart o zonun komut konusuna abone ise vanayi kapatir). Tedavi + durulama
-// TAMAMEN bitince ayni zonlara "sulama_baslat" yayinlanir.
+// COZUM (2026-09-25 basitlestirmesi): TEK kart TUM vanalari dogrudan
+// yonettigi icin, izolasyon artik MQTT uzerinden BASKA cihazlara komut
+// yayinlamaz -- ana_vana.h'deki digerZonlarinVanasiniAyarla() ile DOGRUDAN,
+// YEREL bir fonksiyon cagrisidir. Ag gecikmesi/guvenilirlik riski ortadan
+// kalkti.
 //
-// BILINCLI SINIRLAMA (dogruluk icin acikca yazildi): bu, ACK BEKLEMEYEN
-// "ates et ve devam et" bir koordinasyondur -- diger zonlarin vanasinin
-// GERCEKTEN kapandigini TEYIT ETMEDEN dozlamaya baslar. Gercek zamanli
-// senkron bir el sikisma (handshake) non-blocking tek-ilmekli bir tasarimda
-// onemli bir karmasiklik/gecikme riski tasirdi; MQTT+vana tepki suresi
-// (tipik olarak <1 sn) 30 saniyelik dozlama suresine kiyasla kucuk bir
-// paydir. Gercek donanimda ilk testte, izolasyonun GERCEKTEN zamaninda
-// calistigi (vana kapanmadan pompa baslamadigi) OLCULMELIDIR.
-void _digerZonlarinVanasiniAyarla(bool acik) {
-  const char* komut = acik ? "sulama_baslat" : "sulama_durdur";
-  StaticJsonDocument<64> govde;
-  govde["komut"] = komut;
-  char cikti[64];
-  size_t uzunluk = serializeJson(govde, cikti, sizeof(cikti));
-
-  char hedefTopic[48];
-  for (int zon = 1; zon <= TOPLAM_ZON_SAYISI; zon++) {
-    if (zon == BOLGE_ID) continue;   // kendi zonumuz -- tedaviBaslat zaten yonetiyor
-    snprintf(hedefTopic, sizeof(hedefTopic), MQTT_KONU_KOMUT, zon);
-    _mqttClient.publish(hedefTopic, (const uint8_t*)cikti, uzunluk, false);
-  }
-}
-
 // tedaviBaslat()'in izolasyon-farkinda sarmalayicisi -- OTONOM (karar
 // motoru) VE MANUEL (operator komutu) tedavi baslatma yollarinin IKISI DE
-// bunu cagirmali, dogrudan tedaviBaslat() DEGIL (bkz. aquaguard_main.ino,
-// _komutMesajGeldiginde "tedavi_baslat").
-bool tedaviBaslatZonIzoleyerek(TedaviTuru tedavi) {
+// bunu cagirmali, dogrudan tedaviBaslat() DEGIL.
+bool tedaviBaslatZonIzoleyerek(int zon, TedaviTuru tedavi) {
   if (tedavi == TEDAVI_YOK || tedaviMesgulMu()) {
     return false;   // erken cikis -- gereksiz yere diger zonlari kapatma
   }
-  _digerZonlarinVanasiniAyarla(false);
-  bool basladi = tedaviBaslat(tedavi);
+  digerZonlarinVanasiniAyarla(zon, false);
+  bool basladi = tedaviBaslat(tedavi, zon);
   if (!basladi) {
     // Beklenmeyen yaris durumu (mutex bu iki satir arasinda mesgul oldu) --
     // guvenlik: diger zonlari HEMEN geri ac, kapali birakma.
-    _digerZonlarinVanasiniAyarla(true);
+    digerZonlarinVanasiniAyarla(zon, true);
   }
   return basladi;
 }
 
+// topic (orn. "aquaguard/zone3/komut") -- hangi zonun komut konusuna
+// geldigini cozer. Eslesme yoksa 0 doner (olmamasi gereken bir durum,
+// sadece bu cihazin abone oldugu konular geri cagrilabilir).
+static int _topicZonuCoz(const char* topic) {
+  for (int zon = 1; zon <= TOPLAM_ZON_SAYISI; zon++) {
+    if (strcmp(topic, _komutTopic[zon]) == 0) return zon;
+  }
+  return 0;
+}
+
 void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
+  int zon = _topicZonuCoz(topic);
+  if (zon == 0) {
+    Serial.print(F("[Komut] Bilinmeyen topic'ten mesaj, yoksayildi: "));
+    Serial.println(topic);
+    return;
+  }
+
   StaticJsonDocument<320> belge;
   DeserializationError hata = deserializeJson(belge, payload, uzunluk);
   if (hata) {
@@ -230,9 +186,6 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
   }
 
   const char* komut = belge["komut"] | "";
-  // komutId, belge'nin icindeki bir dizgeye isaret eder -- bu fonksiyon
-  // bitene kadar gecerlidir (belge yerel degisken), yanit ayni cagri
-  // icinde yayinlandigi icin guvenlidir.
   const char* komutId = belge["komut_id"] | "";
 
   // Her dal, sonucu `basarili` degiskenine yazar; ACK/NACK EN SONDA tek
@@ -240,30 +193,22 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
   bool basarili = false;
 
   if (strcmp(komut, "tedavi_baslat") == 0) {
-    // GUVENLIK: ana vana kapaliyken (akis yok) YENI bir kimyasal dozlama/
-    // yikama BASLATILAMAZ -- akissiz bir hatta dozlama, kimyasalin asiri
-    // yogunlasmasina/pompanin kuru calismasina yol acar. bkz. ana_vana.h.
-    if (!anaVanaAcikMi()) {
-      Serial.println(F("[Komut] Operator: manuel tedavi REDDEDILDI (ana vana kapali, akis yok)."));
+    // GUVENLIK: o zonun vanasi kapaliyken (akis yok) YENI bir kimyasal
+    // dozlama/yikama BASLATILAMAZ -- akissiz bir hatta dozlama, kimyasalin
+    // asiri yogunlasmasina/pompanin kuru calismasina yol acar.
+    if (!anaVanaAcikMi(zon)) {
+      Serial.println(F("[Komut] Operator: manuel tedavi REDDEDILDI (zon vanasi kapali, akis yok)."));
     } else {
       TedaviTuru tedavi = tedaviTuruAyristir(belge["tedavi_turu"] | "");
       if (tedavi == TEDAVI_YOK) {
         Serial.println(F("[Komut] Gecersiz/eksik tedavi_turu, yoksayildi."));
       } else {
-        basarili = tedaviBaslatZonIzoleyerek(tedavi);
+        basarili = tedaviBaslatZonIzoleyerek(zon, tedavi);
         Serial.println(basarili
             ? F("[Komut] Operator: manuel tedavi baslatildi (diger zonlar izole edildi).")
-            : F("[Komut] Operator: manuel tedavi REDDEDILDI (mutex mesgul)."));
+            : F("[Komut] Operator: manuel tedavi REDDEDILDI (mutex mesgul veya pin dogrulanmadi)."));
         if (basarili) {
-          // ACIMASIZ DENETIM (2026-09-25): daha once SADECE otonom (karar
-          // motoru tetikledigi) tedaviler SD karta yazilirdi -- manuel
-          // komutla baslatilan hicbir tedavi (besin dozlama DAHIL, Faz 3)
-          // saha loglarinda HIC gorunmuyordu. "tetikleyen_tur"/"guven"
-          // alanlari icin TUR_YOK/0.0 kullanilir -- bu, CSV'de "otonom
-          // teshisten DEGIL, manuel komuttan geldi" anlamina gelir (otonom
-          // satirlarda guven her zaman >= GUVEN_ESIGI, tur asla YOK degildir).
-          // tedaviLogla() kendi zaman damgasini icinde uretir (bkz. logger.h).
-          tedaviLogla(tedavi, tedaviSuresiGetir(tedavi), TUR_YOK, 0.0f);
+          tedaviLogla(zon, tedavi, tedaviSuresiGetir(tedavi), TUR_YOK, 0.0f);
         }
       }
     }
@@ -272,53 +217,38 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
     Serial.println(durduruldu
         ? F("[Komut] Operator: aktif tedavi erken durduruldu, durulamaya geciliyor.")
         : F("[Komut] Operator: durdurulacak aktif tedavi yok."));
-    // "Durdurulacak tedavi yok" da istenen son durumdur (tedavi calismiyor):
-    // acil durdurma gibi durumlarda NACK yanlis alarm uretmesin.
     basarili = true;
   } else if (strcmp(komut, "normale_dondur") == 0) {
-    // Sadece bir GUNLUK kaydi -- karar motoru zaten bir sonraki okumada
-    // esik asilmiyorsa "normal" dondurecektir; burada aktuator durumunda
-    // degisiklik YOKTUR (yanlis alarmda zaten hicbir aktuator calismiyordu).
     Serial.println(F("[Komut] Operator: durumu yanlis alarm olarak isaretledi."));
     basarili = true;
   } else if (strcmp(komut, "sulama_durdur") == 0) {
-    // GUVENLIK: vana kapatilirken GERCEKTEN CALISAN bir pompa varsa, akis
+    // GUVENLIK: bu zon icin GERCEKTEN CALISAN bir tedavi varsa, akis
     // olmadan dozlamaya devam etmek tehlikelidir -- aninda VE TAM olarak
-    // durdur (tedaviAcilDurdur, mutex'i de sifirlar -- bu gercek bir
-    // ariza/beklenmeyen durumdur).
-    if (aktifTedaviGetir() != TEDAVI_YOK) {
+    // durdur.
+    if (aktifTedaviGetir() != TEDAVI_YOK && tedaviZonuGetir() == zon) {
       tedaviAcilDurdur();
-      // ZON IZOLASYONU: bkz. aquaguard_main.ino ayni yorumun ikizi -- acil
-      // durdurma normal durulama-bitti akisini atlar, izole edilmis diger
-      // zonlar elle geri acilmali.
-      _digerZonlarinVanasiniAyarla(true);
-      Serial.println(F("[GUVENLIK] Ana vana kapatiliyor -- suren tedavi ANINDA durduruldu (akis yok), diger zonlar geri acildi."));
-    } else if (durulamaAktifMi()) {
-      // SADECE zorunlu durulama suruyor (pompa zaten kapali) -- akissiz
-      // durulamaya devam EDILEMEZ ama mutex SIFIRLANMAZ (bkz.
-      // durulamaZamanlayicisiniSifirla() dosya-basi yorumu): aksi halde
-      // yarim kalmis bir durulama "tamamlandi" sayilip hat tam
-      // yikanmadan yeni tedaviye izin verilirdi.
-      Serial.println(F("[GUVENLIK] Ana vana kapatiliyor -- durulama akis kesildigi icin yarim kaldi (mutex ACIK kalmaya devam ediyor)."));
+      digerZonlarinVanasiniAyarla(zon, true);
+      Serial.println(F("[GUVENLIK] Zon vanasi kapatiliyor -- suren tedavi ANINDA durduruldu (akis yok), diger zonlar geri acildi."));
+    } else if (durulamaAktifMi() && tedaviZonuGetir() == zon) {
+      Serial.println(F("[GUVENLIK] Zon vanasi kapatiliyor -- durulama akis kesildigi icin yarim kaldi (mutex ACIK kalmaya devam ediyor)."));
     }
-    anaVanayiKapat();
-    Serial.println(F("[Komut] Operator: ana vana MANUEL kapatildi, sulama durdu."));
+    anaVanayiKapat(zon);
+    Serial.println(F("[Komut] Operator: zon vanasi MANUEL kapatildi, sulama durdu."));
     basarili = true;
   } else if (strcmp(komut, "sulama_baslat") == 0) {
-    // Opsiyonel "sure_dakika" alani -- verilmemisse (0) suresiz acilir
-    // (eski davranis). Verilmisse, vana SULAMA_MAKS_SURE_DK ile kirpilip
-    // o sure sonunda KENDILIGINDEN kapanir (bkz. ana_vana.h anaVanayiSureliAc).
     long sureDakika = belge["sure_dakika"] | 0L;
-    anaVanayiSureliAc(sureDakika);
-    // Eger yarim kalmis bir durulama varsa, flow GERCEKTEN geri geldigi
-    // bu andan itibaren suresi SIFIRDAN baslar (bkz. treatment.h).
-    durulamaZamanlayicisiniSifirla();
+    anaVanayiSureliAc(zon, sureDakika);
+    if (tedaviZonuGetir() == zon) {
+      // Bu zon icin yarim kalmis bir durulama varsa, flow GERCEKTEN geri
+      // geldigi bu andan itibaren suresi SIFIRDAN baslar (bkz. treatment.h).
+      durulamaZamanlayicisiniSifirla();
+    }
     if (sureDakika > 0) {
-      Serial.print(F("[Komut] Operator: ana vana yeniden acildi, "));
+      Serial.print(F("[Komut] Operator: zon vanasi yeniden acildi, "));
       Serial.print(sureDakika);
       Serial.println(F(" dakika sureli sulama basladi."));
     } else {
-      Serial.println(F("[Komut] Operator: ana vana yeniden acildi, sulama basladi (suresiz)."));
+      Serial.println(F("[Komut] Operator: zon vanasi yeniden acildi, sulama basladi (suresiz)."));
     }
     basarili = true;
   } else {
@@ -326,7 +256,7 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
     Serial.println(komut);
   }
 
-  _komutDurumuYayinla(komutId, basarili);
+  _komutDurumuYayinla(zon, komutId, basarili);
 }
 
 // ============================================================================
@@ -334,10 +264,12 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
 // ============================================================================
 
 void mqttBaslat() {
-  snprintf(_veriTopic, sizeof(_veriTopic), MQTT_KONU_VERI, BOLGE_ID);
-  snprintf(_durumTopic, sizeof(_durumTopic), MQTT_KONU_DURUM, BOLGE_ID);
-  snprintf(_komutTopic, sizeof(_komutTopic), MQTT_KONU_KOMUT, BOLGE_ID);
-  snprintf(_komutDurumuTopic, sizeof(_komutDurumuTopic), MQTT_KONU_KOMUT_DURUMU, BOLGE_ID);
+  for (int zon = 1; zon <= TOPLAM_ZON_SAYISI; zon++) {
+    snprintf(_veriTopic[zon], sizeof(_veriTopic[zon]), MQTT_KONU_VERI, zon);
+    snprintf(_durumTopic[zon], sizeof(_durumTopic[zon]), MQTT_KONU_DURUM, zon);
+    snprintf(_komutTopic[zon], sizeof(_komutTopic[zon]), MQTT_KONU_KOMUT, zon);
+    snprintf(_komutDurumuTopic[zon], sizeof(_komutDurumuTopic[zon]), MQTT_KONU_KOMUT_DURUMU, zon);
+  }
 
   WiFi.mode(WIFI_STA);
   Serial.print(F("[MQTT] WiFi'ye baglaniliyor: "));
@@ -389,37 +321,34 @@ void mqttBaglantiyiSagla() {
 
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println(F("[MQTT] WiFi baglantisi yok, yeniden deneniyor..."));
-    // WiFi.begin() tekrar cagirmak guvenlidir -- ESP32 karisik/eski bir
-    // baglanma denemesini iptal edip yenisini baslatir, BLOKLAMAZ.
     WiFi.begin(WIFI_SSID, WIFI_SIFRE);
     return;
   }
 
   Serial.println(F("[MQTT] Brokera baglaniliyor..."));
 
-  // MQTT_KULLANICI_ADI bos string ("") oldugunda bile PubSubClient'in
-  // kullanici adli overload'unu cagirmak, CONNECT paketine BOS ama VAR
-  // olan bir kullanici adi alani koyar -- bazi sıkı brokerlar bunu
-  // reddeder. Bu yuzden kimlik dogrulama bilgisi yoksa parametresiz
-  // overload'u kullaniyoruz.
+  // LWT SADECE Zon 1'in durum topic'ine kayitli (bkz. dosya basi notu --
+  // MQTT protokolu CONNECT basina tek bir will-topic destekler).
   bool baglandi;
   if (strlen(MQTT_KULLANICI_ADI) > 0) {
     baglandi = _mqttClient.connect(
         CIHAZ_ADI,
         MQTT_KULLANICI_ADI, MQTT_SIFRE,
-        _durumTopic, 1, true, "offline"   // Last Will Testament
+        _durumTopic[1], 1, true, "offline"
     );
   } else {
     baglandi = _mqttClient.connect(
         CIHAZ_ADI,
-        _durumTopic, 1, true, "offline"   // Last Will Testament
+        _durumTopic[1], 1, true, "offline"
     );
   }
 
   if (baglandi) {
     Serial.println(F("[MQTT] Baglanti basarili."));
-    _mqttClient.publish(_durumTopic, "online", true);
-    _mqttClient.subscribe(_komutTopic);
+    for (int zon = 1; zon <= TOPLAM_ZON_SAYISI; zon++) {
+      _mqttClient.publish(_durumTopic[zon], "online", true);
+      _mqttClient.subscribe(_komutTopic[zon]);
+    }
   } else {
     Serial.print(F("[MQTT] Baglanti basarisiz, hata kodu: "));
     Serial.println(_mqttClient.state());
@@ -439,21 +368,23 @@ void mqttDonguyuIsle() {
 // VERI YAYINLAMA
 // ============================================================================
 
-void veriYayinla(const SensorOkumalari& okuma, const TeshisSonucu& teshis,
+void veriYayinla(int zon, const SensorOkumalari& okuma, const TeshisSonucu& teshis,
                   TedaviTuru aktifTedavi, bool durulamaAktif, const char* zamanDamgasi) {
   if (!_mqttClient.connected()) {
     return;
   }
+  if (zon < 1 || zon > TOPLAM_ZON_SAYISI) return;
 
   StaticJsonDocument<768> belge;
   belge["zaman"] = zamanDamgasi;
-  belge["zone"] = BOLGE_ID;
+  belge["zone"] = zon;
   belge["ph"] = serialized(String(okuma.ph, 2));
   belge["ec"] = serialized(String(okuma.ec, 2));
   belge["orp"] = serialized(String(okuma.orp, 0));
   belge["turbidite"] = serialized(String(okuma.turbidite, 1));
   belge["debi"] = serialized(String(okuma.debi, 2));
   belge["delta_basinc"] = serialized(String(okuma.deltaBasinc, 3));
+  belge["sicaklik_ham_voltaj"] = serialized(String(okuma.sicaklikHamVoltaj, 2));
   belge["durum"] = durumAdiGetir(teshis.durum);
   belge["tikanma_turu"] = turAdiGetir(teshis.tur);
   belge["guven"] = serialized(String(teshis.guven, 1));
@@ -462,18 +393,18 @@ void veriYayinla(const SensorOkumalari& okuma, const TeshisSonucu& teshis,
   belge["guven_fiziksel"] = serialized(String(teshis.guvenFiziksel, 1));
   belge["tedavi_aktif"] = tedaviAdiGetir(aktifTedavi);
   belge["durulama_aktif"] = durulamaAktif;
-  // Ana vana durumu CIHAZDAN raporlanir -- uygulama vana durumunu tahmin
-  // etmek yerine bununla esitler (bkz. Flutter SensorOkuma.anaVanaAcik).
-  belge["ana_vana_acik"] = anaVanaAcikMi();
-  // Sureli sulama geri sayimi (SEMA v3) -- sureli baslatilmadiysa 0.
-  belge["sulama_kalan_saniye"] = anaVanaKalanSaniyeGetir();
+  // Bu ZONUN KENDI vanasinin durumu (bkz. ana_vana.h, artik zon-bazli).
+  belge["ana_vana_acik"] = anaVanaAcikMi(zon);
+  belge["sulama_kalan_saniye"] = anaVanaKalanSaniyeGetir(zon);
 
   char cikti[768];
   size_t uzunluk = serializeJson(belge, cikti, sizeof(cikti));
 
-  bool basarili = _mqttClient.publish(_veriTopic, (const uint8_t*)cikti, uzunluk, true);
+  bool basarili = _mqttClient.publish(_veriTopic[zon], (const uint8_t*)cikti, uzunluk, true);
   if (!basarili) {
-    Serial.println(F("[MQTT] UYARI: veri yayinlanamadi (baglanti veya boyut sorunu)."));
+    Serial.print(F("[MQTT] UYARI: Zon "));
+    Serial.print(zon);
+    Serial.println(F(" verisi yayinlanamadi (baglanti veya boyut sorunu)."));
   }
 }
 

@@ -61,7 +61,7 @@ jobs:
       - run: pytest
 
   firmware:
-    name: Firmware (arduino-cli derleme, genel ESP32)
+    name: Firmware (arduino-cli derleme, Deneyap Kart 1A v2)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,11 +73,15 @@ jobs:
           arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
           arduino-cli core install esp32:esp32 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
           arduino-cli lib install "PubSubClient" "ArduinoJson" "RTClib" "ESP32Servo"
-      # Yalnizca DERLEME dogrulamasi (genel esp32:esp32:esp32 karti). Deneyap
-      # Kart tanimi ve gercek donanim davranisi burada DOGRULANMAZ.
+      # 2026-09-25: GERCEK Deneyap Kart 1A v2 tanimiyla derleniyor (esp32:esp32
+      # cekirdeginin kendi board tanimi -- deneyapkart1Av2, ESP32-S3 tabanli).
+      # Onceki jenerik esp32:esp32:esp32 hedefi YANLIS cip ailesiydi (klasik
+      # ESP32), Enver'in gonderdigi pin notuyla dogru karta gecildi (bkz.
+      # firmware/DONANIM_KONTROL_LISTESI.md basi). Bu HALA sadece sozdizimi/
+      # pin-tanimi dogrulamasi -- gercek donanim davranisi burada DOGRULANMAZ.
       - name: Derle
         run: |
           # arduino-cli, klasor adinin .ino adiyla ayni olmasini ister.
           mkdir -p /tmp/aquaguard_main
           cp firmware/*.ino firmware/*.h /tmp/aquaguard_main/
-          arduino-cli compile --fqbn esp32:esp32:esp32 /tmp/aquaguard_main
+          arduino-cli compile --fqbn esp32:esp32:deneyapkart1Av2 /tmp/aquaguard_main

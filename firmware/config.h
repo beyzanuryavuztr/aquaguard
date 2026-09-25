@@ -8,25 +8,54 @@
  *   dosyalari (sensors.h, decision_engine.h, treatment.h, logger.h,
  *   mqtt_handler.h) bu dosyayi kullanir.
  *
- * ONEMLI - SAHA KALIBRASYONU GEREKLI:
- *   Bu dosyadaki PIN numaralari, Deneyap Kart'in ADC1 kanallarina (GPIO 32-39)
- *   ve genel amacli dijital pinlerine gore YER TUTUCU olarak secilmistir.
- *   Enver, gercek Deneyap Kart pinout diyagrami ve fiziksel kablo baglantisina
- *   gore bu pin numaralarini DOGRULAMALI/GUNCELLEMELIDIR.
+ * ============================================================================
+ * 2026-09-25 BUYUK GUNCELLEME -- Enver'in gercek pin notu + kart fotografi
+ * ============================================================================
+ *   Enver, elle yazilmis bir pin atama notu ve kartin fotografini gonderdi.
+ *   Bu, iki temel varsayimi COKTU:
  *
- *   Sensor kalibrasyon sabitleri (EGIM/OFSET) de yer tutucudur. Gercek
- *   degerler, standart kalibrasyon cozeltileriyle (pH 4.01/6.86/9.18 tampon,
- *   EC 1.413/12.88 mS/cm, ORP 225/475 mV) saha kalibrasyonu yapildiktan
- *   sonra buraya girilmelidir. Karar esikleri (§KARAR ESIKLERI) ise
- *   python/aquaguard_karar_motoru.py ile BIREBIR AYNI tutulmalidir -- o
- *   dosyada bir esik degisirse burasi da guncellenmelidir.
+ *   1) KART MODELI KESINLESTI: "Deneyap Kart 1A v2" (ESP32-S3 tabanli).
+ *      Bu, bu ortamda zaten kurulu olan Deneyap/esp32 board paketlerinin
+ *      pins_arduino.h dosyalari TEK TEK karsilastirilarak DOGRULANDI (tahmin
+ *      degil) -- Enver'in notundaki A0-A7 (8 analog kanal) + D12/D13 SADECE
+ *      bu varyantta mevcut, digerlerinde (Deneyap Kart, Deneyap Kart 1A v1,
+ *      Deneyap Kart G) en fazla A0-A5 var. Onceki pin numaralari (GPIO32-39)
+ *      KLASIK ESP32 varsayimiyla secilmisti -- YANLIS CIP AILESI icin
+ *      yazilmisti, S3'te bu numaralar flash/PSRAM icin ayrilmis olabilir
+ *      (fiziksel risk, sadece "yanlis okuma" degil). Asagida ARTIK ham GPIO
+ *      numarasi degil, kartin KENDI sembolik isimleri (D0, A4 gibi)
+ *      kullaniliyor -- board paketi dogru GPIO'ya kendisi cevirir.
+ *
+ *   2) MIMARI DUZELTMESI: onceki tasarim "4 AYRI Deneyap Kart, her biri
+ *      kendi zonunu izliyor, MQTT ile koordine oluyor" varsayiyordu
+ *      (BOLGE_ID). Kullanicidan DOGRULANDI: gercekte TEK kart 4 zonu
+ *      DOGRUDAN yonetiyor (4 vana ayni kartta), sensorler de zon-bazli
+ *      DEGIL -- TEK ortak set, vana sirayla acilip o zonun suyu okunuyor
+ *      (round-robin). BOLGE_ID kavrami TAMAMEN KALDIRILDI.
+ *
+ *   HALA DOGRULANMAMIS (Enver'in notunda YOK, TAHMIN EDILMEDI -- asagida
+ *   #warning ile isaretli, derlemeyi engellemez ama HER derlemede gorunur):
+ *     - Debi ve basinc sensor pinleri (tikanma tespitinin ASIL sinyali!)
+ *     - ORP sensor pini (bu kartta A0-A8 TAMAMEN DOLU, ORP icin YER YOK --
+ *       ya haric bir ADC genisletici (fotografda gorunen PWM/I2C karti ADC
+ *       DEGIL, once teyit edilmeli) gerekiyor ya da ORP bu prototipte YOK)
+ *     - 4 "pompa" pininin (D0-D3) HANGI kimyasala gittigi (asit/klor/besin
+ *       sivi) -- asagidaki esleme UZMAN TAHMINIDIR, DOGRULANMADAN gercek
+ *       donanimda GUVENMEYIN
+ *     - Toz karistirici/pompa + yikama valfi icin D0-D3 YETERSIZ (6 aktuator
+ *       icin 4 pin) -- fotografta gorunen genisletme karti muhtemelen
+ *       cozum, Enver'e sorulmali
+ *     - SIM800L hala kartta (D12/D13 = Rx/Tx) -- WiFi'ye gecise ragmen
+ *       kullanilacak mi belirsiz, firmware KULLANMIYOR (bilerek)
  *
  * Kaynaklar:
  *   - Karar esikleri ve sensor imzalari: PROJE_BRIEF.md SS4.2 / SS6
  *   - Debi sensoru kalibrasyon orani: YF-S201 tipi hall-effect debi
  *     sensorlerinin yaygin datasheet degeri (7.5 Hz / (L/dak) => 450 pals/litre)
+ *   - Deneyap Kart 1A v2 pin haritasi: bu ortamda kurulu
+ *     `esp32:esp32:deneyapkart1Av2` board paketinin pins_arduino.h dosyasi
  *
- * Tarih:  2026-09-01
+ * Tarih:  2026-09-01 (Deneyap Kart 1A v2 + tek-kart mimarisi: 2026-09-25)
  * Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
  */
 
@@ -34,71 +63,90 @@
 #define AQUAGUARD_CONFIG_H
 
 // ============================================================================
-// 1) BOLGE / CIHAZ KIMLIGI
+// 1) CIHAZ KIMLIGI / ZON SAYISI
 // ============================================================================
 
-#define BOLGE_ID 1                  // Bu Deneyap Kart'in izledigi zon numarasi
-#define CIHAZ_ADI "AquaGuard-Zone1" // MQTT client-id ve loglarda kullanilir
-
-// Sistemdeki TOPLAM zon sayisi (1..TOPLAM_ZON_SAYISI numaralandirilir).
-// Zon-bazli dozlama izolasyonu icin gerekli (bkz. mqtt_handler.h
-// "digerZonlarinVanasiniAyarla" -- ekip karari 2026-09-25: dozlama
-// pompalari ORTAK ana hatta enjekte ediyor, zon vanalari damlama
-// hatlarini ayiriyor. Bir zona dozlama yapilirken DIGER zonlarin
-// vanalari GECICI kapatilir, aksi halde ilac paylasimli hatta karisip
-// TUM zonlara gider).
+#define CIHAZ_ADI "AquaGuard-Merkez" // MQTT client-id ve loglarda kullanilir
+// ONEMLI (2026-09-25): artik "bu kartin zonu" kavrami YOK -- TEK kart
+// TOPLAM_ZON_SAYISI zonun HEPSINI dogrudan yonetiyor (round-robin okuma +
+// bagimsiz vana kontrolu). Eskiden burada bir BOLGE_ID vardi, kaldirildi.
 #define TOPLAM_ZON_SAYISI 4
 
 // ============================================================================
-// 2) PIN TANIMLARI (YER TUTUCU -- Enver dogrulamali)
+// 2) PIN TANIMLARI -- Deneyap Kart 1A v2 SEMBOLIK isimleri (D0.., A0..)
 // ============================================================================
+// NOT: D0, A4 gibi isimler bu .ino Deneyap Kart 1A v2 (esp32:esp32:
+// deneyapkart1Av2) hedefiyle derlendiginde board paketi tarafindan otomatik
+// tanimlanir -- burada YENIDEN #define EDILMEZLER, sadece kullanilirlar.
 
-// --- Analog sensorler (ESP32 ADC1 kanallari, WiFi/BT ile catismaz) ---
-#define PIN_PH_SENSOR         34   // ADC1_CH6
-#define PIN_EC_SENSOR         35   // ADC1_CH7
-#define PIN_ORP_SENSOR        32   // ADC1_CH4
-#define PIN_TURBIDITE_SENSOR  33   // ADC1_CH5
-#define PIN_BASINC_SENSOR     36   // ADC1_CH0 (VP)
+// --- DOGRULANMIS (Enver'in notundan BIREBIR alindi) ---
+#define PIN_SICAKLIK_SENSOR   A0   // "sicaklik" -- YENI, kullanilip kullanilmayacagi DOGRULANMADI (bkz. 4b)
+#define PIN_TURBIDITE_SENSOR  A1   // "bulaniklik"
+#define PIN_EC_SENSOR         A3   // "iletkenlik"
+#define PIN_PH_SENSOR         A4   // "pH"
 
-// --- Debi sensoru (darbe cikisli, kesme/interrupt destekli pin) ---
-#define PIN_DEBI_SENSOR       27
+#define PIN_VANA1             A5   // Zon 1 vanasi
+#define PIN_VANA2             A6   // Zon 2 vanasi
+#define PIN_VANA3             A7   // Zon 3 vanasi
+#define PIN_VANA4             A2   // Zon 4 vanasi
 
-// --- Tedavi aktuatorleri ---
-#define PIN_POMPA_ASIT        25   // Asit dozlama pompasi (DC motor surucu/role)
-#define PIN_POMPA_KLOR        26   // Klor enjeksiyon pompasi (DC motor surucu/role)
-#define PIN_SERVO_YIKAMA      14   // Yuksek basincli yikama valfi (servo motor, PWM)
+// D0-D3: notta "pompa" olarak isaretli, HANGI pompanin HANGI pine bagli
+// oldugu BELIRTILMEMIS. Asagidaki esleme UZMAN TAHMINIDIR (notta yazilma
+// sirasiyla asit/klor/besin-sivi eslestirildi) -- ENVER DOGRULAMADAN
+// GERCEK DONANIMDA GUVENILMEMELI, yanlis pompa tetiklenebilir.
+#define PIN_POMPA_ASIT        D0   // UZMAN TAHMINI -- DOGRULANMADI
+#define PIN_POMPA_KLOR        D1   // UZMAN TAHMINI -- DOGRULANMADI
+#define PIN_POMPA_BESIN_SIVI  D2   // UZMAN TAHMINI -- DOGRULANMADI
+// D3: 4. pompa neyin icin belirsiz (yikama valfi mi, toz karistirici mi) --
+// asagida PIN_SERVO_YIKAMA olarak varsayildi (en olasi -- yikama zaten
+// var olan bir aktuator, toz ise zaten ayri sorunlu, bkz. asagisi).
+#define PIN_SERVO_YIKAMA      D3   // UZMAN TAHMINI -- DOGRULANMADI
 
-// --- Besin/takviye dozlama aktuatorleri (2026-09-25, Faz 3 -- tikanma
-//     teshisinden BAGIMSIZ, operatorun kendi karariyla -- orn. demir
-//     eksikligi icin ziraatcinin onerdigi bir ilaci suya katmak) ---
-// PIN_POMPA_BESIN_SIVI/PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ, GSM'den
-// WiFi'ye gecisle (2026-09-23) bosa cikan SIM800L pinlerini (16, 17) ve
-// bir bos pini (4) kullanir. YER TUTUCU -- Enver, toz haznesi/karistirici
-// mekanizmasinin GERCEK devresini kurunca dogrulamali/degistirmeli.
-#define PIN_POMPA_BESIN_SIVI  16   // 3. sivi (besin/takviye) dozlama pompasi
-// KRITIK VARSAYIM (dogrulanmali -- bkz. DONANIM_KONTROL_LISTESI.md): toz
-// haznesindeki karistirici, karisim suya karisirken calisir; karisim
-// hazir olunca AYRI bir pompa onu ana hatta iter. Eger gercek mekanizma
-// bunun yerine tek bir aktuator veya basinc farkiyla kendiliginden akis
-// kullaniyorsa, bu iki tanim ve _aktuatoruAyarla(TEDAVI_BESIN_TOZ, ...)
-// buna gore guncellenmelidir.
-#define PIN_KARISTIRICI_TOZ   17   // Toz+su karistirici motoru
-#define PIN_POMPA_BESIN_TOZ    4   // Karisimi ana hatta iten pompa
+// D12/D13: notta "Rx"/"Tx" olarak SIM800L'e (GSM modulu, kartta hala fiziksel
+// olarak takili -- bkz. fotograf) baglandigi belirtiliyor. Firmware WiFi'ye
+// gectigi icin (2026-09-23) BU PINLER KULLANILMIYOR -- sadece dokumantasyon
+// icin burada tutuluyor, hicbir yerde referans edilmiyor.
+// #define PIN_SIM800L_RX     D12  (KULLANILMIYOR)
+// #define PIN_SIM800L_TX     D13  (KULLANILMIYOR)
 
-// --- Ana sulama vanasi (operator MQTT komutuyla acar/kapatir -- bkz.
-//     mqtt_handler.h "sulama_durdur"/"sulama_baslat", TEDAVI aktuatorlerinden
-//     BAGIMSIZ: zonun butun sulamasini keser, tedavi/teshis akisiyla ilgisi
-//     yoktur, sahada sizinti supheci/bakim gibi durumlar icindir) ---
-#define PIN_ANA_VANA          13   // Role uzerinden ana su hatti solenoidi
+// --- HALA BILINMIYOR: Enver'in notunda YOK, TAHMIN EDILMEDI ---
+// KRITIK: debi + basinc, tikanma tespitinin ASIL sinyalidir (PROJE_BRIEF
+// SS6) -- Enver dogrulamadan gercek donanimda anlamli bir teshis YAPILAMAZ.
+// Asagidaki numaralar Deneyap Kart 1A v2'nin GUVENLI (Deneyap'in kendi
+// D-serisi genel-amacli, flash/PSRAM ile CATISMAYAN) ama HENUZ fiziksel
+// olarak dogrulanmamis pinleri -- eski klasik-ESP32 numaralari (GPIO27/36
+// vb.) BILEREK KULLANILMADI, S3'te o numaralar flash/PSRAM'e ayrilmis
+// olabilir (derleme hatasi vermez ama kart ACILMAYABILIR/cokebilir).
+#warning "PIN_DEBI_SENSOR/PIN_BASINC_SENSOR Enver'in notunda YOK -- D4/A8 gecici/dogrulanmamis, gercek donanimda GUVENMEYIN"
+#define PIN_DEBI_SENSOR       D4   // GECICI/DOGRULANMAMIS -- darbe cikisli, kesme destekli pin GEREKIR
+#define PIN_BASINC_SENSOR     A8   // GECICI/DOGRULANMAMIS -- bu kartta kalan TEK bos analog kanal
 
-// --- SD kart (SPI) ---
-#define PIN_SD_CS              5
+// ORP: A0-A8 (9 analog kanal) Enver'in notundaki 4 sensor + 4 vana + yukaridaki
+// gecici basinc atamasiyla TAMAMEN DOLU -- bu kartta ORP icin FIZIKSEL
+// OLARAK bos analog pin KALMADI. Ya harici bir ADC genisletici (fotografta
+// gorunen PWM/I2C karti PWM CIKISI icin, ADC GIRISI degil -- bunu ayri
+// dogrulayin) gerekiyor ya da ORP bu prototipte YOK. Pin TANIMLANMADI --
+// sensors.h/decision_engine.h ORP'siz DERLENIR, orpOku() sabit/notr bir
+// deger doner (bkz. sensors.h). Enver'e SORULMALI.
+#warning "PIN_ORP_SENSOR TANIMLANMADI -- bu kartta bos analog pin kalmadi, ORP donanimi/genisletici Enver'e SORULMALI"
 
-// --- RTC modulu I2C uzerinden calisir: varsayilan Wire pinleri (SDA=21, SCL=22)
-//     Deneyap Kart revizyonuna gore farkli olabilir, Wire.begin() cagrisinda
-//     ozel pin verilmek istenirse burada tanimlanabilir.
-#define PIN_I2C_SDA            21
-#define PIN_I2C_SCL            22
+// Besin toz dozlama (Faz 3): 2 ayri aktuator (karistirici + pompa) gerekir
+// ama D0-D3 asit/klor/besin-sivi/yikama tarafindan TUKETILDI. Fotografta
+// gorunen genisletme karti (PWM/I2C) muhtemelen cozum -- Enver'e sorulmadan
+// pin ATANAMIYOR. Toz dozlama BU HALIYLE firmware'de calismaz (derlenir
+// ama pin sabitleri asagida GECICI olarak D3 ile ayni -- CAKISMA riski,
+// kullanilmamali) -- bkz. DONANIM_KONTROL_LISTESI.md.
+#warning "PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ icin pin YOK (D0-D3 doldu) -- toz dozlama Enver'in genisletme karti cevabini bekliyor"
+#define PIN_KARISTIRICI_TOZ   D3   // CAKISMA -- PIN_SERVO_YIKAMA ile AYNI, GERCEK DONANIMDA KULLANMAYIN
+#define PIN_POMPA_BESIN_TOZ   D3   // CAKISMA -- yukaridaki ikisiyle AYNI, GERCEK DONANIMDA KULLANMAYIN
+
+// --- SD kart (SPI) -- Deneyap Kart 1A v2'nin kendi SDCS/SDMO/SDMI/SDCK
+//     sembolleri var, SPI.h + SD.h bunlari varsayilan olarak kullanir.
+#define PIN_SD_CS              SDCS
+
+// --- RTC modulu I2C uzerinden calisir -- kartin kendi SDA/SCL sembolleri.
+#define PIN_I2C_SDA            SDA
+#define PIN_I2C_SCL            SCL
 
 // --- WiFi (Deneyap Kart / ESP32 dahili radyo, ek modul gerekmez) ---
 // 2026-09-23: mimari SIM800L/GSM'den WiFi'ye TASINDI (ekip karari -- saha

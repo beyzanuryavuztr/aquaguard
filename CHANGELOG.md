@@ -334,18 +334,57 @@ doğrulanan 6 ayrı sorun düzeltildi:
 - **Pil/WiFi rozetine görsel ayraç eklendi** — iki ayrı metrik arasında
   sınır yoktu, pilin uyarı rengi WiFi metnine aitmiş gibi okunabiliyordu.
 
+### Firmware — Gerçek Donanım Mimarisine Geçiş (2026-09-25)
+
+Enver'in elle yazılmış pin notu ve kart fotoğrafı, firmware'in iki temel
+varsayımını çürüttü — ikisi de bu commit'te düzeltildi:
+
+- **Kart modeli kesinleşti: Deneyap Kart 1A v2 (ESP32-S3)**, klasik ESP32
+  değil. Bu ortamda kurulu board paketlerinin `pins_arduino.h` dosyaları
+  karşılaştırılarak doğrulandı (tahmin değil). Derleme hedefi jenerik
+  `esp32:esp32:esp32`'den **`esp32:esp32:deneyapkart1Av2`**'ye geçirildi —
+  ilk kez gerçek karta karşı derleniyor. Tüm pin tanımları artık ham GPIO
+  numarası değil, kartın kendi sembolik isimleri (`D0`, `A4` gibi).
+- **Mimari düzeltmesi: TEK kart 4 zonu doğrudan yönetiyor** (4 bağımsız
+  vana aynı kartta), önceki "4 ayrı kart, MQTT ile koordine" varsayımı
+  yanlıştı. `ana_vana.h`, `treatment.h`, `mqtt_handler.h`,
+  `aquaguard_main.ino` buna göre yeniden yazıldı — zon-izolasyonu artık
+  MQTT üzerinden başka cihazlara komut yayınlamıyor, doğrudan yerel
+  fonksiyon çağrısı (ağ gecikmesi riski ortadan kalktı). Sensörler zon-
+  bazlı değil, tek ortak set — açık olan her zon için taze okuma alınıp
+  o zona atfediliyor.
+- Sıcaklık sensörü (A0) artık HAM voltaj olarak okunuyor (`sicaklikHamVoltaj`,
+  santigrat DEĞİL, kalibre edilmedi) — pH/EC teşhisine katılmıyor, sadece
+  dürüstçe loglanıyor. Gerçekten kullanılacak mı belirsiz.
+- **ORP sensörü için bu kartta artık fiziksel olarak boş analog pin yok**
+  (9 kanal, 8'i sensör/vana için kullanılıyor) — `orpOku()` gerçek bir
+  pinden OKUMAYA çalışmak yerine sabit bir nötr değer döndürüyor.
+- **Toz dozlama (`besin_toz`) firmware tarafından bilerek reddediliyor** —
+  gerekli 2 pin, pin yetersizliği nedeniyle yıkama valfiyle çakışıyor.
+- SD kart loglarına `zon` kolonu eklendi (tek kart artık 4 zonu birden
+  logluyor, zon numarası olmadan satırlar ayırt edilemezdi).
+- 6 açık soru (debi/basınç pini, pompa-kimyasal eşlemesi, toz dozlama
+  pini, SIM800L'in akıbeti, sıcaklık sensörünün gerçekliği) `config.h`'de
+  derleme sırasında görünen `#warning` ile işaretlendi, TAHMİN EDİLMEDİ —
+  detaylar `firmware/DONANIM_KONTROL_LISTESI.md`'de.
+
 ### Bilinen Sınırlamalar
 
-- Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.
+- Sıcaklık sensörü belki var (bkz. yukarıdaki firmware notu) — varlığı ve
+  kullanım amacı Enver'e soruldu, henüz teyit edilmedi. Var olsa bile
+  pH/EC ölçümlerinde sıcaklık telafisi henüz yapılmıyor.
 
 - MQTT varsayılan olarak genel test broker'ı (`test.mosquitto.org`)
   üzerinden düz TCP ile çalışır. Kimlik doğrulama desteklenir ama varsayılan
   kapalıdır; üretimde kendi TLS+kimlik doğrulamalı broker'ınızı kullanın.
 - i18n sadece Ayarlar > Görünüm bölümünde etkin; uygulamanın geri
   kalanı sabit Türkçe metin içerir.
-- Firmware (`firmware/`) genel ESP32 kartı için uyarısız derleniyor
-  (arduino-cli), ancak Deneyap Kart tanımıyla derlenmedi ve gerçek
-  donanımda hiç çalıştırılmadı; pinler ve kalibrasyon sabitleri yer tutucudur.
+- Firmware (`firmware/`) artık gerçek Deneyap Kart 1A v2 tanımıyla
+  (`esp32:esp32:deneyapkart1Av2`) uyarısız derleniyor (arduino-cli), ama
+  gerçek donanımda hiç çalıştırılmadı; birçok pin (debi, basınç, pompa-
+  kimyasal eşlemesi, toz dozlama) hâlâ Enver'in doğrulamasını bekliyor
+  (bkz. `firmware/DONANIM_KONTROL_LISTESI.md`), kalibrasyon sabitleri
+  yer tutucudur.
 - Firebase projesi henüz kurulmadı (`config/firebase_secenekleri.dart`
   yer tutucu) — kurulana kadar giriş/kayıt ekranı gösterilmez (bkz.
   `docs/FIREBASE_KURULUM.md`). Hesap sistemi kurulduktan sonra bile

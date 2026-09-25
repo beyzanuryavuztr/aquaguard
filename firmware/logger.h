@@ -88,10 +88,13 @@ void loggerBaslat() {
   }
 
   // Dosyalar yoksa basliklariyla birlikte olustur
+  // NOT (2026-09-25): "zon" kolonu EKLENDI -- artik TEK kart 4 zonu birden
+  // yonetiyor (round-robin), zon numarasi olmadan bir satirin hangi zona ait
+  // oldugu ayirt edilemezdi.
   if (!SD.exists(SENSOR_LOG_DOSYASI)) {
     File f = SD.open(SENSOR_LOG_DOSYASI, FILE_WRITE);
     if (f) {
-      f.println(F("zaman,ph,ec,orp,turbidite,debi,delta_basinc,durum,tur,guven"));
+      f.println(F("zaman,zon,ph,ec,orp,turbidite,debi,delta_basinc,durum,tur,guven"));
       f.close();
     }
   }
@@ -99,7 +102,7 @@ void loggerBaslat() {
   if (!SD.exists(TEDAVI_LOG_DOSYASI)) {
     File f = SD.open(TEDAVI_LOG_DOSYASI, FILE_WRITE);
     if (f) {
-      f.println(F("zaman,tedavi_turu,sure_ms,tetikleyen_tur,tetikleyen_guven"));
+      f.println(F("zaman,zon,tedavi_turu,sure_ms,tetikleyen_tur,tetikleyen_guven"));
       f.close();
     }
   }
@@ -109,7 +112,7 @@ void loggerBaslat() {
 // SENSOR + TESHIS SATIRI KAYDET
 // ============================================================================
 
-void sensorVerisiLogla(const SensorOkumalari& okuma, const TeshisSonucu& teshis) {
+void sensorVerisiLogla(int zon, const SensorOkumalari& okuma, const TeshisSonucu& teshis) {
   if (!_sdHazir) return;
 
   char zaman[32];
@@ -122,6 +125,7 @@ void sensorVerisiLogla(const SensorOkumalari& okuma, const TeshisSonucu& teshis)
   }
 
   f.print(zaman); f.print(',');
+  f.print(zon); f.print(',');
   f.print(okuma.ph, 2); f.print(',');
   f.print(okuma.ec, 2); f.print(',');
   f.print(okuma.orp, 0); f.print(',');
@@ -139,7 +143,7 @@ void sensorVerisiLogla(const SensorOkumalari& okuma, const TeshisSonucu& teshis)
 // TEDAVI OLAYI KAYDET
 // ============================================================================
 
-void tedaviLogla(TedaviTuru tedavi, unsigned long sureMs, TikanmaTuru tetikleyenTur, float tetikleyenGuven) {
+void tedaviLogla(int zon, TedaviTuru tedavi, unsigned long sureMs, TikanmaTuru tetikleyenTur, float tetikleyenGuven) {
   if (!_sdHazir) return;
 
   char zaman[32];
@@ -152,6 +156,7 @@ void tedaviLogla(TedaviTuru tedavi, unsigned long sureMs, TikanmaTuru tetikleyen
   }
 
   f.print(zaman); f.print(',');
+  f.print(zon); f.print(',');
   f.print(tedaviAdiGetir(tedavi)); f.print(',');
   f.print(sureMs); f.print(',');
   f.print(turAdiGetir(tetikleyenTur)); f.print(',');

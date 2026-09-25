@@ -96,16 +96,23 @@ Sahada tıkanma türünü doğrudan belirleyecek bir yöntem literatürde tanım
 ### 4.3. Deneyap Kart Gömülü Yazılım (C++ / Arduino)
 **Klasör:** `firmware/`
 
+**Kart:** Deneyap Kart 1A v2 (ESP32-S3), `esp32:esp32:deneyapkart1Av2` —
+2026-09-25'te Enver'in pin notuyla kesinleşti (önceden jenerik ESP32
+varsayılıyordu). **Mimari:** TEK kart, `TOPLAM_ZON_SAYISI` (4) zonu
+DOĞRUDAN yönetir — 4 bağımsız vana aynı kartta, sensörler zon-bazlı değil
+tek ortak set (açık olan zonun suyu okunur). Detaylar ve hâlâ açık olan
+donanım soruları için bkz. `firmware/DONANIM_KONTROL_LISTESI.md`.
+
 | Dosya | İçerik |
 |-------|--------|
-| `aquaguard_main.ino` | Ana döngü: sensör oku → karar ver → tedavi uygula → logla → MQTT gönder |
-| `config.h` | Pin tanımları, eşik değerleri, MQTT ayarları, kalibrasyon sabitleri |
-| `sensors.h` | 6 sensör okuma fonksiyonları, outlier filtresi, normalizasyon |
+| `aquaguard_main.ino` | Ana döngü: her zon için ayrı ayrı sensör oku → karar ver → tedavi uygula → logla → MQTT gönder |
+| `config.h` | Pin tanımları (Deneyap Kart 1A v2 sembolik isimleri), eşik değerleri, MQTT ayarları, kalibrasyon sabitleri |
+| `sensors.h` | Sensör okuma fonksiyonları, outlier filtresi, normalizasyon |
 | `decision_engine.h` | Kural tabanlı karar motoru (Python versiyonunun C++ karşılığı) |
-| `treatment.h` | 5 tedavi kanalı kontrolü (asit/klor/yıkama + besin sıvı/toz), mutex kilidi, zorunlu durulama döngüsü |
-| `mqtt_handler.h` | WiFi üzerinden MQTT bağlantısı, veri gönderme, yeniden bağlanma, zon-bazlı dozlama izolasyonu |
-| `logger.h` | SD kart + RTC ile zaman damgalı veri ve tedavi geçmişi kaydı |
-| `ana_vana.h` | Ana vana kontrolü + süreli (otomatik kapanan) sulama zamanlayıcısı |
+| `treatment.h` | Tedavi kanalı kontrolü (asit/klor/yıkama + besin sıvı), mutex kilidi, zorunlu durulama döngüsü, hangi zonun tedavi gördüğünün takibi |
+| `mqtt_handler.h` | WiFi üzerinden MQTT bağlantısı, 4 zonun HEPSİ için veri gönderme/komut alma, yeniden bağlanma |
+| `logger.h` | SD kart + RTC ile zon numaralı, zaman damgalı veri ve tedavi geçmişi kaydı |
+| `ana_vana.h` | 4 bağımsız zon vanası kontrolü + süreli (otomatik kapanan) sulama zamanlayıcısı + yerel zon-izolasyonu |
 
 ### 4.4. Flutter Mobil Uygulama
 **Klasör:** `aquaguard_mobile/` (Flutter projesi olarak ayrı oluşturulacak)

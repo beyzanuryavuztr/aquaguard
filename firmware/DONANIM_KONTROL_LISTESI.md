@@ -1,53 +1,100 @@
 # AquaGuard Firmware — Donanım Entegrasyon Kontrol Listesi
 
-Bu liste Enver için hazırlandı: `firmware/` kodu 2026-09-23'te arduino-cli (ESP32 çekirdeği 3.x, genel
-`esp32:esp32:esp32` kartı; PubSubClient 2.8, ArduinoJson 7.4, ESP32Servo 3.1,
-RTClib 2.1 — artık TinyGSM YOK, ESP32'nin dahili WiFi kütüphanesi kullanılıyor)
-ile DERLENDİ (%78 flash, %15 RAM — WiFi/TLS yığını TinyGSM'den daha büyük yer
-kaplıyor, ama hâlâ bol marj var). Kalan uyarılar: ArduinoJson 7'de
-`StaticJsonDocument` kullanımdan kalkma uyarısı (kod v6 API'siyle yazıldı;
-v6.21.x sabitlemek uyarıyı kaldırır). Aşağıdaki "MQTT paket boyutu" maddesine bakın.
-Bu yalnızca sözdizimi/kütüphane uyumunu doğrular: Deneyap Kart'a özgü kart
-tanımıyla derleme, pin doğruluğu ve sensör davranışı gerçek donanımda
-ilk kez çalıştırılmadan önce aşağıdaki adımlarla doğrulanmalı.
+## 🔴 2026-09-25 BÜYÜK GÜNCELLEME — Enver'in pin notu + kart fotoğrafı analiz edildi
 
-**2026-09-23 mimari değişikliği**: İletişim SIM800L/GSM'den WiFi'ye taşındı
-(ekip kararı — sunum/fuar ortamında WiFi, SIM kapsama alanından daha
-güvenilir). SIM800L donanımı karttan sökülmek ZORUNDA değil, firmware
-artık onu kullanmıyor. **Önemli kısıt**: WiFi menzili sınırlıdır
-(yönlendiriciden birkaç on metre) — gerçek bir tarlada yönlendirici/hotspot
-yoksa sistem bağlanamaz; GSM'in "her yerde çeker" garantisi kaybedildi. Bu,
-bilinçli bir ödünleşim olarak kabul edildi.
+Enver elle yazılmış bir pin ataması notu ve kartın fotoğrafını gönderdi. Bu,
+projenin başından beri süregelen İKİ büyük varsayımı çürüttü:
+
+1. **Kart modeli artık KESİN**: Deneyap Kart 1A v2 (ESP32-**S3** tabanlı,
+   klasik ESP32 DEĞİL). Bu ortamda kurulu board paketlerinin `pins_arduino.h`
+   dosyaları karşılaştırılarak doğrulandı — Enver'in notundaki A0-A7 (8 analog
+   kanal) + D12/D13, SADECE bu varyantta mevcut. Eski pin numaraları
+   (GPIO32-39) klasik ESP32 için seçilmişti; S3'te bu numaralar flash/PSRAM'e
+   ayrılmış olabilir (gerçek fiziksel risk, sadece "yanlış okuma" değil).
+2. **Mimari düzeltmesi**: önceki kod "4 ayrı Deneyap Kart, her biri kendi
+   zonunu izliyor, MQTT ile koordine oluyor" varsayıyordu. **Kullanıcıdan
+   DOĞRULANDI**: gerçekte **TEK kart 4 zonu DOĞRUDAN yönetiyor** (4 vana aynı
+   kartta), sensörler de zon-bazlı DEĞİL — TEK ortak set, vana sırayla açılıp
+   o zonun suyu okunuyor.
+
+Firmware bu iki bulguya göre **tamamen yeniden yazıldı** (`config.h`,
+`ana_vana.h`, `treatment.h`, `mqtt_handler.h`, `aquaguard_main.ino`,
+`logger.h`, `sensors.h`). Artık `esp32:esp32:deneyapkart1Av2` hedefine göre
+derleniyor (%77 flash, %15 RAM) — önceki gibi jenerik `esp32:esp32:esp32`
+DEĞİL, gerçek kart tanımına karşı derlenen İLK sürüm bu.
+
+### 🟡 Hâlâ Enver'e sorulması gereken, TAHMİN EDİLMEYEN sorular
+
+Kod bu sorular cevaplanmadan **gerçek donanıma flaşlanmamalı**. Her biri
+`config.h`'de derleme sırasında görünen bir `#warning` ile işaretli:
+
+1. **Debi ve basınç sensör pinleri notta YOK** — bunlar tıkanma tespitinin
+   ASIL sinyali (aşağıdaki §6/PROJE_BRIEF). `config.h`'de D4/A8 GEÇİCİ
+   olarak atandı (Deneyap'ın güvenli/genel-amaçlı pinleri, eski
+   klasik-ESP32 numaraları BİLEREK kullanılmadı) — gerçek pin Enver'den
+   gelmeden bu değerlere güvenmeyin.
+2. **ORP sensörü için bu kartta fiziksel olarak boş analog pin KALMADI**
+   (A0-A8 = 9 kanal, 4 sensör + 4 vana + geçici basınç ataması ile tamamen
+   dolu). Ya harici bir ADC genişletici gerekiyor (fotoğraftaki PWM/I2C
+   kartı PWM ÇIKIŞI için, ADC GİRİŞİ değil — ayrıca doğrulanmalı) ya da bu
+   prototipte ORP yok. `orpOku()` şu an sabit bir nötr değer döndürüyor
+   (bkz. `sensors.h`) — gerçek okuma DEĞİL.
+3. **4 "pompa" pininin (D0-D3) hangi kimyasala gittiği notta belirtilmemiş**
+   — `config.h`'deki asit/klor/besin-sıvı/yıkama eşlemesi **UZMAN
+   TAHMİNİDİR**, doğrulanmadan güvenilmemeli.
+4. **Toz dozlama (karıştırıcı + pompa) için hiç pin kalmadı** — D0-D3
+   diğer 4 aktüatör tarafından tüketildi. Fotoğraftaki genişletme kartı
+   muhtemelen çözüm. **Bu doğrulanana kadar toz dozlama firmware'de
+   BİLEREK REDDEDİLİYOR** (`treatment.h` `tedaviBaslat()` — pin çakışması
+   riski nedeniyle).
+5. **SIM800L hâlâ kartta fiziksel olarak takılı** (D12/D13 = Rx/Tx, notta
+   yazılı) — WiFi'ye geçişe rağmen kullanılacak mı, yoksa sökülecek mi
+   belirsiz. Firmware WiFi kullanıyor, SIM800L'e HİÇ dokunmuyor.
+6. **Sıcaklık sensörü (A0) gerçekten kullanılacak mı** yoksa boşta duran
+   bir pin mi? Firmware artık ham voltajını okuyup yayınlıyor
+   (`sicaklik_ham_voltaj`, KALİBRE EDİLMEDİ, santigrat DEĞİL) ama
+   pH/EC teşhisine KATMIYOR — bu, projenin daha önce "sıcaklık sensörü
+   yok" kararıyla çelişiyor, netleştirilmeli.
+
+**2026-09-23 mimari değişikliği (hâlâ geçerli)**: İletişim SIM800L/GSM'den
+WiFi'ye taşındı. **Önemli kısıt**: WiFi menzili sınırlıdır (yönlendiriciden
+birkaç on metre).
 
 ## 1) Pin Bağlantı Doğrulaması
 
-`firmware/config.h`'deki tüm pin numaraları **yer tutucudur** — gerçek Deneyap
-Kart pinout diyagramına ve fiziksel kablolamaya göre doğrulanmalı/gerekirse
-güncellenmelidir.
+`firmware/config.h`'deki pin isimleri artık **Deneyap Kart 1A v2'nin kendi
+sembolik isimleri** (`D0`, `A4` gibi) — ham GPIO numarası değil, board paketi
+doğru GPIO'ya kendisi çevirir. Aşağıdaki tablo Enver'in notundan DOĞRUDAN
+alınanları ✅, hâlâ tahmin/belirsiz olanları 🟡 ile işaretler.
 
-| Bileşen | Pin (config.h) | Not |
+| Bileşen | Pin (config.h) | Durum |
 |---|---|---|
-| pH sensörü | GPIO 34 (ADC1_CH6) | Analog |
-| EC sensörü | GPIO 35 (ADC1_CH7) | Analog |
-| ORP sensörü | GPIO 32 (ADC1_CH4) | Analog |
-| Türbidite sensörü | GPIO 33 (ADC1_CH5) | Analog |
-| Basınç sensörü | GPIO 36 (ADC1_CH0 / VP) | Analog |
-| Debi sensörü | GPIO 27 | Darbe çıkışlı, kesme (interrupt) destekli pin olmalı |
-| Asit dozlama pompası | GPIO 25 | Röle/motor sürücü |
-| Klor enjeksiyon pompası | GPIO 26 | Röle/motor sürücü |
-| Yüksek basınçlı yıkama valfi | GPIO 14 | Servo (PWM) |
-| Ana sulama vanası | GPIO 13 | Röle üzerinden solenoid |
-| SD kart (SPI CS) | GPIO 5 | |
-| RTC (I2C) | SDA=21, SCL=22 | Deneyap Kart revizyonuna göre değişebilir |
-| WiFi | dahili radyo, ek pin yok | SSID/şifre `config.h` `WIFI_SSID`/`WIFI_SIFRE` |
-| 3. sıvı (besin takviyesi) pompası | GPIO 16 | Röle/motor sürücü (Faz 3 — eski SIM800L RX pini, boşta) |
-| Toz+su karıştırıcı motoru | GPIO 17 | Röle/motor sürücü (Faz 3 — eski SIM800L TX pini, boşta) |
-| Toz karışımını ana hatta iten pompa | GPIO 4 | Röle/motor sürücü (Faz 3 — **VARSAYIM**, aşağıya bakın) |
+| Sıcaklık sensörü | `A0` | ✅ Enver'in notundan, ama kullanımı §6 sorusu |
+| Türbidite (bulanıklık) sensörü | `A1` | ✅ Enver'in notundan |
+| EC (iletkenlik) sensörü | `A3` | ✅ Enver'in notundan |
+| pH sensörü | `A4` | ✅ Enver'in notundan |
+| Zon 1 vanası | `A5` | ✅ Enver'in notundan |
+| Zon 2 vanası | `A6` | ✅ Enver'in notundan |
+| Zon 3 vanası | `A7` | ✅ Enver'in notundan |
+| Zon 4 vanası | `A2` | ✅ Enver'in notundan |
+| Asit dozlama pompası | `D0` | 🟡 UZMAN TAHMİNİ — hangi pompa D0-D3'ten hangisi belirsiz |
+| Klor enjeksiyon pompası | `D1` | 🟡 UZMAN TAHMİNİ |
+| Besin sıvı dozlama pompası | `D2` | 🟡 UZMAN TAHMİNİ |
+| Yüksek basınçlı yıkama valfi (servo) | `D3` | 🟡 UZMAN TAHMİNİ |
+| Debi sensörü | `D4` | 🟡 GEÇİCİ — notta yok, kesme destekli pin gerekir |
+| Basınç sensörü | `A8` | 🟡 GEÇİCİ — notta yok, kartta kalan tek boş analog kanal |
+| ORP sensörü | *(tanımsız)* | 🔴 Bu kartta boş analog pin kalmadı, bkz. §🟡2 |
+| Toz karıştırıcı motoru | `D3` (ÇAKIŞMA) | 🔴 Pin yok, `treatment.h` bu tedaviyi REDDEDİYOR |
+| Toz pompası | `D3` (ÇAKIŞMA) | 🔴 Pin yok, `treatment.h` bu tedaviyi REDDEDİYOR |
+| SD kart (SPI CS) | `SDCS` (kartın kendi sembolü) | ✅ |
+| RTC (I2C) | `SDA`/`SCL` (kartın kendi sembolleri) | ✅ |
+| WiFi | dahili radyo, ek pin yok | ✅ SSID/şifre `config.h` `WIFI_SSID`/`WIFI_SIFRE` |
+| SIM800L Rx/Tx (KULLANILMIYOR) | `D12`/`D13` | Bilgi amaçlı, koddan referans edilmiyor |
 
-**Kritik**: analog sensör pinleri **ADC1 kanallarından** seçilmiştir (ADC2,
-WiFi aktifken güvenilir çalışmaz) — bu kısıtlama Deneyap Kart'ın hangi
-revizyonu kullanıldığında da geçerlidir, pin değiştirilecekse mutlaka ADC1
-kanalından seçilmelidir.
+**Derleme hedefi artık `esp32:esp32:deneyapkart1Av2`** (önceden jenerik
+`esp32:esp32:esp32`) — ADC1/ADC2 ayrımı ESP32-S3'te klasik ESP32'den
+FARKLI çalışır, yukarıdaki pinlerin hepsi zaten ADC1 aralığında (GPIO1-10)
+seçildi.
 
 ## 1b) Gerilim Bölücü (ADC 3,3 V sınırı) — KRİTİK
 
@@ -96,11 +143,16 @@ Kod flaşlandıktan sonra, karmaşık senaryolara (otonom tedavi vb.) geçmeden
    Flaşlamadan önce gerçek ağ adı/şifresiyle değiştirin.
 1. **Seri port çıktısı**: `Serial.println` mesajlarının (sistem başlatma,
    sensör okuma, teşhis) düzgün göründüğünü doğrulayın.
-2. **Ana vana**: MQTT üzerinden `sulama_durdur`/`sulama_baslat` komutlarını
-   gönderip vananın fiziksel olarak açılıp kapandığını gözlemleyin.
-3. **Sensör okumaları**: yayınlanan MQTT mesajındaki pH/EC/ORP/türbidite/
-   debi/basınç değerlerinin, sensörleri bilinen bir referans ortamına
-   (örn. musluk suyu) koyduğunuzda makul aralıkta olduğunu doğrulayın.
+2. **Zon vanaları (4 tanesi)**: MQTT üzerinden her zon için ayrı ayrı
+   `sulama_durdur`/`sulama_baslat` (`aquaguard/zone{N}/komut`) komutlarını
+   gönderip İLGİLİ vananın fiziksel olarak açılıp kapandığını, DİĞER 3
+   vananın ETKİLENMEDİĞİNİ gözlemleyin.
+3. **Sensör okumaları + zon isolasyonu**: SADECE bir zonun vanasını açıp
+   diğerlerini kapatarak, yayınlanan MQTT mesajındaki pH/EC/turbidite
+   değerlerinin makul aralıkta olduğunu doğrulayın. Ardından birden fazla
+   zonu AYNI ANDA açıp paylaşımlı sensörün ne okuduğunu gözlemleyin (bkz.
+   `aquaguard_main.ino` dosya başı notu — bu durumda okuma hangi zona
+   ait olduğu belirsizleşir, sahada tek-seferde-tek-zon sulama ÖNERİLİR).
 4. **MQTT bağlantısı**: `aquaguard/zone{N}/durum` konusunda `online`
    mesajının retained olarak göründüğünü, cihaz kapatıldığında (veya
    bağlantı koptuğunda) `offline` LWT mesajının geldiğini doğrulayın.
@@ -167,58 +219,25 @@ Diğer, düşük öncelikli/bilinen sınırlamalar (değiştirilmedi, riski dü�
   donanımda henüz denenmedi** -- ilk testte kısa bir süre (örn. 1 dakika)
   ile sulama başlatıp vananın gerçekten kendiliğinden kapandığını, bu sırada
   ana döngünün (sensör okuma vb.) kilitlenmediğini doğrulayın.
-- **Zon-bazlı dozlama izolasyonu -- 2026-09-25'te firmware'e EKLENDİ**
-  (ekip kararı: dozlama pompaları **ortak** ana hatta enjekte ediyor,
-  fiziksel olarak doğrulanmalı): bir zon otonom veya manuel olarak bir
-  tedavi (asit/klor/yıkama) başlattığında, kart önce **diğer tüm zonların**
-  komut konusuna `sulama_durdur` yayınlar (`mqtt_handler.h`
-  `tedaviBaslatZonIzoleyerek`/`_digerZonlarinVanasiniAyarla`,
-  `config.h` `TOPLAM_ZON_SAYISI=4`), tedavi+durulama tamamen bitince
-  `sulama_baslat` ile geri açar. Acil durdurma (`tedaviAcilDurdur`) bu
-  akışı atladığı için, iki çağrı noktasında da (aquaguard_main.ino vana-
-  kapalı güvenlik yedeği, mqtt_handler.h `sulama_durdur` işleyicisi) ELLE
-  geri açma eklendi.
-  **Bilinçli/dokümante edilmiş sınırlama:** bu, ACK BEKLEMEYEN "ateş et ve
-  devam et" bir koordinasyondur — diğer zonların vanasının gerçekten
-  kapandığını teyit etmeden dozlamaya başlar (MQTT+vana tepki süresi
-  tipik <1 sn, 30 sn'lik dozlama süresine kıyasla küçük bir pay).
-  **Ayrıca çözülmemiş, gerçek bir açık nokta:** eğer sistemde GERÇEKTEN
-  4 ayrı fiziksel kart varsa (tek kart değil), iki zon TEORİK olarak aynı
-  anda otonom tedavi başlatabilir — her kartın kendi mutex'i BAĞIMSIZ
-  çalışıyor, birbirini gerçek zamanlı engellemiyor (sadece birbirinin
-  vanasını kapatıyor, kendi dozlama kararını değil). Bu, kaç fiziksel kart
-  olduğu netleşip gerçek donanımda test edilene kadar **doğrulanamayan bir
-  risktir** — Python mock'ta da BİLEREK simüle edilmedi (bkz. mock'un
-  dosya başı notu).
-  **Ayrıca (acımasız denetim, 2026-09-25):** `TOPLAM_ZON_SAYISI=4` sabiti
-  izolasyonun kaç zonu kapsayacağını belirler — uygulamadaki çiftlik/zon
-  modeli ise SERBEST sayı kabul eder. Sistemde gerçekten 4'ten fazla zon
-  ya da 1-4 dışında numaralandırılmış bir zon varsa, izolasyon o zonları
-  KAPSAMAZ (dozlama sırasında o zonun vanası kapatılmaz). **Enver/Beyzanur:
-  gerçek zon sayısı 4 ve numaralandırma 1-4 değilse bu sabiti güncelleyin.**
-- **Python mock ile PARİTE NOTU:** yukarıdaki zon-izolasyonu SADECE
-  firmware'de var — `aquaguard_mock_yayinci.py` çok-süreçli (multi-process)
-  MQTT koordinasyonu simüle etmiyor (kasıtlı kapsam dışı, gerekçe dosya
-  başında). Flutter uygulaması bunu test etmek için kullanılamaz; sadece
-  gerçek donanımda veya birden fazla mock örneğini elle MQTT ile
-  izleyerek gözlemlenebilir.
-- **Besin/takviye dozlama (Faz 3) -- 2026-09-25'te firmware'e EKLENDİ**:
-  tıkanma teşhisinden BAĞIMSIZ, operatörün `tedavi_baslat` komutuyla
-  `tedavi_turu:"besin_sivi"` veya `"besin_toz"` göndererek istediği zaman
-  başlatabildiği bir dozlama. AYNI mutex kilidine VE zon-izolasyonuna
-  tabidir (asit/klor/yıkama ile asla aynı anda çalışmaz). `treatment.h`
-  `TedaviTuru` enum'una eklendi; `tedaviTuruBelirle()` (otonom teşhis
-  eşlemesi) bunları ASLA döndürmez, sadece manuel tetiklenir.
-  **KRİTİK, DOĞRULANMAMIŞ VARSAYIM:** toz karışımının ana hatta nasıl
-  itildiği bilinmediği için, kod "karıştırıcı önce çalışır (20 sn),
-  ardından AYRI bir pompa karışımı iter (20 sn)" varsayımıyla yazıldı
-  (`config.h` `PIN_KARISTIRICI_TOZ`/`PIN_POMPA_BESIN_TOZ`,
-  `BESIN_TOZ_KARISTIRMA_SURESI_MS`/`BESIN_TOZ_POMPALAMA_SURESI_MS`).
-  **Enver, gerçek mekanizmayı görünce bunu MUTLAKA doğrulamalı** — eğer
-  gerçekte tek bir aktüatör varsa, veya sıralama farklıysa, `treatment.h`
-  `_aktuatoruAyarla(TEDAVI_BESIN_TOZ, ...)` ve `tedaviGuncelle()` içindeki
-  faz geçiş bloğu güncellenmeli. 3 yeni pin (GPIO 16, 17, 4) eski
-  SIM800L pinlerini ve bir boş pini kullanıyor — DOĞRULANMALI.
+- **Zon-bazlı dozlama izolasyonu — 2026-09-25'te YEREL mimariye BASİTLEŞTİRİLDİ**
+  (dozlama pompaları **ortak** ana hatta enjekte ediyor, fiziksel olarak
+  doğrulanmalı): bir zon otonom veya manuel olarak bir tedavi başlattığında,
+  kart diğer tüm zonların vanasını **doğrudan `digitalWrite` ile** kapatır
+  (`ana_vana.h` `digerZonlarinVanasiniAyarla`) — TEK kart tüm 4 vanayı
+  yönettiği için (bkz. bu dosyanın başındaki büyük mimari düzeltmesi) artık
+  MQTT üzerinden başka cihazlara komut yayınlamaya GEREK YOK, önceki "ateş
+  et ve devam et" ağ riski TAMAMEN ORTADAN KALKTI. Tedavi+durulama tamamen
+  bitince aynı şekilde yerel olarak geri açılır. `treatment.h`'de HANGİ
+  zonun tedavi gördüğü `tedaviZonuGetir()` ile takip edilir.
+- **Besin/takviye dozlama (Faz 3, sıvı) — çalışıyor**: tıkanma teşhisinden
+  BAĞIMSIZ, operatörün `tedavi_baslat` komutuyla `tedavi_turu:"besin_sivi"`
+  göndererek istediği zaman başlatabildiği bir dozlama, aynı mutex+izolasyona
+  tabidir. **Toz dozlama (`"besin_toz"`) 2026-09-25'ten itibaren firmware
+  tarafından BİLEREK REDDEDİLİYOR** — karıştırıcı/pompa pinleri (D3) yıkama
+  valfiyle çakışıyor (bkz. bu dosyanın başı, §🟡4). Enver genişletme kartı
+  (fotoğrafta görülen PWM/I2C kartı) veya başka bir pin çözümü sağlayınca
+  `treatment.h`'deki ret kuralı kaldırılıp gerçek pinler `config.h`'ye
+  girilmeli.
 
 ## Kaynak / Tek Kaynak Referansları
 
@@ -228,3 +247,8 @@ Diğer, düşük öncelikli/bilinen sınırlamalar (değiştirilmedi, riski dü�
   sayıları taşımalı.
 - MQTT JSON şeması: `firmware/mqtt_handler.h` dosya başı yorumu,
   `python/aquaguard_mock_yayinci.py`, `aquaguard_mobile/lib/models/sensor_okuma.dart`.
+  **Bilinen tek sapma (2026-09-25):** firmware artık opsiyonel
+  `sicaklik_ham_voltaj` alanını yayınlıyor, Python mock ve Flutter modeli
+  HENÜZ bunu bilmiyor (kasıtlı — sensör kalibre değil/amacı belirsiz,
+  tüm UI'ya taşımak erken). Zararsız (bilinmeyen alan yoksayılır) ama
+  sensörün gerçekliği netleşince üç tarafa da eklenmelidir.

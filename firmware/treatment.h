@@ -100,6 +100,12 @@ TedaviTuru tedaviTuruAyristir(const char* ad) {
 // ============================================================================
 
 static TedaviTuru _aktifTedavi = TEDAVI_YOK;
+// HANGI zon icin tedavi/durulama surdugu (2026-09-25, tek-kart/4-zon
+// mimarisi) -- mutex hala GLOBAL (ayni anda sadece 1 zon tedavi gorebilir,
+// dozlama ORTAK ana hatta enjekte ediyor), ama vana izolasyonu (ana_vana.h
+// digerZonlarinVanasiniAyarla) HANGI zonun HARIC TUTULACAGINI bilmeli.
+// Tedavi/durulama YOKKEN anlamsizdir (0).
+static int _tedaviZonu = 0;
 static unsigned long _tedaviBaslangicMs = 0;
 static bool _durulamaAktif = false;
 static unsigned long _durulamaBaslangicMs = 0;
@@ -144,14 +150,13 @@ static void _aktuatoruAyarla(TedaviTuru tedavi, bool acik) {
       digitalWrite(PIN_POMPA_BESIN_SIVI, acik ? HIGH : LOW);
       break;
     case TEDAVI_BESIN_TOZ:
-      if (acik) {
-        _tozPompalamaFazindaMi = false;
-        digitalWrite(PIN_KARISTIRICI_TOZ, HIGH);
-        digitalWrite(PIN_POMPA_BESIN_TOZ, LOW);
-      } else {
-        digitalWrite(PIN_KARISTIRICI_TOZ, LOW);
-        digitalWrite(PIN_POMPA_BESIN_TOZ, LOW);
-      }
+      // GUVENLIK (2026-09-25): PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ, pin
+      // yetersizligi nedeniyle config.h'de PIN_SERVO_YIKAMA ile AYNI pine
+      // (D3) atanmis durumda (bkz. config.h #warning) -- bu aktuatoru
+      // GERCEKTEN tetiklemek yikama valfini de tetikler/bozar. Bu fonksiyon
+      // BILEREK HICBIR PINE DOKUNMAZ; tedaviBaslat() zaten bu turu en
+      // basta REDDEDER (bkz. asagisi), buraya normal akista hic girilmez --
+      // bu sadece savunma amacli ikinci bir guvenlik katmani.
       break;
     default:
       break;
@@ -173,16 +178,17 @@ void tedaviSistemBaslat() {
   _yikamaServo.attach(PIN_SERVO_YIKAMA, 500, 2400);
   _yikamaServo.write(0);   // baslangicta valf kapali
 
-  // Besin/takviye dozlama (Faz 3) -- bkz. config.h PIN_POMPA_BESIN_SIVI/
-  // PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ dosya basi "KRITIK VARSAYIM" notu.
+  // Besin/takviye dozlama (Faz 3, sivi) -- bkz. config.h PIN_POMPA_BESIN_SIVI.
   pinMode(PIN_POMPA_BESIN_SIVI, OUTPUT);
-  pinMode(PIN_KARISTIRICI_TOZ, OUTPUT);
-  pinMode(PIN_POMPA_BESIN_TOZ, OUTPUT);
   digitalWrite(PIN_POMPA_BESIN_SIVI, LOW);
-  digitalWrite(PIN_KARISTIRICI_TOZ, LOW);
-  digitalWrite(PIN_POMPA_BESIN_TOZ, LOW);
+
+  // NOT (2026-09-25): PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ icin BILEREK
+  // pinMode() cagrilmiyor -- bu pinler su an PIN_SERVO_YIKAMA (D3) ile
+  // CAKISIYOR (bkz. config.h #warning, _aktuatoruAyarla yorumu). Enver pin
+  // atamasini netlestirdiginde buraya geri eklenmeli.
 
   _aktifTedavi = TEDAVI_YOK;
+  _tedaviZonu = 0;
   _durulamaAktif = false;
 }
 
@@ -190,9 +196,20 @@ void tedaviSistemBaslat() {
 // TEDAVI BASLATMA -- MUTEX KONTROLU BURADA UYGULANIR
 // ============================================================================
 
+// zon: bu tedavinin HANGI zon icin baslatildigi (1..TOPLAM_ZON_SAYISI) --
+// ana_vana.h digerZonlarinVanasiniAyarla() bu zonu HARIC TUTAR (bkz.
+// mqtt_handler.h tedaviBaslatZonIzoleyerek).
 // Basariliysa true, mutex nedeniyle reddedildiyse false doner.
-bool tedaviBaslat(TedaviTuru istenenTedavi) {
+bool tedaviBaslat(TedaviTuru istenenTedavi, int zon) {
   if (istenenTedavi == TEDAVI_YOK) {
+    return false;
+  }
+
+  // GUVENLIK (2026-09-25): toz dozlama pinleri su an yikama valfiyle
+  // CAKISIYOR (bkz. config.h #warning) -- Enver dogrulayana kadar KESINLIKLE
+  // reddedilir, TAHMINLE tetiklenmez.
+  if (istenenTedavi == TEDAVI_BESIN_TOZ) {
+    Serial.println(F("[TEDAVI] REDDEDILDI: toz dozlama pinleri henuz dogrulanmadi (config.h PIN_KARISTIRICI_TOZ/PIN_POMPA_BESIN_TOZ)."));
     return false;
   }
 
@@ -204,6 +221,7 @@ bool tedaviBaslat(TedaviTuru istenenTedavi) {
   }
 
   _aktifTedavi = istenenTedavi;
+  _tedaviZonu = zon;
   _tedaviBaslangicMs = millis();
   _aktuatoruAyarla(istenenTedavi, true);
 
@@ -218,7 +236,9 @@ void tedaviAcilDurdur() {
   _aktuatoruAyarla(TEDAVI_ASIT, false);
   _aktuatoruAyarla(TEDAVI_KLOR, false);
   _aktuatoruAyarla(TEDAVI_YIKAMA, false);
+  _aktuatoruAyarla(TEDAVI_BESIN_SIVI, false);
   _aktifTedavi = TEDAVI_YOK;
+  _tedaviZonu = 0;
   _durulamaAktif = false;
 }
 
@@ -281,6 +301,7 @@ bool tedaviGuncelle() {
   if (_durulamaAktif) {
     if (simdi - _durulamaBaslangicMs >= DURULAMA_SURESI_MS) {
       _durulamaAktif = false;   // mutex serbest kaldi, yeni tedavi baslatilabilir
+      _tedaviZonu = 0;          // izolasyon artik gerekmiyor (bkz. tedaviZonuGetir)
       return true;
     }
   }
@@ -293,6 +314,12 @@ bool tedaviGuncelle() {
 
 TedaviTuru aktifTedaviGetir() {
   return _aktifTedavi;
+}
+
+// Aktif tedavi/durulamanin HANGI zon icin surdugunu dondurur (tedavi/
+// durulama yoksa 0). bkz. ana_vana.h digerZonlarinVanasiniAyarla.
+int tedaviZonuGetir() {
+  return _tedaviZonu;
 }
 
 bool durulamaAktifMi() {

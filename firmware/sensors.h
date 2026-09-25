@@ -40,6 +40,13 @@ struct SensorOkumalari {
   float turbidite;
   float debi;
   float deltaBasinc;
+  // YENI (2026-09-25, Enver'in notu -- A0 "sicaklik"): HAM VOLTAJ, santigrat
+  // DEGIL -- sensor modeli/referans noktalari bilinmedigi icin bir donusum
+  // formulu UYDURULMADI. pH/EC telafisine KATILMIYOR -- sadece dogrudan
+  // yayinlaniyor (bkz. mqtt_handler.h "sicaklik_ham_voltaj", nullable).
+  // Sensorun gercekten kullanilip kullanilmayacagi (yoksa bos pin mi)
+  // Enver'e SORULDU.
+  float sicaklikHamVoltaj;
   unsigned long zamanDamgasi;   // millis() -- bu okumanin alindigi an
 };
 
@@ -124,10 +131,15 @@ float ecOku() {
   return _degereSinirlaFloat(ec, EC_MIN, EC_MAKS);
 }
 
+// GECICI (2026-09-25): Deneyap Kart 1A v2'de ORP icin FIZIKSEL OLARAK bos
+// analog pin kalmadi (bkz. config.h #warning) -- gercek bir pinden OKUMA
+// YAPILMIYOR, sahte/uydurma bir okuma yerine sabit bir NOTR deger donuluyor
+// (uc imzanin -- kimyasal/biyolojik/fiziksel -- ORP ortalamalarinin kabaca
+// ortasi, decision_engine.h'nin ORP'yi ayirt edici olarak KULLANMAMASI ama
+// COKMEMESI icin). Enver bir pin/genisletici onaylayinca gercek okumaya
+// donusturulmeli.
 float orpOku() {
-  float voltaj = _medyanVoltajOku(PIN_ORP_SENSOR, ORP_BOLUCU_ORANI);
-  float orp = (voltaj - ORP_KALIBRASYON_OFSET_V) * ORP_KALIBRASYON_KAZANC;
-  return _degereSinirlaFloat(orp, ORP_MIN, ORP_MAKS);
+  return (IMZA_KIMYASAL_ORP_ORT + IMZA_BIYOLOJIK_ORP_ORT + IMZA_FIZIKSEL_ORP_ORT) / 3.0f;
 }
 
 float turbiditeOku() {
@@ -142,6 +154,15 @@ float basincOku() {
   float oran = (voltaj - BASINC_MIN_VOLTAJ) / (BASINC_MAKS_VOLTAJ - BASINC_MIN_VOLTAJ);
   float bar = oran * BASINC_MAKS_BAR;
   return _degereSinirlaFloat(bar, DELTA_BASINC_MIN, DELTA_BASINC_MAKS);
+}
+
+// GECICI/KALIBRE EDILMEDI (2026-09-25): sensor modeli ve referans noktalari
+// bilinmiyor -- ham voltaji dogrudan "santigrat" gibi SUNMUYORUZ (bu
+// UYDURMA olurdu). Bunun yerine ham voltaji dondururuz; mqtt_handler.h bunu
+// acikca "sicaklik_c (HAM, kalibre edilmedi)" olarak yayinlar. Enver sensor
+// tipini/kalibrasyonunu netlestirince gercek bir donusum formulu eklenmeli.
+float sicaklikOkuHamVoltaj() {
+  return _medyanVoltajOku(PIN_SICAKLIK_SENSOR, 1.0f);
 }
 
 float debiHesapla() {
@@ -174,8 +195,9 @@ float debiHesapla() {
 void sensorleriBaslat() {
   pinMode(PIN_PH_SENSOR, INPUT);
   pinMode(PIN_EC_SENSOR, INPUT);
-  pinMode(PIN_ORP_SENSOR, INPUT);
+  // PIN_ORP_SENSOR YOK (bkz. orpOku() dosya ici notu) -- pinMode cagrilmaz.
   pinMode(PIN_TURBIDITE_SENSOR, INPUT);
+  pinMode(PIN_SICAKLIK_SENSOR, INPUT);
   pinMode(PIN_BASINC_SENSOR, INPUT);
 
   pinMode(PIN_DEBI_SENSOR, INPUT_PULLUP);
@@ -192,6 +214,7 @@ SensorOkumalari tumSensorleriOku() {
   okuma.turbidite = turbiditeOku();
   okuma.debi = debiHesapla();
   okuma.deltaBasinc = basincOku();
+  okuma.sicaklikHamVoltaj = sicaklikOkuHamVoltaj();
   okuma.zamanDamgasi = millis();
   return okuma;
 }
