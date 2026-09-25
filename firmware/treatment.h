@@ -3,8 +3,9 @@
  * =======================================================
  *
  * Amac:
- *   3 tedavi kanalini (asit dozlama, klor enjeksiyonu, yuksek basincli
- *   yikama) kontrol eder. Bu dosyanin en onemli gorevi GUVENLIKTIR:
+ *   5 tedavi kanalini (asit dozlama, klor enjeksiyonu, yuksek basincli
+ *   yikama + Faz 3'te eklenen besin takviyesi sivi/toz -- bkz. asagida
+ *   TedaviTuru) kontrol eder. Bu dosyanin en onemli gorevi GUVENLIKTIR:
  *
  *   1) MUTEX KILIDI: Asit ve klor pompalari ASLA AYNI ANDA calisamaz
  *      (birlikte tepkimeye girip toksik gaz -- klor gazi -- acigi cikarma

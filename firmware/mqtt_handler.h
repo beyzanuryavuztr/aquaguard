@@ -112,6 +112,14 @@
 #include "decision_engine.h"
 #include "treatment.h"
 #include "ana_vana.h"
+// ACIMASIZ DENETIM (2026-09-25): logger.h burada ACIKCA include edilmeli --
+// daha once SADECE aquaguard_main.ino'nun kendi #include SIRASINA (logger.h,
+// mqtt_handler.h'den ONCE) guvenerek tedaviLogla() cagirilabiliyordu, bu
+// KIRILGAN bir bagimliliktir (biri o sirayi degistirirse sessizce derleme
+// hatasi verir). Include guard'lar (logger.h zaten kendi ic bagimliliklarini
+// -- config/sensors/decision_engine/treatment -- ayni sekilde tekrar
+// include ediyor) tekrar-tanimlama sorunu cikarmaz.
+#include "logger.h"
 
 // ============================================================================
 // GLOBAL NESNELER
@@ -246,6 +254,17 @@ void _komutMesajGeldiginde(char* topic, byte* payload, unsigned int uzunluk) {
         Serial.println(basarili
             ? F("[Komut] Operator: manuel tedavi baslatildi (diger zonlar izole edildi).")
             : F("[Komut] Operator: manuel tedavi REDDEDILDI (mutex mesgul)."));
+        if (basarili) {
+          // ACIMASIZ DENETIM (2026-09-25): daha once SADECE otonom (karar
+          // motoru tetikledigi) tedaviler SD karta yazilirdi -- manuel
+          // komutla baslatilan hicbir tedavi (besin dozlama DAHIL, Faz 3)
+          // saha loglarinda HIC gorunmuyordu. "tetikleyen_tur"/"guven"
+          // alanlari icin TUR_YOK/0.0 kullanilir -- bu, CSV'de "otonom
+          // teshisten DEGIL, manuel komuttan geldi" anlamina gelir (otonom
+          // satirlarda guven her zaman >= GUVEN_ESIGI, tur asla YOK degildir).
+          // tedaviLogla() kendi zaman damgasini icinde uretir (bkz. logger.h).
+          tedaviLogla(tedavi, tedaviSuresiGetir(tedavi), TUR_YOK, 0.0f);
+        }
       }
     }
   } else if (strcmp(komut, "tedavi_durdur") == 0) {
