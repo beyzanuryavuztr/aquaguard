@@ -49,15 +49,16 @@ class _JuriSunumEkraniState extends State<JuriSunumEkrani> {
   @override
   void initState() {
     super.initState();
-    // Kabuk, bu ekran ustteyken YENI bir canli bildirim SnackBar'i
+    // Kabuk, bu ekran ustteyken YENI bir canli bildirim banner'i
     // GOSTERMEZ (bkz. ana_kabuk.dart), ama Genel Bakış'tan buraya
-    // gecerken ZATEN gosterilmekte olan bir SnackBar (suresi 4 sn) kendi
-    // suresini doldurana kadar ekranda KALMAYA devam eder -- demo Hizli/
-    // Turbo modda hemen her geciste boyle biri "tam o anda" gosterilmis
-    // olur. Ekran acilir acilmaz mevcut/kuyruktaki SnackBar'i temizleyerek
-    // Geri/Ileri butonlarinin ustune binmesini engeller.
+    // gecerken ZATEN gosterilmekte olan bir banner kendi suresini
+    // doldurana kadar ekranda KALMAYA devam eder -- demo Hizli/Turbo
+    // modda hemen her geciste boyle biri "tam o anda" gosterilmis olur.
+    // Banner artik USTTEN indigi icin (2026-09-25 yeniden tasarim) Geri/
+    // Ileri butonlarinin UZERINE binmiyor, ama yine de "Adım X / Y"
+    // basligini gecici kapatmamasi icin ekran acilir acilmaz temizlenir.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
+      if (mounted) ScaffoldMessenger.of(context).clearMaterialBanners();
     });
   }
 

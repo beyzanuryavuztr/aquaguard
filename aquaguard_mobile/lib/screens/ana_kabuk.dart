@@ -26,6 +26,8 @@
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -64,6 +66,71 @@ class AnaKabuk extends StatefulWidget {
 
 class _AnaKabukState extends State<AnaKabuk> {
   int _seciliSekme = 0;
+
+  // ACIMASIZ DENETIM (2026-09-25): canli aktivite bildirimleri onceden
+  // ALTTAN (SnackBar) gosteriliyordu -- bu, ekranin ALT kismindaki her sey
+  // (Jüri Sunum Modu'nun Geri/Ileri butonlari, Genel Bakis'in Hizli Eylem
+  // butonlari, Trend Analizi/Ayarlar'in son karti) ile TEKRAR TEKRAR
+  // cakisan gercek bug'lara yol acti (bkz. proje gecmisi). Kok neden
+  // mimariydi: alttan gelen bir toast, icerigin nerede bittigini asla
+  // bilemez. Cozum: USTTEN (AppBar'in hemen altindan) inen bir
+  // MaterialBanner -- icerik yukaridan asagi aktigi icin bir ust-banner
+  // hicbir zaman alttaki interaktif kontrollerle cakismaz.
+  //
+  // MaterialBanner kendi suresi/otomatik kapanma OZELLIGI TASIMAZ (SnackBar
+  // gibi degil) -- bu yuzden basit bir sira (kuyruk) + zamanlayici burada
+  // elle kuruluyor: aninda birden fazla bildirim gelirse sirayla, her biri
+  // 4 saniye gorunup bir sonrakine gecer.
+  final List<AktiviteKaydi> _bannerKuyrugu = [];
+  bool _bannerGosteriliyor = false;
+  Timer? _bannerZamanlayici;
+
+  @override
+  void dispose() {
+    _bannerZamanlayici?.cancel();
+    super.dispose();
+  }
+
+  void _bannerSirasiniIsle(BuildContext context, AyarlarProvider ayarlar) {
+    if (_bannerGosteriliyor || _bannerKuyrugu.isEmpty) return;
+    // Kabuk'un UZERINE baska bir ekran PUSH edilmisse (Zon Detay/Ayarlar
+    // alt-sayfasi/Jüri Sunum Modu vb.) gösterilmez -- bildirim yine de
+    // Bildirim Gecmisi'ne kaydedildi (asagida, provider tarafinda) ve OS
+    // bildirimi olarak gonderildi, sadece anlik "toast" atlanir.
+    final kabukGuncelRotada = ModalRoute.of(context)?.isCurrent ?? true;
+    if (!kabukGuncelRotada) {
+      _bannerKuyrugu.clear();
+      return;
+    }
+    final kayit = _bannerKuyrugu.removeAt(0);
+    _bannerGosteriliyor = true;
+    ScaffoldMessenger.of(context).showMaterialBanner(
+      MaterialBanner(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        leading: Icon(kayit.ikon, color: Theme.of(context).colorScheme.primary),
+        content: Text(kayit.mesaj),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _bannerZamanlayici?.cancel();
+              _bannerGosterimiKapat(context);
+            },
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+    _bannerZamanlayici = Timer(const Duration(seconds: 4), () {
+      _bannerGosterimiKapat(context);
+    });
+  }
+
+  void _bannerGosterimiKapat(BuildContext context) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+    _bannerGosteriliyor = false;
+    _bannerSirasiniIsle(context, context.read<AyarlarProvider>());
+  }
 
   static const _sekmeler = [
     _SekmeTanimi(
@@ -105,50 +172,29 @@ class _AnaKabukState extends State<AnaKabuk> {
     final ayarlar = context.watch<AyarlarProvider>();
     final bildirimler = aktivite.bildirimleriAlVeTemizle();
     if (bildirimler.isNotEmpty) {
+      _bannerKuyrugu.addAll(bildirimler);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        for (final kayit in bildirimler) {
-          if (!context.mounted) return;
-          // SnackBar, ScaffoldMessenger paylasimli oldugu icin BURADAN
-          // tetiklense bile o an EKRANDA GORUNEN (Navigator yiginin en
-          // ustundeki) Scaffold'un altina "yapisir" -- Kabuk'un UZERINE
-          // Zon Detay/Ayarlar/Jüri Sunum Modu gibi bir ekran PUSH
-          // edilmisse, canli bildirim o ekranin sabit kontrollerinin
-          // (orn. Jüri Sunum Modu'nun Geri/Ileri butonlari) UZERINE biner.
-          // Kabuk kendi rotasinin GUNCEL (en ustte) olup olmadigini
-          // kontrol ederek, sadece Genel Bakis/sekmeler seviyesindeyken
-          // SnackBar gosterir -- bildirim yine de Bildirim Gecmisi'ne
-          // kaydedilir ve (asagida) OS bildirimi olarak gonderilir, sadece
-          // baska bir ekranin ustune binen rahatsiz edici toast atlanir.
-          final kabukGuncelRotada = ModalRoute.of(context)?.isCurrent ?? true;
-          if (kabukGuncelRotada) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(kayit.mesaj),
-                duration: const Duration(seconds: 4),
-              ),
-            );
-          }
-          // Yerel bildirim (SnackBar sadece on plandayken gorunur) --
-          // BildirimServisi kendi icinde try/catch ile korunur, burada
-          // ek bir hata isleme gerekmez. Sessiz saatte (kritik haric)
-          // OS bildirimi BASTIRILIR -- SnackBar yine de gosterilir
-          // (kullanici zaten uygulamayi acik tutuyor, rahatsiz etmez).
-          final oncelik = oncelikGetir(kayit.tur);
-          if (!sessizSaattaBastirilmaliMi(
-            ayarlar.bildirimTercihleri,
-            oncelik,
-          )) {
-            unawaited(
-              BildirimServisi.goster(
-                id: bildirimIdGetir(kayit),
-                baslik: bildirimBasligiGetir(kayit.tur),
-                icerik: kayit.mesaj,
-                oncelik: oncelik,
-              ),
-            );
-          }
-        }
+        if (!context.mounted) return;
+        _bannerSirasiniIsle(context, ayarlar);
       });
+      for (final kayit in bildirimler) {
+        // Yerel bildirim (banner sadece on plandayken gorunur) --
+        // BildirimServisi kendi icinde try/catch ile korunur, burada
+        // ek bir hata isleme gerekmez. Sessiz saatte (kritik haric)
+        // OS bildirimi BASTIRILIR -- banner yine de gosterilir
+        // (kullanici zaten uygulamayi acik tutuyor, rahatsiz etmez).
+        final oncelik = oncelikGetir(kayit.tur);
+        if (!sessizSaattaBastirilmaliMi(ayarlar.bildirimTercihleri, oncelik)) {
+          unawaited(
+            BildirimServisi.goster(
+              id: bildirimIdGetir(kayit),
+              baslik: bildirimBasligiGetir(kayit.tur),
+              icerik: kayit.mesaj,
+              oncelik: oncelik,
+            ),
+          );
+        }
+      }
     }
 
     final icerik = IndexedStack(

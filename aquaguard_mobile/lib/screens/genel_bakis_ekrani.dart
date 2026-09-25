@@ -21,7 +21,7 @@ import '../providers/aktivite_bildirim_provider.dart';
 import '../providers/bakim_provider.dart';
 import '../providers/cihaz_iletisim_provider.dart';
 import '../providers/tarla_provider.dart';
-import '../widgets/acil_durdurma_fab.dart';
+import '../widgets/acil_durdurma_cubugu.dart';
 import '../widgets/aktif_tedaviler_bolumu.dart';
 import '../widgets/bakim_uyari_karti.dart';
 import '../widgets/cevrimdisi_banner.dart';
@@ -105,7 +105,40 @@ class GenelBakisEkrani extends StatelessWidget {
       ),
       body: !cihaz.hazir
           ? const Center(child: CircularProgressIndicator())
-          : DuyarliIcerik(
+          : Column(
+              children: [
+                Expanded(
+                  child: _icerik(
+                    context,
+                    cihaz,
+                    tarla,
+                    bakim,
+                    ozet,
+                    tumZonlar,
+                    sonAktiviteler,
+                  ),
+                ),
+                // ACIMASIZ DENETIM (2026-09-25): daha once yuzen bir FAB'di,
+                // sayfa kisaldikca (redundancy sadelestirmesi sonrasi) alttaki
+                // Hizli Eylem butonlarinin UZERINE binmeye basladi -- artik
+                // sabit, tam genislikte bir cubuk: kaydirilabilir alanin
+                // KENDI ayrilmis seridi, hicbir icerigin ustune binmez.
+                if (tumZonlar.isNotEmpty) const AcilDurdurmaCubugu(),
+              ],
+            ),
+    );
+  }
+
+  Widget _icerik(
+    BuildContext context,
+    CihazIletisimProvider cihaz,
+    TarlaProvider tarla,
+    BakimProvider bakim,
+    ZonDurumOzeti ozet,
+    List<int> tumZonlar,
+    List<AktiviteKaydi> sonAktiviteler,
+  ) {
+    return DuyarliIcerik(
               // NOT: ListView yerine bilerek SingleChildScrollView+Column --
               // bu ekrandaki icerik KUCUK VE SABIT sayida (en fazla birkac
               // kart + 6 zon + 6 aktivite), yani ListView'in lazy/sliver
@@ -197,38 +230,6 @@ class GenelBakisEkrani extends StatelessWidget {
                                 ? DurumRenkleri.tedaviAktif
                                 : null,
                           ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          _DurumOzetRozeti(
-                            sayi: ozet.normal,
-                            etiket: 'Normal',
-                            renk: DurumRenkleri.normal,
-                          ),
-                          const SizedBox(width: 8),
-                          _DurumOzetRozeti(
-                            sayi: ozet.belirsiz,
-                            etiket: 'Belirsiz',
-                            renk: DurumRenkleri.belirsiz,
-                          ),
-                          const SizedBox(width: 8),
-                          _DurumOzetRozeti(
-                            sayi: ozet.tespitEdildi,
-                            etiket: 'Tespit',
-                            renk: DurumRenkleri.tespitEdildi,
-                          ),
-                          if (ozet.cevrimdisi > 0) ...[
-                            const SizedBox(width: 8),
-                            _DurumOzetRozeti(
-                              sayi: ozet.cevrimdisi,
-                              etiket: 'Çevrimdışı',
-                              renk: DurumRenkleri.cevrimdisi,
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -360,11 +361,7 @@ class GenelBakisEkrani extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-      floatingActionButton: cihaz.hazir && tumZonlar.isNotEmpty
-          ? const AcilDurdurmaFab()
-          : null,
-    );
+            );
   }
 }
 
@@ -449,44 +446,6 @@ class _IstatistikKarti extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DurumOzetRozeti extends StatelessWidget {
-  final int sayi;
-  final String etiket;
-  final Color renk;
-
-  const _DurumOzetRozeti({
-    required this.sayi,
-    required this.etiket,
-    required this.renk,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: renk.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Text(
-              '$sayi',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: renk,
-              ),
-            ),
-            Text(etiket, style: TextStyle(fontSize: 11, color: renk)),
-          ],
         ),
       ),
     );

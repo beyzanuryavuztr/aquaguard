@@ -27,6 +27,7 @@ import '../config/firebase_secenekleri.dart';
 import '../config/tarih_bicimleri.dart';
 import '../services/disa_aktarma_factory.dart';
 import '../services/hata_gunlugu_servisi.dart';
+import '../widgets/ayarlar/ayarlar_kategorisi.dart';
 import '../widgets/ayarlar/bakim_takvimi_karti.dart';
 import '../widgets/ayarlar/bildirimler_karti.dart';
 import '../widgets/ayarlar/bolum_basligi.dart';
@@ -61,81 +62,112 @@ class AyarlarEkrani extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (firebaseYapilandirildiMi) ...[
-              const BolumBasligi(baslik: 'Hesap'),
-              const HesapKarti(),
-              const SizedBox(height: 24),
-            ],
-            const BolumBasligi(baslik: 'Kullanıcı Profili'),
-            const KullaniciProfiliKarti(),
-            const SizedBox(height: 24),
-            // i18n PILOT (kisitli kapsam -- bkz. lib/l10n/app_tr.arb dosya
-            // basi notu): SADECE Gorunum+Dil kartlari AppLocalizations
-            // uzerinden cekilir, uygulamanin geri kalani hala sabit
-            // Turkce metin kullanir.
-            const GorunumDilKartlari(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Veri Kaynağı'),
-            const VeriKaynagiKarti(),
-            const SizedBox(height: 24),
-            const MqttBaglantiKarti(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Bildirimler'),
-            const BildirimlerKarti(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Zon İsimleri'),
-            const ZonIsimleriKarti(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Maliyet Parametreleri'),
-            const MaliyetParametreleriKarti(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Sensör Kalibrasyonu'),
-            const KalibrasyonKarti(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Eşik Değerleri'),
-            const EsikDegerleriKarti(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Bakım Takvimi'),
-            const BakimTakvimiKarti(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Güvenlik'),
-            const GuvenlikKarti(),
-            const SizedBox(height: 24),
-            const BolumBasligi(baslik: 'Tanılama'),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.bug_report_outlined),
-                title: const Text('Hata Günlüğünü Dışa Aktar'),
-                subtitle: const Text(
-                  'Uygulama içinde yakalanan hatalar cihazınızda saklanır, '
-                  'hiçbir sunucuya gönderilmez',
-                ),
-                onTap: () => _hataGunlugunuDisaAktar(context),
-              ),
+            AyarlarKategorisi(
+              baslik: 'Hesap ve Profil',
+              ikon: Icons.account_circle_outlined,
+              children: [
+                if (firebaseYapilandirildiMi) ...[
+                  const BolumBasligi(baslik: 'Hesap'),
+                  const HesapKarti(),
+                  const SizedBox(height: 16),
+                ],
+                const BolumBasligi(baslik: 'Kullanıcı Profili'),
+                const KullaniciProfiliKarti(),
+                const SizedBox(height: 16),
+                // i18n PILOT (kisitli kapsam -- bkz. lib/l10n/app_tr.arb
+                // dosya basi notu): SADECE Gorunum+Dil kartlari
+                // AppLocalizations uzerinden cekilir, uygulamanin geri
+                // kalani hala sabit Turkce metin kullanir.
+                const GorunumDilKartlari(),
+              ],
             ),
-            const SizedBox(height: 24),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.privacy_tip_outlined),
-                title: const Text('Gizlilik Politikası'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const GizlilikPolitikasiEkrani(),
+            const SizedBox(height: 12),
+            AyarlarKategorisi(
+              baslik: 'Bağlantı',
+              ikon: Icons.wifi_tethering,
+              children: [
+                const BolumBasligi(baslik: 'Veri Kaynağı'),
+                const VeriKaynagiKarti(),
+                const SizedBox(height: 16),
+                const MqttBaglantiKarti(),
+              ],
+            ),
+            const SizedBox(height: 12),
+            AyarlarKategorisi(
+              baslik: 'Sistem Yapılandırması',
+              ikon: Icons.tune,
+              children: [
+                const BolumBasligi(baslik: 'Zon İsimleri'),
+                const ZonIsimleriKarti(),
+                const SizedBox(height: 16),
+                const BolumBasligi(baslik: 'Maliyet Parametreleri'),
+                const MaliyetParametreleriKarti(),
+                const SizedBox(height: 16),
+                const BolumBasligi(baslik: 'Sensör Kalibrasyonu'),
+                const KalibrasyonKarti(),
+                const SizedBox(height: 16),
+                const BolumBasligi(baslik: 'Eşik Değerleri'),
+                const EsikDegerleriKarti(),
+                const SizedBox(height: 16),
+                const BolumBasligi(baslik: 'Bakım Takvimi'),
+                const BakimTakvimiKarti(),
+              ],
+            ),
+            const SizedBox(height: 12),
+            AyarlarKategorisi(
+              baslik: 'Bildirim ve Güvenlik',
+              ikon: Icons.notifications_active_outlined,
+              children: [
+                const BolumBasligi(baslik: 'Bildirimler'),
+                const BildirimlerKarti(),
+                const SizedBox(height: 16),
+                const BolumBasligi(baslik: 'Güvenlik'),
+                const GuvenlikKarti(),
+              ],
+            ),
+            const SizedBox(height: 12),
+            AyarlarKategorisi(
+              baslik: 'Diğer',
+              ikon: Icons.more_horiz,
+              children: [
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: const Text('Hata Günlüğünü Dışa Aktar'),
+                    subtitle: const Text(
+                      'Uygulama içinde yakalanan hatalar cihazınızda '
+                      'saklanır, hiçbir sunucuya gönderilmez',
+                    ),
+                    onTap: () => _hataGunlugunuDisaAktar(context),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.info_outline),
-                title: const Text('Hakkında'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const HakkindaEkrani()),
+                const SizedBox(height: 16),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: const Text('Gizlilik Politikası'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const GizlilikPolitikasiEkrani(),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text('Hakkında'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const HakkindaEkrani(),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

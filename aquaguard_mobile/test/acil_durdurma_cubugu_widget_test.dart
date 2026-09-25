@@ -1,6 +1,6 @@
-// AquaGuard - AcilDurdurmaFab Widget Testleri
+// AquaGuard - AcilDurdurmaCubugu Widget Testleri
 //
-// FAB'a dokununca onay diyaloğu açıldığını, "Vazgeç" ile hiçbir şey
+// Cubuga dokununca onay diyaloğu açıldığını, "Vazgeç" ile hiçbir şey
 // olmadığını, "ACİL DURDUR" onayıyla gerçekten tüm zonların vanasının
 // kapandığını ve SnackBar'daki "Geri Al" ile yeniden açılabildiğini
 // dogrular.
@@ -11,9 +11,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:aquaguard_mobile/providers/uygulama_durumu.dart';
-import 'package:aquaguard_mobile/widgets/acil_durdurma_fab.dart';
+import 'package:aquaguard_mobile/widgets/acil_durdurma_cubugu.dart';
 
-// AcilDurdurmaFab, Faz "haptic feedback" kapsaminda AyarlarProvider'i da
+// AcilDurdurmaCubugu, Faz "haptic feedback" kapsaminda AyarlarProvider'i da
 // okur (titresim tercihi) -- test agacinda da saglanmasi gerekir.
 Widget _sarmala(UygulamaDurumu durum) {
   return MultiProvider(
@@ -23,7 +23,7 @@ Widget _sarmala(UygulamaDurumu durum) {
       ChangeNotifierProvider.value(value: durum.cihazProvider),
     ],
     child: const MaterialApp(
-      home: Scaffold(floatingActionButton: AcilDurdurmaFab()),
+      home: Scaffold(body: AcilDurdurmaCubugu()),
     ),
   );
 }
@@ -32,7 +32,7 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets(
-    'FABa dokununca onay diyalogu acilir, Vazgec ile hicbir sey degismez',
+    'cubuga dokununca onay diyalogu acilir, Vazgec ile hicbir sey degismez',
     (tester) async {
       final durum = UygulamaDurumu();
       await durum.baslat();

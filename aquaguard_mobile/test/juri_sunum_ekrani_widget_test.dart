@@ -218,7 +218,7 @@ void main() {
   });
 
   testWidgets(
-    'AnaKabuk uzerine PUSH edilmisken canli bildirim SnackBar olarak '
+    'AnaKabuk uzerine PUSH edilmisken canli bildirim banner olarak '
     'gosterilmez (Geri/Ileri butonlarinin ustune binmesin diye); '
     'geri donulunce sonraki bildirim yine gosterilir',
     (tester) async {
@@ -249,8 +249,7 @@ void main() {
       expect(find.text('Jüri Sunum Modu'), findsOneWidget);
 
       // Kabuk hala monteli (IndexedStack) ama artik GUNCEL rota degil --
-      // bu bildirim SnackBar olarak GORUNMEMELI (Jüri Sunum Modu'nun
-      // Geri/Ileri butonlarinin ustune binmemesi icin).
+      // bu bildirim banner olarak GORUNMEMELI.
       durum.aktiviteProvider.aktiviteKaydiEkle(
         AktiviteKaydi(
           zaman: DateTime.now(),
@@ -296,12 +295,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(tester.takeException(), isNull);
-      // findsOneWidget DEGIL: mesaj hem SnackBar'da (toast) hem Genel
+      // findsOneWidget DEGIL: mesaj hem banner'da (toast) hem Genel
       // Bakış'in "Son Aktiviteler" listesinde (kalici) ayni anda gorunur --
-      // burada asil kontrol edilen, SnackBar'in GERCEKTEN gosterildigi.
+      // burada asil kontrol edilen, banner'in GERCEKTEN gosterildigi.
       expect(
         find.descendant(
-          of: find.byType(SnackBar),
+          of: find.byType(MaterialBanner),
           matching: find.text('Test: kabuk guncel rotadayken gelen bildirim'),
         ),
         findsOneWidget,
@@ -312,7 +311,7 @@ void main() {
   );
 
   testWidgets(
-    'Genel Bakış\'ta ZATEN gösterilmekte olan bir SnackBar, Jüri Sunum '
+    'Genel Bakış\'ta ZATEN gösterilmekte olan bir banner, Jüri Sunum '
     'Modu\'na geçildiği an temizlenir (suresi dolmasini beklemez)',
     (tester) async {
       final durum = UygulamaDurumu();
@@ -334,7 +333,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Kabuk hala GUNCEL rotadayken bir bildirim gelir -- SnackBar
+      // Kabuk hala GUNCEL rotadayken bir bildirim gelir -- banner
       // gosterilir (suresi 4 sn, henuz KAPANMAMIS olacak).
       durum.aktiviteProvider.aktiviteKaydiEkle(
         AktiviteKaydi(
@@ -348,19 +347,19 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(
         find.descendant(
-          of: find.byType(SnackBar),
+          of: find.byType(MaterialBanner),
           matching: find.text('Test: gecis aninda hala gosterilen bildirim'),
         ),
         findsOneWidget,
       );
 
-      // SnackBar suresi DOLMADAN (4 sn) Jüri Sunum Modu'na gecilir.
+      // Banner suresi DOLMADAN (4 sn) Jüri Sunum Modu'na gecilir.
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
       navigator.push(
         MaterialPageRoute(builder: (_) => const JuriSunumEkrani()),
       );
       await tester.pump();
-      // SnackBar'in kapanma animasyonunun (clearSnackBars) TAMAMEN
+      // Banner'in kapanma animasyonunun (clearMaterialBanners) TAMAMEN
       // bitmesini bekle -- pumpAndSettle DEGIL (Genel Bakış'taki nabiz
       // animasyonu asla durulmaz), sabit sureli birkac pump yeterli.
       await tester.pump(const Duration(milliseconds: 300));
@@ -368,9 +367,8 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Jüri Sunum Modu'), findsOneWidget);
-      // Eski SnackBar, suresi dolmamis olsa da ARTIK GORUNMEMELI --
-      // Geri/Ileri butonlarinin ustune binmemesi icin ekran acilir
-      // acilmaz temizlenir.
+      // Eski banner, suresi dolmamis olsa da ARTIK GORUNMEMELI -- ekran
+      // acilir acilmaz temizlenir.
       expect(
         find.text('Test: gecis aninda hala gosterilen bildirim'),
         findsNothing,

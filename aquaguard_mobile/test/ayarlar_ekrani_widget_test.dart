@@ -23,12 +23,13 @@ void main() {
     WidgetTester tester,
     UygulamaDurumu durum,
   ) async {
-    // 4200 (once 3900'du): Titresim Geri Bildirimi anahtari + Yazi Boyutu
-    // segmenti eklenince Gorunum karti buyudu, ListView'in sliver lazy
-    // layout'u (RenderSliverList) yuzeyin altina tasan icerigi (orn.
-    // "Referans debi") ARTIK LAYOUT ETMIYORDU -- bu yuzden yukseklik
-    // ARTIRILDI, sadece kirpma/tasma alani buyutulmedi.
-    await tester.binding.setSurfaceSize(const Size(500, 4600));
+    // 9000 (once 4600'du, ondan once 4200/3900): kategoriler artik 5
+    // katlanir AyarlarKategorisi grubuna toplandi (2026-09-25) -- bu test
+    // yardimcisi HEPSINI acar (asagida), yani ListView'in sliver lazy
+    // layout'u (RenderSliverList) artik 15 bolumun TAMAMINI ayni anda
+    // layout etmek zorunda + 5 ExpansionTile baslik/kenar payi. Yukseklik
+    // buna gore buyutuldu -- sadece kirpma/tasma alani buyutulmedi.
+    await tester.binding.setSurfaceSize(const Size(500, 9000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MultiProvider(
@@ -61,7 +62,84 @@ void main() {
       ),
     );
     await tester.pump();
+    // ACIMASIZ DENETIM (2026-09-25): bolumler artik 5 katlanir ust
+    // kategoriye (AyarlarKategorisi/ExpansionTile) gruplandi, varsayilan
+    // KAPALI -- asagidaki testler icerigin kendisini dogruladigi icin,
+    // hepsini asagida ACIYORUZ (collapse/expand davranisinin kendisi ayri
+    // bir testte -- 'kategoriler varsayilan kapali...' -- dogrulaniyor).
+    // pumpAndSettle GUVENLI -- bu ekranda (Genel Bakış'in aksine) surekli
+    // tekrarlanan bir animasyon yok, ExpansionTile'in acilma gecisinin
+    // TAMAMEN bitmesini bekliyoruz ki alttaki kategorinin nihai konumuna
+    // gore yapilan sonraki dokunuslar doGru widget'i hedeflesin.
+    for (final kategori in [
+      'Hesap ve Profil',
+      'Bağlantı',
+      'Sistem Yapılandırması',
+      'Bildirim ve Güvenlik',
+      'Diğer',
+    ]) {
+      await tester.tap(find.text(kategori));
+      await tester.pumpAndSettle();
+    }
   }
+
+  testWidgets(
+    'kategoriler varsayilan kapali gelir, basliga dokununca icerik acilir '
+    '(ACIMASIZ DENETIM 2026-09-25: eskiden 15 bolum tek duz listede acikti)',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
+
+      await tester.binding.setSurfaceSize(const Size(500, 4600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.ayarlarProvider),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+            ChangeNotifierProvider.value(value: durum.tarlaProvider),
+            ChangeNotifierProvider.value(value: durum.bakimProvider),
+            ChangeNotifierProvider.value(value: durum.guvenlikProvider),
+          ],
+          child: const MaterialApp(
+            locale: Locale('tr'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AyarlarEkrani(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // 5 kategori basligi hemen gorunur olmali...
+      expect(find.text('Hesap ve Profil'), findsOneWidget);
+      expect(find.text('Bağlantı'), findsOneWidget);
+      expect(find.text('Sistem Yapılandırması'), findsOneWidget);
+      expect(find.text('Bildirim ve Güvenlik'), findsOneWidget);
+      expect(find.text('Diğer'), findsOneWidget);
+      // ...ama ic icerik (orn. Kullanıcı Profili'nin İsim alani) KAPALI
+      // oldugu icin agac icinde OLMAMALI.
+      expect(find.text('İsim'), findsNothing);
+      expect(find.text('Zon İsimleri'), findsNothing);
+
+      await tester.tap(find.text('Hesap ve Profil'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      // Sadece dokunulan kategori acilir -- digerleri hala kapali.
+      expect(find.text('İsim'), findsOneWidget);
+      expect(find.text('Zon İsimleri'), findsNothing);
+
+      durum.dispose();
+    },
+  );
 
   testWidgets(
     'yeni bolumler (bildirimler, zon isimleri, kalibrasyon, esikler) tasma/istisna olmadan cizilir',

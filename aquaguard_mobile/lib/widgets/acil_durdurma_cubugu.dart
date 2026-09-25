@@ -1,4 +1,4 @@
-/// AquaGuard - Acil Durdurma FAB'i
+/// AquaGuard - Acil Durdurma Cubugu
 /// ====================================
 ///
 /// Amac:
@@ -13,7 +13,19 @@
 ///   için 3 saniyelik bir "Geri Al" penceresi sunulur (durdurulan
 ///   tedaviler GERİ ALINAMAZ -- güvenlik gereği tek yönlüdür).
 ///
-/// Tarih:  2026-09-05
+///   ACIMASIZ DENETIM (2026-09-25): bu eskiden yüzen bir
+///   FloatingActionButton'du -- her zaman ekranın sağ-alt köşesinde
+///   SABİT konumda kalıp, sayfa kısaldıkça (bkz. Genel Bakış'taki
+///   tekrar/redundancy sadeleştirmesi) ALTINDAKİ içeriğin (Hızlı Eylem
+///   butonları, istatistik kartları) üzerine binmeye devam ediyordu --
+///   yüzen bir buton doğası gereği HER ZAMAN scroll içeriğinin üzerinde
+///   durur, hangi içeriğin altında kaldığı tamamen tesadüfe bağlıdır.
+///   Artık `GenelBakisEkrani`'nin `body`'sinde, kaydırılabilir alanın
+///   HEMEN ALTINDA, sabit (floating DEĞİL) tam genişlikte bir çubuk --
+///   içerik onun ÜZERİNDE asla render edilmez, ekranın ayrılmış kendi
+///   şeridi vardır.
+///
+/// Tarih:  2026-09-05 (FAB -> sabit cubuk: 2026-09-25)
 library;
 
 import 'package:flutter/material.dart';
@@ -24,8 +36,8 @@ import '../providers/ayarlar_provider.dart';
 import '../providers/cihaz_iletisim_provider.dart';
 import 'durum_renkleri.dart';
 
-class AcilDurdurmaFab extends StatelessWidget {
-  const AcilDurdurmaFab({super.key});
+class AcilDurdurmaCubugu extends StatelessWidget {
+  const AcilDurdurmaCubugu({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,16 +48,36 @@ class AcilDurdurmaFab extends StatelessWidget {
           'onay gerektirir.',
       onTap: () => _onayDiyaloguGoster(context),
       excludeSemantics: true,
-      child: FloatingActionButton.extended(
-        heroTag: 'acil_durdurma_fab',
-        backgroundColor: DurumRenkleri.tespitEdildi,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.warning_amber_rounded),
-        label: const Text(
-          'ACİL DURDUR',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.3),
+      child: Material(
+        color: DurumRenkleri.tespitEdildi,
+        child: InkWell(
+          onTap: () => _onayDiyaloguGoster(context),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'ACİL DURDUR',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-        onPressed: () => _onayDiyaloguGoster(context),
       ),
     );
   }

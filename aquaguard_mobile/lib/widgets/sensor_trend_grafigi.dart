@@ -165,11 +165,20 @@ class _SensorTrendGrafigiState extends State<SensorTrendGrafigi> {
     final minDeger = tumDegerler.reduce(math.min);
     final maxDeger = tumDegerler.reduce(math.max);
     final pay = (maxDeger - minDeger) * 0.15 + 0.01;
+    final minY = minDeger - pay;
+    final maxY = maxDeger + pay;
+    // ACIMASIZ DENETIM (2026-09-25): araligi belirtmeden fl_chart bazen
+    // COK INCE bir adim secip, ekrana yazdirilirken (toStringAsFixed ile
+    // yuvarlanan) IKI komsu etiketin AYNI metne yuvarlanmasina yol aciyordu
+    // (orn. 7.19 ve 7.24 ikisi de "7.2" -- ekranda "7.2" ust uste iki kez
+    // goruluyordu). Sabit 4 araliga (5 etiket) bolerek bu her zaman
+    // onleniyor -- fl_chart'in kendi otomatik secimine birakilmiyor.
+    final araBaslik = (maxY - minY) / 4;
 
     return LineChart(
       LineChartData(
-        minY: minDeger - pay,
-        maxY: maxDeger + pay,
+        minY: minY,
+        maxY: maxY,
         gridData: const FlGridData(show: true, drawVerticalLine: false),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(
@@ -185,6 +194,7 @@ class _SensorTrendGrafigiState extends State<SensorTrendGrafigi> {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 42,
+              interval: araBaslik > 0 ? araBaslik : null,
               getTitlesWidget: (deger, meta) => Text(
                 deger.toStringAsFixed(deger.abs() < 10 ? 1 : 0),
                 style: const TextStyle(fontSize: 10),

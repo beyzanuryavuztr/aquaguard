@@ -56,6 +56,12 @@ void main() {
     await tester.pumpWidget(_sar(durum, const Locale('tr')));
     await tester.pump();
 
+    // Görünüm artik "Hesap ve Profil" katlanir kategorisinin icinde --
+    // kategori basligi (henuz i18n kapsaminda degil, bkz. dosya basi notu)
+    // her iki locale'de de Turkce kalir; once ac.
+    await tester.tap(find.text('Hesap ve Profil'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Görünüm'), findsOneWidget);
     expect(find.text('Tema'), findsOneWidget);
     expect(find.text('Aksan Rengi'), findsOneWidget);
@@ -77,6 +83,10 @@ void main() {
 
     await tester.pumpWidget(_sar(durum, const Locale('en')));
     await tester.pump();
+
+    // Kategori basligi locale'den BAGIMSIZ Turkce kalir (bkz. yukaridaki test).
+    await tester.tap(find.text('Hesap ve Profil'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Appearance'), findsOneWidget);
     expect(find.text('Theme'), findsOneWidget);
@@ -128,6 +138,9 @@ void main() {
       ),
     );
     await tester.pump();
+
+    await tester.tap(find.text('Hesap ve Profil'));
+    await tester.pumpAndSettle();
 
     expect(find.text('Görünüm'), findsOneWidget);
 

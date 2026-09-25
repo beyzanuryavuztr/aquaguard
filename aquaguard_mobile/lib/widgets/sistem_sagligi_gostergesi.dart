@@ -14,7 +14,14 @@
 ///   belirsiz/tespit edildi (henuz tedavi baslamamis) ve cevrimdisi
 ///   zonlar puani dusurur.
 ///
-/// Tarih:  2026-09-02
+///   ACIMASIZ DENETIM (2026-09-25): durum kirilimi (Normal/Belirsiz/Tespit/
+///   Çevrimdışı sayilari) onceden Genel Bakış'ta AYRI, kendi basina bir
+///   satir olarak gosteriliyordu -- bu kart zaten ayni ozeti anlatiyor,
+///   iki ayri blok "hangi zonlar sorunlu" sorusunu iki kez cevapliyordu.
+///   Kirilim artik BU kartin icinde, aciklama metninin hemen altinda --
+///   tek bir "sistem sagligi hikayesi" kart, iki degil.
+///
+/// Tarih:  2026-09-02 (durum kirilimi birlestirmesi: 2026-09-25)
 /// Yazar:  Beyzanur (AquaGuard - Arge-T HydroLab, TEKNOFEST 2026)
 library;
 
@@ -58,92 +65,174 @@ class SistemSagligiGostergesi extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Semantics(
-              label: 'Sistem sağlığı göstergesi',
-              value: '%${yuzde.toStringAsFixed(0)} sağlıklı, $durumMetni',
-              excludeSemantics: true,
-              child: SizedBox(
-                width: 108,
-                height: 108,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 108,
-                      height: 108,
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(
-                          begin: 0,
-                          end: (yuzde / 100).clamp(0.0, 1.0),
-                        ),
-                        duration: const Duration(milliseconds: 700),
-                        curve: Curves.easeOut,
-                        builder: (context, deger, _) =>
-                            CircularProgressIndicator(
-                              value: deger,
-                              strokeWidth: 10,
-                              backgroundColor: renk.izTonu,
-                              color: renk,
-                              strokeCap: StrokeCap.round,
-                            ),
-                      ),
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+            Row(
+              children: [
+                Semantics(
+                  label: 'Sistem sağlığı göstergesi',
+                  value: '%${yuzde.toStringAsFixed(0)} sağlıklı, $durumMetni',
+                  excludeSemantics: true,
+                  child: SizedBox(
+                    width: 108,
+                    height: 108,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Text(
-                          '%${yuzde.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: renk,
+                        SizedBox(
+                          width: 108,
+                          height: 108,
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(
+                              begin: 0,
+                              end: (yuzde / 100).clamp(0.0, 1.0),
+                            ),
+                            duration: const Duration(milliseconds: 700),
+                            curve: Curves.easeOut,
+                            builder: (context, deger, _) =>
+                                CircularProgressIndicator(
+                                  value: deger,
+                                  strokeWidth: 10,
+                                  backgroundColor: renk.izTonu,
+                                  color: renk,
+                                  strokeCap: StrokeCap.round,
+                                ),
                           ),
                         ),
-                        Text(
-                          'sağlıklı',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '%${yuzde.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: renk,
+                              ),
+                            ),
+                            Text(
+                              'sağlıklı',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sistem Sağlığı',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        durumMetni,
+                        style: TextStyle(
+                          color: renk,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$toplam zondan $saglikliSayisi tanesi normal veya '
+                        'aktif olarak tedavi ediliyor.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            if (toplam > 0) ...[
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 14),
+              Row(
                 children: [
-                  Text(
-                    'Sistem Sağlığı',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  _DurumOzetRozeti(
+                    sayi: ozet.normal,
+                    etiket: 'Normal',
+                    renk: DurumRenkleri.normal,
+                  ),
+                  const SizedBox(width: 8),
+                  _DurumOzetRozeti(
+                    sayi: ozet.belirsiz,
+                    etiket: 'Belirsiz',
+                    renk: DurumRenkleri.belirsiz,
+                  ),
+                  const SizedBox(width: 8),
+                  _DurumOzetRozeti(
+                    sayi: ozet.tespitEdildi,
+                    etiket: 'Tespit',
+                    renk: DurumRenkleri.tespitEdildi,
+                  ),
+                  if (ozet.cevrimdisi > 0) ...[
+                    const SizedBox(width: 8),
+                    _DurumOzetRozeti(
+                      sayi: ozet.cevrimdisi,
+                      etiket: 'Çevrimdışı',
+                      renk: DurumRenkleri.cevrimdisi,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    durumMetni,
-                    style: TextStyle(color: renk, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$toplam zondan $saglikliSayisi tanesi normal veya '
-                    'aktif olarak tedavi ediliyor.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  ],
                 ],
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DurumOzetRozeti extends StatelessWidget {
+  final int sayi;
+  final String etiket;
+  final Color renk;
+
+  const _DurumOzetRozeti({
+    required this.sayi,
+    required this.etiket,
+    required this.renk,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: renk.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Text(
+              '$sayi',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: renk,
+              ),
             ),
+            Text(etiket, style: TextStyle(fontSize: 11, color: renk)),
           ],
         ),
       ),

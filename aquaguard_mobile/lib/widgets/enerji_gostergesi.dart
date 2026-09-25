@@ -86,7 +86,21 @@ class EnerjiGostergesi extends StatelessWidget {
                 color: pilRenk,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
+            // ACIMASIZ DENETIM (2026-09-25): pil ve WiFi iki AYRI metrik
+            // ama aralarinda gorsel bir sinir yoktu -- pilin uyari rengi
+            // (turuncu/kirmizi) yaninda duran "WiFi Güçlü" metnine aitmis
+            // gibi okunabiliyordu. Ince bir dikey ayrac ikisini net
+            // sekilde iki ayri okuma olarak gosteriyor.
+            SizedBox(
+              height: 14,
+              child: VerticalDivider(
+                width: 1,
+                thickness: 1,
+                color: onSurfaceVariant.withValues(alpha: 0.3),
+              ),
+            ),
+            const SizedBox(width: 10),
             Icon(
               wifiGuclu ? Icons.wifi : Icons.wifi_2_bar,
               size: 16,

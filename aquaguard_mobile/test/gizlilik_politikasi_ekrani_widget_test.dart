@@ -65,6 +65,12 @@ void main() {
       );
       await tester.pump();
 
+      // "Gizlilik Politikası" artik "Diğer" katlanir kategorisinin
+      // icinde -- once o kategoriyi ac (bkz. ayarlar_ekrani_widget_test.dart
+      // ayni not, 2026-09-25 kategori gruplandirmasi).
+      await tester.tap(find.text('Diğer'));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.text('Gizlilik Politikası'));
       await tester.pumpAndSettle();
 
