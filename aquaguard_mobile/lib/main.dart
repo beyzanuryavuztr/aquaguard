@@ -27,10 +27,12 @@ library;
 
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'config/firebase_secenekleri.dart';
 import 'config/tema.dart';
 import 'l10n/app_localizations.dart';
 import 'models/tema_modu.dart';
@@ -39,8 +41,10 @@ import 'models/yazi_boyutu.dart';
 import 'providers/ayarlar_provider.dart';
 import 'providers/cihaz_iletisim_provider.dart';
 import 'providers/guvenlik_provider.dart';
+import 'providers/kimlik_dogrulama_provider.dart';
 import 'providers/uygulama_durumu.dart';
 import 'screens/giris_ekrani.dart';
+import 'screens/kayit_giris_ekrani.dart';
 import 'screens/onboarding_ekrani.dart';
 import 'screens/pin_kilit_ekrani.dart';
 import 'services/hata_gunlugu_servisi.dart';
@@ -51,6 +55,20 @@ void main() {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
       await HataGunluguServisi.baslat();
+
+      // Firebase SADECE gerçek bir proje yapılandırıldıysa başlatılır
+      // (bkz. config/firebase_secenekleri.dart) -- yer tutucu değerlerle
+      // hiç çağrılmaz, böylece bu adım tamamlanana kadar uygulama BUGÜNKÜ
+      // GİBİ (hesap kavramı hiç yokmuş gibi) çalışmaya devam eder. Başarısız
+      // olursa (örn. ağ yoksa) da uygulamayı ÇÖKERTMEZ -- sadece hesap
+      // özelliği o oturumda kapalı kalır.
+      if (firebaseYapilandirildiMi) {
+        try {
+          await Firebase.initializeApp(options: FirebaseSecenekleri.web);
+        } catch (e, yigin) {
+          HataGunluguServisi.logla(e, yigin, baglam: 'Firebase.initializeApp');
+        }
+      }
 
       final onceki = FlutterError.onError;
       FlutterError.onError = (details) {
@@ -78,8 +96,13 @@ class AquaGuardUygulamasi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => UygulamaDurumu()..baslat(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UygulamaDurumu()..baslat()),
+        // UygulamaDurumu'dan BAGIMSIZ -- hesap oturumu, cihaz/simulasyon
+        // durumundan ayrı bir kavram (bkz. dosya başı notu).
+        ChangeNotifierProvider(create: (_) => KimlikDogrulamaProvider()),
+      ],
       // Facade'i DINLEMEZ (read) -- aksi halde her sensor okumasinda tum
       // MaterialApp yeniden kurulurdu. Sadece tema/dil/yazi boyutu icin
       // AyarlarProvider dinlenir (asagidaki Consumer).
@@ -177,6 +200,13 @@ class _BaslangicYonlendirici extends StatelessWidget {
       (a) => a.onboardingGoruldu,
     );
     if (!onboardingGoruldu) return const OnboardingEkrani();
+    // Firebase yapılandırılmadıysa girisGerekliMi HER ZAMAN false döner
+    // (bkz. providers/kimlik_dogrulama_provider.dart) -- bu satır o zaman
+    // hiçbir davranış değişikliği yapmaz.
+    final girisGerekli = context.select<KimlikDogrulamaProvider, bool>(
+      (k) => k.girisGerekliMi,
+    );
+    if (girisGerekli) return const KayitGirisEkrani();
     final pinKilitli = context.select<GuvenlikProvider, bool>(
       (g) => g.pinKilitliSuAn,
     );

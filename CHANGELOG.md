@@ -256,6 +256,45 @@ bir zon varsa, izolasyon o zonları KAPSAMAZ. Şu anki varsayılan kurulum
   öneri kural mantığının tüm dalları, servisin 4 ağ senaryosu (başarı/HTTP
   hatası/bozuk JSON/bağlantı istisnası), widget entegrasyonu.
 
+### Jüri Sunum Modu Düzeltmesi (2026-09-25)
+
+- "Bu Adımı Tetikle" butonuna basınca ekranda hiçbir görsel değişiklik
+  olmuyordu — bu ekranda canlı bildirim SnackBar'ları bilerek bastırıldığı
+  için (Geri/İleri butonlarının üstüne binmesin diye), buton aslında
+  çalışıyor ama sunucuya "hiçbir şey olmadı" hissi veriyordu. Artık
+  butonun altında "Tetiklendi" onayı görünüyor.
+- Sunum senaryosuna eksik bir adım eklendi: Uzaktan Sulama/Besin
+  Takviyesi/Hava Durumu Önerisi (Faz 1-4) hiç sunum akışında yer
+  almıyordu — Mutex Kilidi ile Rapor ve Analiz adımları arasına
+  "Uzaktan/Manuel Kontrol" adımı eklendi.
+
+### Gerçek Kullanıcı Hesabı — E-posta/Şifre Girişi (2026-09-25)
+
+- Onboarding'den sonra, e-posta/şifre ile **gerçek** kayıt/giriş ekranı
+  eklendi (Firebase Authentication). Önceki "Giriş Ekranı" (marka + Demo
+  Modu seçimi) gerçek bir kimlik doğrulama akışı DEĞİLDİ — bu, ilk kez
+  gerçek bir hesap sistemi ekliyor.
+- **Dürüstlük notu:** hesap sistemi SADECE giriş/çıkışı yönetir — çiftlik/
+  sensör/tedavi verisi hâlâ cihazda yerel olarak tutulur, hesaplar arası
+  veri ayrımı veya bulut senkronizasyonu YOKTUR. Bu, ekranda da açıkça
+  belirtiliyor.
+- **Kurulum bekliyor:** Firebase projesinin kendisi, sadece Beyzanur'un
+  kendi Google hesabıyla yapabileceği, dışarıdaki bir adım (bkz.
+  `docs/FIREBASE_KURULUM.md`) — bu tamamlanana kadar
+  `config/firebase_secenekleri.dart`'taki değerler yer tutucu kalır ve
+  giriş/kayıt ekranı HİÇ gösterilmez, uygulama bugünkü gibi çalışmaya
+  devam eder (firmware'in `WIFI_SSID` yer tutucusuyla aynı disiplin).
+- **Jüri demosu güvenliği:** giriş ekranında "Misafir olarak devam et"
+  seçeneği var — saha Wi-Fi'sinde bir sorun çıkarsa (Firebase Auth ağ
+  gerektirir) demo asla bloklanmaz.
+- Hata mesajları Firebase'in İngilizce kodlarından (email-already-in-use,
+  wrong-password, network-request-failed vb.) doğrudan okunabilir
+  Türkçe metne çevrilir.
+- Yeni bağımlılıklar: `firebase_core`, `firebase_auth`. 16 yeni test
+  (provider'ın sahte bir `KimlikDogrulamaServisi` ile — gerçek Firebase'e
+  hiç çıkmadan — tüm giriş/kayıt/çıkış/misafir senaryoları, form
+  doğrulama, hata banner'ı, Ayarlar'daki Çıkış Yap kartı).
+
 ### Bilinen Sınırlamalar
 
 - Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.
@@ -268,7 +307,12 @@ bir zon varsa, izolasyon o zonları KAPSAMAZ. Şu anki varsayılan kurulum
 - Firmware (`firmware/`) genel ESP32 kartı için uyarısız derleniyor
   (arduino-cli), ancak Deneyap Kart tanımıyla derlenmedi ve gerçek
   donanımda hiç çalıştırılmadı; pinler ve kalibrasyon sabitleri yer tutucudur.
+- Firebase projesi henüz kurulmadı (`config/firebase_secenekleri.dart`
+  yer tutucu) — kurulana kadar giriş/kayıt ekranı gösterilmez (bkz.
+  `docs/FIREBASE_KURULUM.md`). Hesap sistemi kurulduktan sonra bile
+  çiftlik/sensör verisini hesaba göre AYIRMAZ, sadece giriş/çıkışı yönetir.
 - Erişilebilirlik: ana durum/sensör/kontrol widget'larında ekran okuyucu
   etiketleri var; uygulamanın tamamı henüz taranmadı.
-- README'deki ekran görüntüleri bölümü henüz gerçek görsellerle
-  doldurulmadı (`docs/screenshots/` — manuel olarak eklenecek).
+- README'deki Zon Detay ekran görüntüsü eksik (canlı demonun SnackBar
+  bildirimleri zon kartlarının üzerine geldiği için otomatik alınamadı —
+  bkz. "Ekran Görüntüleri" bölümü yukarıda). Diğer 4 ekran görüntüsü gerçek.

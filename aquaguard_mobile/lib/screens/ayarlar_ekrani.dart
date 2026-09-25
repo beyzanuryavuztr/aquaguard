@@ -23,6 +23,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../config/firebase_secenekleri.dart';
 import '../config/tarih_bicimleri.dart';
 import '../services/disa_aktarma_factory.dart';
 import '../services/hata_gunlugu_servisi.dart';
@@ -31,6 +32,7 @@ import '../widgets/ayarlar/bildirimler_karti.dart';
 import '../widgets/ayarlar/bolum_basligi.dart';
 import '../widgets/ayarlar/gorunum_dil_karti.dart';
 import '../widgets/ayarlar/guvenlik_karti.dart';
+import '../widgets/ayarlar/hesap_karti.dart';
 import '../widgets/ayarlar/kalibrasyon_esik_kartlari.dart';
 import '../widgets/ayarlar/kullanici_profili_karti.dart';
 import '../widgets/ayarlar/maliyet_parametreleri_karti.dart';
@@ -59,6 +61,11 @@ class AyarlarEkrani extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (firebaseYapilandirildiMi) ...[
+              const BolumBasligi(baslik: 'Hesap'),
+              const HesapKarti(),
+              const SizedBox(height: 24),
+            ],
             const BolumBasligi(baslik: 'Kullanıcı Profili'),
             const KullaniciProfiliKarti(),
             const SizedBox(height: 24),

@@ -127,6 +127,12 @@ Sahada tıkanma türünü doğrudan belirleyecek bir yöntem literatürde tanım
     konumu varsa Open-Meteo'dan (API anahtarı gerekmez) yarının tahminini
     çekip bitki türüne göre basit, kural tabanlı bir öneri gösterir —
     gerçek bir agronomik model değildir, Uzaktan Sulama ekranında görünür
+  - **Kayıt/Giriş** (2026-09-25): Onboarding sonrası e-posta/şifre ile
+    gerçek hesap açma/giriş (Firebase Authentication) — SADECE giriş/
+    çıkışı yönetir, çiftlik/sensör verisi hâlâ cihaz-yerel kalır, hesaplar
+    arası veri ayrımı yoktur. Firebase projesi kurulana kadar (bkz.
+    `docs/FIREBASE_KURULUM.md`) bu ekran hiç gösterilmez, "Misafir olarak
+    devam et" jüri demosunu ağ sorunlarına karşı korur
 - Tıkanma ve tedavi bildirimleri
 - Çevrimdışı mod: WiFi/internet kesilirse son bilinen durumu göster
 - Hedef: önce web/Chrome test, sonra Android
