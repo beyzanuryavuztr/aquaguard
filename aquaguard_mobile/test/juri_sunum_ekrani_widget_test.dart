@@ -148,6 +148,42 @@ void main() {
     },
   );
 
+  testWidgets(
+    '"Bu Adımı Tetikle" basınca ekranda görünür bir onay belirir '
+    '(ruthless audit: SnackBar bu ekranda bastırıldığı için buton hiçbir '
+    'görsel değişiklik yapmıyormuş gibi görünüyordu)',
+    (tester) async {
+      final durum = UygulamaDurumu();
+      await durum.baslat();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: durum),
+            ChangeNotifierProvider.value(value: durum.cihazProvider),
+          ],
+          child: const MaterialApp(home: JuriSunumEkrani()),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('İleri')); // 2. adım -- Sağlıklı Sistem
+      await tester.pump();
+      expect(
+        find.textContaining('Tetiklendi'),
+        findsNothing, // henuz basilmadi
+      );
+
+      await tester.tap(find.text('Bu Adımı Tetikle'));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('Tetiklendi'), findsOneWidget);
+
+      durum.dispose();
+    },
+  );
+
   testWidgets('son adımda İleri butonu devre dışı kalır', (tester) async {
     final durum = UygulamaDurumu();
     await durum.baslat();

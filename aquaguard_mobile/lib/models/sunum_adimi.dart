@@ -74,6 +74,17 @@ const List<SunumAdimi> sunumAdimlari = [
     opsiyonelDemoSenaryosu: DemoSenaryosu.mutexKilidi,
   ),
   SunumAdimi(
+    baslik: 'Uzaktan/Manuel Kontrol',
+    konusmaMetni:
+        'AquaGuard sadece otonom teşhis yapmaz, operatöre manuel kontrol '
+        'de sunar. Şimdi Genel Bakış\'ın sağ üstündeki "⋮" menüsünden '
+        'Uzaktan Sulama\'ya geçin — bir çiftlik ve zon seçip süre girerek '
+        'sulamayı tek dokunuşla başlatabilirsiniz; çiftliğin GPS konumu '
+        'varsa hava durumuna göre basit bir sulama önerisi de görünür. '
+        'Aynı menüden Besin Takviyesi\'ne geçip sıvı/toz dozlamayı da '
+        'gösterebilirsiniz.',
+  ),
+  SunumAdimi(
     baslik: 'Rapor ve Analiz',
     konusmaMetni:
         'Şimdi Tedavi Geçmişi sekmesine geçip, tıkanma türü dağılımını, '

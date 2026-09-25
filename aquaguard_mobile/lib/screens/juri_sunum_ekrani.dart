@@ -40,6 +40,11 @@ class JuriSunumEkrani extends StatefulWidget {
 
 class _JuriSunumEkraniState extends State<JuriSunumEkrani> {
   int _adimIndeksi = 0;
+  // Bu ekranda YENI SnackBar gösterilmiyor (bkz. dosya başı notu) — bu
+  // yüzden butona basıldığında ekranda HİÇBİR görsel değişiklik olmazdı,
+  // sunucuya "hiçbir şey olmadı" hissi verirdi. Tetiklenen adımları burada
+  // tutup buton altında kısa bir onay metni gösteriyoruz.
+  final Set<int> _tetiklenenAdimlar = {};
 
   @override
   void initState() {
@@ -108,14 +113,47 @@ class _JuriSunumEkraniState extends State<JuriSunumEkrani> {
                         if (adim.opsiyonelDemoSenaryosu != null) ...[
                           const SizedBox(height: 24),
                           FilledButton.icon(
-                            onPressed: () => context
-                                .read<CihazIletisimProvider>()
-                                .demoSenaryosuTetikle(
-                                  adim.opsiyonelDemoSenaryosu!,
-                                ),
+                            onPressed: () {
+                              context
+                                  .read<CihazIletisimProvider>()
+                                  .demoSenaryosuTetikle(
+                                    adim.opsiyonelDemoSenaryosu!,
+                                  );
+                              setState(
+                                () => _tetiklenenAdimlar.add(_adimIndeksi),
+                              );
+                            },
                             icon: const Icon(Icons.play_circle_outline),
                             label: const Text('Bu Adımı Tetikle'),
                           ),
+                          if (_tetiklenenAdimlar.contains(_adimIndeksi)) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    'Tetiklendi — Genel Bakış\'ta görebilirsiniz',
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ],
                     ),
