@@ -295,6 +295,45 @@ bir zon varsa, izolasyon o zonları KAPSAMAZ. Şu anki varsayılan kurulum
   hiç çıkmadan — tüm giriş/kayıt/çıkış/misafir senaryoları, form
   doğrulama, hata banner'ı, Ayarlar'daki Çıkış Yap kartı).
 
+### Keşfedilebilirlik Düzeltmesi — Sulama Başlat (2026-09-25)
+
+- Uzaktan Sulama ve Besin Takviyesi'ne erişim daha önce SADECE AppBar'daki
+  etiketsiz "⋮" (Daha fazla) menüsündeydi — kullanıcı gerçek uygulamada
+  denedi ve özelliği bulamadı ("hâlâ yok" olarak bildirdi, iki kez). Kod
+  hiçbir zaman bozuk değildi; menü dar telefon genişliğinde 4 diğer
+  ikonun (Yardım/Bildirim/Jüri Sunum/Çiftlikler) arkasında hiçbir görsel
+  ipucu vermeden duruyordu. Artık Genel Bakış'ın gövdesinde, yazılı iki
+  büyük buton olarak duruyor. Eski "⋮" menüsü tamamen kaldırıldı.
+
+### Acımasız UI/UX Denetimi — 6 Parçalı Sadeleştirme (2026-09-25)
+
+Kullanıcının "arayüz çok karmaşık geliyor" geri bildirimine yanıt olarak,
+gerçek ekran görüntüleriyle (360×800 telefon genişliği, Playwright)
+doğrulanan 6 ayrı sorun düzeltildi:
+
+- **Bildirim gösterim mimarisi değişti**: canlı aktivite bildirimleri
+  artık alttan `SnackBar` değil, üstten (AppBar'ın hemen altında)
+  `MaterialBanner` olarak gösteriliyor. Bu oturumda iki kez gerçek bug
+  olarak karşımıza çıkan "bildirim alttaki interaktif kontrollerin
+  üzerine biniyor" sorununu kökten çözüyor — bir üst-banner hiçbir zaman
+  ekranın altındaki içerikle çakışmaz.
+- **Genel Bakış'taki üçlü tekrar sadeleştirildi**: zon durum kırılımı
+  (Normal/Belirsiz/Tespit) daha önce Sistem Sağlığı göstergesinin metni +
+  ayrı bir rozet satırı + Zon Şeması olmak üzere üç kez gösteriliyordu.
+  Rozet satırı artık Sistem Sağlığı kartının içinde, ayrı blok kaldırıldı.
+- **Ayarlar 15 düz bölümden 5 katlanır kategoriye gruplandı** (Hesap ve
+  Profil / Bağlantı / Sistem Yapılandırması / Bildirim ve Güvenlik /
+  Diğer), varsayılan kapalı.
+- **ACİL DURDUR yüzen bir buton olmaktan çıkarıldı** — sayfa kısaldıkça
+  alttaki Hızlı Eylem butonlarının üzerine binmeye başlamıştı. Artık
+  ekranın kaydırılabilir alanının hemen altında, sabit, tam genişlikte
+  bir şerit.
+- **Trend Analizi grafiklerinde tekrarlayan y-ekseni etiketi düzeltildi**
+  (örn. "7.2" üst üste iki kez görünüyordu) — açık bir eksen aralığı
+  verilerek.
+- **Pil/WiFi rozetine görsel ayraç eklendi** — iki ayrı metrik arasında
+  sınır yoktu, pilin uyarı rengi WiFi metnine aitmiş gibi okunabiliyordu.
+
 ### Bilinen Sınırlamalar
 
 - Sıcaklık sensörü yok; pH/EC ölçümlerinde sıcaklık telafisi yapılmaz.
